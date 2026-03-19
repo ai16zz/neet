@@ -1504,67 +1504,120 @@ const NEET_MINT = 'Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
 const SOL_MINT  = 'So11111111111111111111111111111111111111112';
 const FEE_BPS   = 100; // 1%
 const FEE_ACCT  = 'DVjhpStJD6UKGM6EfSXBtp5n6wayiPttRYms2cXBN7JM';
-const RPC       = 'https://api.mainnet-beta.solana.com';
+
+// RPC fallback chain — tries each in order until one works
+const RPCS = [
+  'https://rpc.ankr.com/solana',
+  'https://solana-mainnet.rpc.extrnode.com',
+  'https://api.mainnet-beta.solana.com',
+];
+
+async function getRpc() {
+  for (const url of RPCS) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc:'2.0', id:1, method:'getHealth' }),
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) return url;
+    } catch {}
+  }
+  return RPCS[0];
+}
 
 let walletPubkey = null;
 let currentQuote = null;
 let quoteTimer   = null;
 
-/* ── PROVIDER DETECTION (works on Edge + Chrome + Firefox) ── */
+/* ── PROVIDER DETECTION ── */
 function getProvider() {
-  // Phantom injects under window.phantom.solana on newer versions
   if (window.phantom?.solana?.isPhantom) return window.phantom.solana;
-  // Fallback: some extensions still use window.solana
-  if (window.solana?.isPhantom) return window.solana;
-  // Generic Solana wallet fallback
-  if (window.solana) return window.solana;
+  if (window.solana?.isPhantom)          return window.solana;
+  if (window.solana)                     return window.solana;
   return null;
 }
 
 /* ── WALLET CONNECT ── */
 async function connectWallet() {
-  let provider = getProvider();
+  const addrEl = document.getElementById('wallet-addr');
+  const btn    = document.getElementById('wallet-btn');
 
-  // On Edge, the extension can inject slightly after load — wait briefly and retry
-  if (!provider) {
-    await new Promise(r => setTimeout(r, 800));
-    provider = getProvider();
-  }
-
-  if (!provider) {
-    if (confirm('Phantom wallet not detected.\n\nClick OK to install Phantom, or Cancel to dismiss.\n\nIf you already installed it, refresh the page and try again.')) {
-      window.open('https://phantom.app/', '_blank');
-    }
+  // Block if file:// — Phantom refuses connections on file protocol
+  if (location.protocol === 'file:') {
+    addrEl.textContent = 'must be on https://';
+    addrEl.style.color = 'var(--red)';
+    alert('⚠️ Phantom cannot connect on a local file.\n\nDeploy to Netlify (free drag-and-drop) and open the live URL, then it will work.\n\nhttps://app.netlify.com/drop');
     return;
   }
+
+  addrEl.textContent = 'detecting wallet...';
+
+  // Poll for up to 3 seconds — Edge injects extensions slowly
+  let provider = null;
+  for (let i = 0; i < 12; i++) {
+    provider = getProvider();
+    if (provider) break;
+    await new Promise(r => setTimeout(r, 250));
+  }
+
+  if (!provider) {
+    addrEl.textContent = 'phantom not found';
+    addrEl.style.color = 'var(--red)';
+    const msg =
+      'Phantom not detected.\n\n' +
+      '📌 On Microsoft Edge:\n' +
+      '1. Click the puzzle piece (Extensions icon)\n' +
+      '2. Find Phantom → click ⋯ → "Allow on all sites"\n' +
+      '3. Refresh this page and try again\n\n' +
+      'If Phantom is not installed, click OK to download it.';
+    if (confirm(msg)) {
+      window.open('https://phantom.app/download', '_blank');
+    }
+    setTimeout(() => { addrEl.textContent = 'not connected'; addrEl.style.color = ''; }, 3000);
+    return;
+  }
+
+  addrEl.style.color = '';
+  btn.textContent  = 'CONNECTING...';
+  btn.disabled     = true;
 
   try {
     const resp = await provider.connect();
     walletPubkey = resp.publicKey.toString();
-    const short = walletPubkey.slice(0,4) + '...' + walletPubkey.slice(-4);
-    document.getElementById('wallet-addr').textContent = short;
-    document.getElementById('wallet-btn').textContent  = 'CONNECTED ✓';
-    document.getElementById('wallet-btn').style.background = 'var(--green-dim)';
+    const short  = walletPubkey.slice(0,4) + '...' + walletPubkey.slice(-4);
+    addrEl.textContent           = short;
+    addrEl.style.color           = 'var(--green)';
+    btn.textContent              = 'CONNECTED ✓';
+    btn.disabled                 = false;
+    btn.style.background         = 'var(--green-dim)';
     fetchSolBalance();
     updateSwapBtn();
   } catch(e) {
+    btn.textContent  = 'CONNECT WALLET';
+    btn.disabled     = false;
     if (e.code === 4001) {
-      // User rejected
-      document.getElementById('wallet-addr').textContent = 'connection rejected';
+      addrEl.textContent = 'rejected — try again';
+      addrEl.style.color = 'var(--red)';
     } else {
-      console.warn('Wallet connect error:', e);
+      addrEl.textContent = 'error: ' + (e.message || 'unknown');
+      addrEl.style.color = 'var(--red)';
+      console.error('Wallet connect error:', e);
     }
+    setTimeout(() => { addrEl.textContent = 'not connected'; addrEl.style.color = ''; }, 3000);
   }
 }
 
 async function fetchSolBalance() {
   if (!walletPubkey) return;
   try {
-    const conn = new solanaWeb3.Connection(RPC, 'confirmed');
+    const rpc  = await getRpc();
+    const conn = new solanaWeb3.Connection(rpc, 'confirmed');
     const pk   = new solanaWeb3.PublicKey(walletPubkey);
     const bal  = await conn.getBalance(pk);
     document.getElementById('sol-balance').textContent = (bal / 1e9).toFixed(4);
-  } catch(e) {}
+  } catch(e) { console.warn('Balance fetch failed:', e); }
 }
 
 /* ── QUOTE ── */
@@ -1594,7 +1647,8 @@ async function getQuote() {
       document.getElementById('quote-info').textContent = `price impact: ${impact}%  |  route: ${data.routePlan?.[0]?.swapInfo?.label || 'jupiter'}`;
       updateSwapBtn();
     } catch(e) {
-      document.getElementById('quote-info').textContent = 'quote failed — check RPC or try again';
+      console.error('Quote error:', e);
+      document.getElementById('quote-info').textContent = 'quote failed: ' + (e.message || 'no route found — try a different amount');
       currentQuote = null;
       updateSwapBtn();
     }
@@ -1646,11 +1700,14 @@ async function executeSwap() {
         prioritizationFeeLamports: 'auto',
       }),
     });
-    const { swapTransaction } = await swapRes.json();
+    const swapJson = await swapRes.json();
+    if (swapJson.error) throw new Error(swapJson.error);
+    const { swapTransaction } = swapJson;
 
     // Deserialise, sign & send
     const txBuf  = Uint8Array.from(atob(swapTransaction), c => c.charCodeAt(0));
-    const conn   = new solanaWeb3.Connection(RPC, 'confirmed');
+    const rpc    = await getRpc();
+    const conn   = new solanaWeb3.Connection(rpc, 'confirmed');
     const signed = await provider.signTransaction(
       solanaWeb3.VersionedTransaction.deserialize(txBuf)
     );
