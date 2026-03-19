@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>$NEET PREDICT — 5min price prediction market</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00ff41;
+    --green-dim: #00cc33;
+    --green-glow: rgba(0,255,65,0.15);
+    --green-soft: rgba(0,255,65,0.07);
+    --black: #000000;
+    --dark: #050a05;
+    --card: #060d06;
+    --card2: #0a120a;
+    --border: rgba(0,255,65,0.15);
+    --text: #e0ffe0;
+    --muted: #4a7a4a;
+    --red: #ff4444;
+    --red-soft: rgba(255,68,68,0.07);
+    --up: #00ff41;
+    --down: #ff4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,255,65,0.012) 2px, rgba(0,255,65,0.012) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* TICKER */
+  .ticker-wrap {
+    overflow: hidden;
+    background: var(--green);
+    padding: 5px 0;
+  }
+  .ticker-inner {
+    display: flex;
+    white-space: nowrap;
+    animation: ticker 25s linear infinite;
+    gap: 4rem;
+  }
+  .ticker-item {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: var(--black);
+    letter-spacing: 1px;
+  }
+  @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    height: 54px;
+    background: rgba(0,0,0,0.95);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: var(--green);
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px var(--green);
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--text); opacity: 0.5; font-size: 0.9rem; }
+  .nav-right { display: flex; align-items: center; gap: 1.5rem; }
+  .nav-price-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+  }
+  .nav-price-val { color: var(--green); font-weight: 700; }
+  .nav-price-chg { color: var(--muted); }
+  .pulse-dot {
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(0,255,65,0.6); }
+    50% { box-shadow: 0 0 0 6px rgba(0,255,65,0); }
+  }
+  .wallet-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    background: var(--green);
+    color: var(--black);
+    border: none;
+    padding: 7px 16px;
+    cursor: pointer;
+    clip-path: polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+  .wallet-btn:hover { background: #00ff41cc; box-shadow: 0 0 20px var(--green); }
+  .wallet-btn.connected { background: var(--green-dim); }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 0;
+    min-height: calc(100vh - 90px);
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ROUND HEADER */
+  .round-header {
+    padding: 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+  .round-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--green);
+    letter-spacing: 3px;
+    margin-bottom: 0.5rem;
+    opacity: 0.7;
+  }
+  .round-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    line-height: 1;
+    letter-spacing: 1px;
+  }
+  .round-title span { color: var(--green); text-shadow: 0 0 30px var(--green); }
+  .round-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 0.5rem;
+    line-height: 1.6;
+  }
+
+  /* TIMER */
+  .timer-block {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .timer-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 0.3rem;
+  }
+  .timer-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem;
+    color: var(--green);
+    text-shadow: 0 0 40px rgba(0,255,65,0.4);
+    line-height: 1;
+    letter-spacing: 2px;
+    transition: color 0.3s;
+  }
+  .timer-display.urgent { color: var(--red); text-shadow: 0 0 40px rgba(255,68,68,0.4); }
+  .timer-status {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  /* PRICE DISPLAY */
+  .price-section {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .price-main {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: var(--green);
+    text-shadow: 0 0 30px rgba(0,255,65,0.3);
+    line-height: 1;
+  }
+  .price-meta {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .open-price-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    text-align: right;
+  }
+  .open-price-tag .lbl { color: var(--muted); margin-bottom: 3px; }
+  .open-price-tag .val { color: var(--text); font-weight: 700; }
+  .price-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 2px;
+  }
+  .price-delta.up { background: rgba(0,255,65,0.1); color: var(--up); border: 1px solid rgba(0,255,65,0.2); }
+  .price-delta.down { background: rgba(255,68,68,0.1); color: var(--down); border: 1px solid rgba(255,68,68,0.2); }
+
+  /* POOL BAR */
+  .pool-section {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .pool-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+  }
+  .pool-up { color: var(--up); }
+  .pool-down { color: var(--down); }
+  .pool-total { color: var(--muted); }
+  .pool-bar-wrap {
+    height: 8px;
+    background: rgba(255,68,68,0.3);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+  .pool-bar-up {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+    position: relative;
+  }
+  .pool-bar-up::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--black);
+  }
+  .pool-pct-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+  }
+  .pool-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 1rem;
+  }
+  .pool-stat {
+    background: var(--card);
+    padding: 0.75rem;
+    text-align: center;
+  }
+  .pool-stat-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: block;
+  }
+  .pool-stat-lbl {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-top: 2px;
+    display: block;
+  }
+
+  /* ROUND HISTORY */
+  .history-section {
+    padding: 1.5rem 2rem;
+    flex: 1;
+    overflow-y: auto;
+  }
+  .history-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--green);
+    letter-spacing: 3px;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+  }
+  .history-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .history-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 80px 80px 70px;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 8px 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    transition: border-color 0.2s;
+  }
+  .history-row:hover { border-color: rgba(0,255,65,0.3); }
+  .history-round { color: var(--muted); }
+  .history-prices { color: var(--text); }
+  .history-prices .arrow { margin: 0 4px; }
+  .history-result {
+    padding: 3px 8px;
+    font-weight: 700;
+    font-size: 0.58rem;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  .history-result.up { background: rgba(0,255,65,0.1); color: var(--up); border: 1px solid rgba(0,255,65,0.2); }
+  .history-result.down { background: rgba(255,68,68,0.1); color: var(--down); border: 1px solid rgba(255,68,68,0.2); }
+  .history-pool { color: var(--muted); text-align: right; }
+  .history-payout { color: var(--green); text-align: right; font-weight: 700; }
+
+  /* RIGHT PANEL — BET */
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bet-panel {
+    padding: 2rem;
+    border-bottom: 1px solid var(--border);
+    flex: 1;
+  }
+  .bet-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--green);
+    letter-spacing: 3px;
+    margin-bottom: 1.2rem;
+    opacity: 0.7;
+  }
+
+  /* ROUND STATUS */
+  .round-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    margin-bottom: 1.2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.live { background: var(--green); animation: pulse 1.5s infinite; }
+  .status-dot.closed { background: var(--red); }
+  .status-dot.settling { background: #ffaa00; animation: pulse 1s infinite; }
+
+  /* UP/DOWN BUTTONS */
+  .bet-direction {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 1.2rem;
+  }
+  .dir-btn {
+    padding: 14px 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    position: relative;
+    overflow: hidden;
+  }
+  .dir-btn .dir-arrow { font-size: 1.4rem; line-height: 1; }
+  .dir-btn .dir-odds {
+    font-size: 0.58rem;
+    opacity: 0.7;
+    font-weight: 400;
+  }
+  .dir-btn.up-btn {
+    border-color: rgba(0,255,65,0.3);
+    color: var(--up);
+  }
+  .dir-btn.up-btn:hover,
+  .dir-btn.up-btn.selected {
+    background: rgba(0,255,65,0.12);
+    border-color: var(--up);
+    box-shadow: 0 0 20px rgba(0,255,65,0.15);
+  }
+  .dir-btn.down-btn {
+    border-color: rgba(255,68,68,0.3);
+    color: var(--down);
+  }
+  .dir-btn.down-btn:hover,
+  .dir-btn.down-btn.selected {
+    background: rgba(255,68,68,0.12);
+    border-color: var(--down);
+    box-shadow: 0 0 20px rgba(255,68,68,0.15);
+  }
+  .dir-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  /* AMOUNT INPUT */
+  .amount-section { margin-bottom: 1.2rem; }
+  .amount-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 0.5rem;
+  }
+  .amount-input-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    gap: 8px;
+    transition: border-color 0.2s;
+  }
+  .amount-input-wrap:focus-within { border-color: var(--green); }
+  .sol-tag {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--green);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .sol-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #9945ff, #14f195);
+    flex-shrink: 0;
+  }
+  .amount-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    text-align: right;
+    width: 100%;
+  }
+  .amount-input::placeholder { color: var(--muted); opacity: 0.5; }
+  .quick-amounts {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .qa-btn {
+    flex: 1;
+    padding: 5px 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .qa-btn:hover { border-color: var(--green); color: var(--green); }
+
+  /* PAYOUT PREVIEW */
+  .payout-preview {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    padding: 12px;
+    margin-bottom: 1.2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+  }
+  .payout-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    color: var(--muted);
+  }
+  .payout-row.total {
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    margin-top: 3px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .payout-row.total .payout-val { color: var(--green); }
+
+  /* SUBMIT BTN */
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    border: none;
+    cursor: pointer;
+    clip-path: polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);
+    transition: all 0.2s;
+    background: rgba(0,255,65,0.15);
+    color: var(--muted);
+    cursor: not-allowed;
+  }
+  .submit-btn.ready-up {
+    background: var(--green);
+    color: var(--black);
+    cursor: pointer;
+  }
+  .submit-btn.ready-up:hover { box-shadow: 0 0 30px rgba(0,255,65,0.4); }
+  .submit-btn.ready-down {
+    background: var(--red);
+    color: #fff;
+    cursor: pointer;
+  }
+  .submit-btn.ready-down:hover { box-shadow: 0 0 30px rgba(255,68,68,0.4); }
+
+  /* WALLET BALANCE */
+  .wallet-bar {
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--muted);
+  }
+  .wallet-bal { color: var(--green); font-weight: 700; }
+
+  /* MY POSITIONS */
+  .positions-section {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .positions-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--green);
+    letter-spacing: 3px;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+  }
+  .no-positions {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-align: center;
+    padding: 1rem 0;
+  }
+  .position-card {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .pos-dir { font-weight: 700; font-size: 0.65rem; }
+  .pos-dir.up { color: var(--up); }
+  .pos-dir.down { color: var(--down); }
+  .pos-amount { color: var(--muted); }
+  .pos-payout { color: var(--text); }
+  .pos-status { color: var(--muted); opacity: 0.7; }
+
+  /* CONTRACT NOTICE */
+  .contract-notice {
+    margin: 1.5rem;
+    padding: 12px;
+    background: rgba(255,170,0,0.05);
+    border: 1px solid rgba(255,170,0,0.2);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: rgba(255,170,0,0.8);
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  /* FOOTER */
+  .bottom-bar {
+    padding: 1rem 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+  }
+
+  /* RESULT FLASH */
+  .result-flash {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    padding: 2rem 3rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem;
+    letter-spacing: 3px;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .result-flash.show { opacity: 1; }
+  .result-flash.up-win {
+    color: var(--green);
+    text-shadow: 0 0 60px var(--green);
+    background: rgba(0,0,0,0.9);
+    border: 1px solid var(--green);
+  }
+  .result-flash.down-win {
+    color: var(--red);
+    text-shadow: 0 0 60px var(--red);
+    background: rgba(0,0,0,0.9);
+    border: 1px solid var(--red);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 800px) {
+    .main { grid-template-columns: 1fr; }
+    .left-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    .history-row { grid-template-columns: 50px 1fr 60px 60px; }
+    .history-payout { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-inner">
+    <span class="ticker-item">$NEET PREDICT • 5MIN CANDLES • UP OR DOWN • 1% FEE</span>
+    <span class="ticker-item">// predict the price. win the pool. never work again //</span>
+    <span class="ticker-item">$NEET PREDICT • 5MIN CANDLES • UP OR DOWN • 1% FEE</span>
+    <span class="ticker-item">// predict the price. win the pool. never work again //</span>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">$NEET <span>/ PREDICT</span></a>
+  <div class="nav-right">
+    <div class="nav-price-pill">
+      <div class="pulse-dot"></div>
+      <span id="navPriceVal" class="nav-price-val">$——</span>
+      <span id="navPriceChg" class="nav-price-chg">—</span>
+    </div>
+    <button class="wallet-btn" id="walletBtn" onclick="connectWallet()">CONNECT WALLET</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT: CHART / ROUND INFO -->
+  <div class="left-panel">
+
+    <!-- ROUND HEADER -->
+    <div class="round-header">
+      <div>
+        <div class="round-label">// CURRENT_ROUND</div>
+        <div class="round-title">ROUND <span id="roundNum">#001</span></div>
+        <div class="round-sub">
+          will $NEET be higher or lower in 5 minutes?<br>
+          <span style="color:var(--green)">1% fee</span> deducted from winning pool · powered by solana
+        </div>
+      </div>
+      <div class="timer-block">
+        <div class="timer-label">CLOSES_IN</div>
+        <div class="timer-display" id="timerDisplay">5:00</div>
+        <div class="timer-status" id="timerStatus">round open · place your bets</div>
+      </div>
+    </div>
+
+    <!-- PRICE -->
+    <div class="price-section">
+      <div>
+        <div class="price-main" id="currentPrice">$——</div>
+        <div class="price-meta">$NEET/USD · live · dexscreener</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+        <div id="priceDelta" class="price-delta up" style="opacity:0">——</div>
+        <div class="open-price-tag">
+          <div class="lbl">ROUND OPEN PRICE</div>
+          <div class="val" id="openPrice">——</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POOL BAR -->
+    <div class="pool-section">
+      <div class="pool-row">
+        <span class="pool-up">▲ UP — <span id="poolUpSol">0.00</span> SOL (<span id="poolUpPct">50</span>%)</span>
+        <span class="pool-total">total pool: <span id="poolTotal">0.00</span> SOL</span>
+        <span class="pool-down">▼ DOWN — <span id="poolDownSol">0.00</span> SOL (<span id="poolDownPct">50</span>%)</span>
+      </div>
+      <div class="pool-bar-wrap">
+        <div class="pool-bar-up" id="poolBarUp" style="width:50%"></div>
+      </div>
+      <div class="pool-pct-row">
+        <span id="poolUpPct2" style="color:var(--up)">50%</span>
+        <span id="poolDownPct2" style="color:var(--down)">50%</span>
+      </div>
+      <div class="pool-stats">
+        <div class="pool-stat">
+          <span class="pool-stat-val" style="color:var(--up)" id="statUpBettors">0</span>
+          <span class="pool-stat-lbl">UP BETTORS</span>
+        </div>
+        <div class="pool-stat">
+          <span class="pool-stat-val" id="statRound">1</span>
+          <span class="pool-stat-lbl">ROUND</span>
+        </div>
+        <div class="pool-stat">
+          <span class="pool-stat-val" style="color:var(--down)" id="statDownBettors">0</span>
+          <span class="pool-stat-lbl">DOWN BETTORS</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="history-section">
+      <div class="history-label">// ROUND_HISTORY</div>
+      <div class="history-grid" id="historyGrid">
+        <div style="font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted); padding:0.5rem 0;">
+          no rounds completed yet. first round in progress...
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: BET PANEL -->
+  <div class="right-panel">
+
+    <!-- WALLET BAR -->
+    <div class="wallet-bar">
+      <span id="walletAddr">not connected</span>
+      <span>balance: <span class="wallet-bal" id="walletBal">—</span> SOL</span>
+    </div>
+
+    <!-- BET PANEL -->
+    <div class="bet-panel">
+      <div class="bet-label">// PLACE_BET</div>
+
+      <div class="round-status-bar">
+        <div class="status-dot live" id="statusDot"></div>
+        <span id="statusText">round open · bets accepted</span>
+      </div>
+
+      <!-- UP / DOWN -->
+      <div class="bet-direction">
+        <button class="dir-btn up-btn" id="upBtn" onclick="selectDirection('up')">
+          <span class="dir-arrow">▲</span>
+          <span>UP</span>
+          <span class="dir-odds" id="upOdds">2.00x</span>
+        </button>
+        <button class="dir-btn down-btn" id="downBtn" onclick="selectDirection('down')">
+          <span class="dir-arrow">▼</span>
+          <span>DOWN</span>
+          <span class="dir-odds" id="downOdds">2.00x</span>
+        </button>
+      </div>
+
+      <!-- AMOUNT -->
+      <div class="amount-section">
+        <div class="amount-label">AMOUNT (SOL)</div>
+        <div class="amount-input-wrap">
+          <div class="sol-tag">
+            <div class="sol-dot"></div>
+            SOL
+          </div>
+          <input type="number" class="amount-input" id="betAmount"
+            placeholder="0.00" min="0.01" step="0.01"
+            oninput="updatePayout()">
+        </div>
+        <div class="quick-amounts">
+          <button class="qa-btn" onclick="setAmount(0.05)">0.05</button>
+          <button class="qa-btn" onclick="setAmount(0.1)">0.1</button>
+          <button class="qa-btn" onclick="setAmount(0.25)">0.25</button>
+          <button class="qa-btn" onclick="setAmount(0.5)">0.5</button>
+          <button class="qa-btn" onclick="setAmount(1)">1</button>
+        </div>
+      </div>
+
+      <!-- PAYOUT PREVIEW -->
+      <div class="payout-preview">
+        <div class="payout-row">
+          <span>your bet</span>
+          <span class="payout-val" id="ppBet">— SOL</span>
+        </div>
+        <div class="payout-row">
+          <span>1% protocol fee</span>
+          <span class="payout-val" id="ppFee">— SOL</span>
+        </div>
+        <div class="payout-row">
+          <span>est. multiplier</span>
+          <span class="payout-val" id="ppMulti">—x</span>
+        </div>
+        <div class="payout-row total">
+          <span>est. payout if correct</span>
+          <span class="payout-val" id="ppPayout">— SOL</span>
+        </div>
+      </div>
+
+      <!-- SUBMIT -->
+      <button class="submit-btn" id="submitBtn" onclick="placeBet()">
+        CONNECT WALLET FIRST
+      </button>
+    </div>
+
+    <!-- MY POSITIONS -->
+    <div class="positions-section">
+      <div class="positions-label">// MY_POSITIONS</div>
+      <div id="positionsList">
+        <div class="no-positions">connect wallet to see positions</div>
+      </div>
+    </div>
+
+    <!-- CONTRACT NOTICE -->
+    <div class="contract-notice">
+      ⚠ DEMO MODE — smart contract pending deployment.<br>
+      UI is fully functional. bets will go live once<br>
+      the on-chain program is deployed to mainnet.
+    </div>
+
+  </div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <span>$NEET prediction market · solana · 5min rounds</span>
+  <span>1% fee → treasury · <a href="index.html" style="color:var(--green); text-decoration:none;">← back to neet.lol</a></span>
+</div>
+
+<!-- RESULT FLASH -->
+<div class="result-flash" id="resultFlash"></div>
+
+<script>
+// ── CONFIG ──
+const NEET_CA = 'Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
+const ROUND_DURATION = 5 * 60; // 5 minutes in seconds
+const FEE_PCT = 0.01; // 1%
+const RPCS = ['https://rpc.ankr.com/solana', 'https://api.mainnet-beta.solana.com'];
+
+// ── STATE ──
+let walletPubkey = null;
+let currentPrice = 0;
+let roundOpenPrice = 0;
+let roundNum = 1;
+let roundSecondsLeft = ROUND_DURATION;
+let roundPhase = 'open'; // open | closed | settling
+let selectedDir = null;
+let roundTimer = null;
+
+// Simulated pool state (will come from contract)
+let pool = { up: 0, down: 0, upBettors: 0, downBettors: 0 };
+let myPositions = [];
+let roundHistory = [];
+
+// ── WALLET ──
+function getProvider() {
+  if (window.phantom?.solana?.isPhantom) return window.phantom.solana;
+  if (window.solana?.isPhantom) return window.solana;
+  if (window.solana) return window.solana;
+  return null;
+}
+
+async function connectWallet() {
+  const btn = document.getElementById('walletBtn');
+  const addrEl = document.getElementById('walletAddr');
+
+  if (location.protocol === 'file:') {
+    alert('⚠️ Must be served over https:// for Phantom to work.');
+    return;
+  }
+
+  let provider = getProvider();
+  if (!provider) {
+    for (let i = 0; i < 12; i++) {
+      await new Promise(r => setTimeout(r, 250));
+      provider = getProvider();
+      if (provider) break;
+    }
+  }
+  if (!provider) {
+    if (confirm('Phantom not detected.\n\nIn Edge: Extensions → Phantom → Allow on all sites → Refresh.\n\nInstall Phantom?')) {
+      window.open('https://phantom.app/download', '_blank');
+    }
+    return;
+  }
+
+  btn.textContent = 'CONNECTING...';
+  try {
+    const resp = await provider.connect();
+    walletPubkey = resp.publicKey.toString();
+    const short = walletPubkey.slice(0,4) + '...' + walletPubkey.slice(-4);
+    addrEl.textContent = short;
+    addrEl.style.color = 'var(--green)';
+    btn.textContent = 'CONNECTED ✓';
+    btn.classList.add('connected');
+    fetchBalance();
+    updateSubmitBtn();
+    renderPositions();
+  } catch(e) {
+    btn.textContent = 'CONNECT WALLET';
+    if (e.code !== 4001) console.error(e);
+  }
+}
+
+async function fetchBalance() {
+  if (!walletPubkey) return;
+  try {
+    const res = await fetch(RPCS[0], {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc:'2.0', id:1, method:'getBalance', params:[walletPubkey,{commitment:'confirmed'}] }),
+    });
+    const data = await res.json();
+    const sol = (data?.result?.value ?? 0) / 1e9;
+    document.getElementById('walletBal').textContent = sol.toFixed(4);
+  } catch {}
+}
+
+// ── PRICE FEED ──
+async function fetchPrice() {
+  try {
+    const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${NEET_CA}`);
+    const data = await res.json();
+    const pair = data?.pairs?.find(p => p.chainId === 'solana') || data?.pairs?.[0];
+    if (!pair) return;
+
+    const price = parseFloat(pair.priceUsd || 0);
+    const change = parseFloat(pair.priceChange?.h24 || 0);
+
+    currentPrice = price;
+    if (!roundOpenPrice) roundOpenPrice = price;
+
+    // Update UI
+    const fmt = price < 0.000001
+      ? '$' + price.toExponential(3)
+      : '$' + price.toFixed(price < 0.01 ? 8 : 6);
+
+    document.getElementById('currentPrice').textContent = fmt;
+    document.getElementById('navPriceVal').textContent = fmt;
+    document.getElementById('navPriceChg').textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+    document.getElementById('navPriceChg').style.color = change >= 0 ? 'var(--green)' : 'var(--red)';
+
+    // Round delta
+    if (roundOpenPrice > 0) {
+      const delta = ((price - roundOpenPrice) / roundOpenPrice) * 100;
+      const deltaEl = document.getElementById('priceDelta');
+      deltaEl.style.opacity = '1';
+      deltaEl.textContent = (delta >= 0 ? '▲ +' : '▼ ') + delta.toFixed(3) + '%';
+      deltaEl.className = 'price-delta ' + (delta >= 0 ? 'up' : 'down');
+    }
+
+    updatePayout();
+  } catch(e) {
+    console.warn('Price fetch failed:', e);
+  }
+}
+
+// ── ROUND TIMER ──
+function startRoundTimer() {
+  clearInterval(roundTimer);
+  roundTimer = setInterval(() => {
+    roundSecondsLeft--;
+
+    if (roundSecondsLeft <= 0) {
+      clearInterval(roundTimer);
+      settleRound();
+      return;
+    }
+
+    // Update timer display
+    const mins = Math.floor(roundSecondsLeft / 60);
+    const secs = roundSecondsLeft % 60;
+    const display = `${mins}:${secs.toString().padStart(2,'0')}`;
+    const timerEl = document.getElementById('timerDisplay');
+    const statusEl = document.getElementById('timerStatus');
+    timerEl.textContent = display;
+
+    // Urgent when < 30s
+    if (roundSecondsLeft <= 30) {
+      timerEl.classList.add('urgent');
+      statusEl.textContent = '⚠ closing soon — last bets';
+    } else if (roundSecondsLeft <= 60) {
+      statusEl.textContent = 'less than 1 min — place bets now';
+    }
+
+    // Close bets in last 10 seconds
+    if (roundSecondsLeft <= 10 && roundPhase === 'open') {
+      roundPhase = 'closed';
+      setRoundStatus('closed', 'bets closed · waiting to settle');
+      document.getElementById('upBtn').disabled = true;
+      document.getElementById('downBtn').disabled = true;
+      updateSubmitBtn();
+    }
+  }, 1000);
+}
+
+function setRoundStatus(phase, text) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = 'status-dot ' + phase;
+  txt.textContent = text;
+}
+
+async function settleRound() {
+  roundPhase = 'settling';
+  setRoundStatus('settling', 'settling round...');
+  document.getElementById('timerDisplay').textContent = '0:00';
+  document.getElementById('timerStatus').textContent = 'round ended · calculating results';
+
+  // Fetch final price
+  await fetchPrice();
+  const closePrice = currentPrice;
+  const openPrice  = roundOpenPrice;
+  const result     = closePrice >= openPrice ? 'up' : 'down';
+
+  // Show result flash
+  showResultFlash(result, closePrice, openPrice);
+
+  // Add to history
+  const totalPool = pool.up + pool.down;
+  const winPool   = result === 'up' ? pool.up : pool.down;
+  const payout    = winPool > 0 ? ((totalPool * (1 - FEE_PCT)) / winPool).toFixed(2) : '—';
+
+  roundHistory.unshift({
+    round: roundNum,
+    openPrice,
+    closePrice,
+    result,
+    totalPool: totalPool.toFixed(3),
+    payout,
+  });
+  renderHistory();
+
+  // Settle my positions
+  settleMyPositions(result, parseFloat(payout));
+
+  // Start next round after 3s
+  setTimeout(() => {
+    roundNum++;
+    pool = { up: 0, down: 0, upBettors: 0, downBettors: 0 };
+    roundOpenPrice = currentPrice;
+    roundSecondsLeft = ROUND_DURATION;
+    roundPhase = 'open';
+    selectedDir = null;
+    document.getElementById('upBtn').disabled = false;
+    document.getElementById('downBtn').disabled = false;
+    document.getElementById('upBtn').classList.remove('selected');
+    document.getElementById('downBtn').classList.remove('selected');
+    document.getElementById('betAmount').value = '';
+    document.getElementById('roundNum').textContent = '#' + String(roundNum).padStart(3,'0');
+    document.getElementById('statRound').textContent = roundNum;
+    document.getElementById('timerDisplay').classList.remove('urgent');
+    document.getElementById('openPrice').textContent = formatPrice(currentPrice);
+    setRoundStatus('live', 'round open · bets accepted');
+    updatePool();
+    updatePayout();
+    updateSubmitBtn();
+    startRoundTimer();
+  }, 3000);
+}
+
+function showResultFlash(result, close, open) {
+  const el = document.getElementById('resultFlash');
+  const pct = Math.abs(((close - open) / open) * 100).toFixed(3);
+  el.className = 'result-flash show ' + (result === 'up' ? 'up-win' : 'down-win');
+  el.innerHTML = (result === 'up' ? '▲ UP' : '▼ DOWN') +
+    '<br><span style="font-size:1.5rem">+' + pct + '%</span>';
+  setTimeout(() => { el.classList.remove('show'); }, 2500);
+}
+
+// ── BETTING ──
+function selectDirection(dir) {
+  selectedDir = dir;
+  document.getElementById('upBtn').classList.toggle('selected', dir === 'up');
+  document.getElementById('downBtn').classList.toggle('selected', dir === 'down');
+  updateSubmitBtn();
+  updatePayout();
+}
+
+function setAmount(val) {
+  document.getElementById('betAmount').value = val;
+  updatePayout();
+  updateSubmitBtn();
+}
+
+function updatePayout() {
+  const amt = parseFloat(document.getElementById('betAmount').value) || 0;
+  if (!amt || !selectedDir) {
+    document.getElementById('ppBet').textContent = '— SOL';
+    document.getElementById('ppFee').textContent = '— SOL';
+    document.getElementById('ppMulti').textContent = '—x';
+    document.getElementById('ppPayout').textContent = '— SOL';
+    return;
+  }
+
+  const fee = amt * FEE_PCT;
+  const net = amt - fee;
+  const totalIfBet = selectedDir === 'up'
+    ? pool.up + amt : pool.down + amt;
+  const otherPool  = selectedDir === 'up' ? pool.down : pool.up;
+  const totalPool  = pool.up + pool.down + amt;
+  const multiplier = totalPool > 0 && totalIfBet > 0
+    ? ((totalPool * (1 - FEE_PCT)) / totalIfBet)
+    : 2.0;
+  const payout = net * multiplier;
+
+  document.getElementById('ppBet').textContent    = amt.toFixed(3) + ' SOL';
+  document.getElementById('ppFee').textContent    = fee.toFixed(4) + ' SOL';
+  document.getElementById('ppMulti').textContent  = multiplier.toFixed(2) + 'x';
+  document.getElementById('ppPayout').textContent = payout.toFixed(3) + ' SOL';
+
+  // Update odds on buttons
+  const upPool  = pool.up  + (selectedDir === 'up'   ? amt : 0);
+  const downPool= pool.down + (selectedDir === 'down' ? amt : 0);
+  const tot     = upPool + downPool;
+  const upMult  = tot > 0 && upPool   > 0 ? ((tot * 0.99) / upPool).toFixed(2)   : '—';
+  const downMult= tot > 0 && downPool > 0 ? ((tot * 0.99) / downPool).toFixed(2) : '—';
+  document.getElementById('upOdds').textContent   = upMult + 'x';
+  document.getElementById('downOdds').textContent = downMult + 'x';
+
+  updateSubmitBtn();
+}
+
+function updateSubmitBtn() {
+  const btn = document.getElementById('submitBtn');
+  const amt = parseFloat(document.getElementById('betAmount').value) || 0;
+
+  if (!walletPubkey) {
+    btn.textContent = 'CONNECT WALLET FIRST';
+    btn.className = 'submit-btn';
+    return;
+  }
+  if (roundPhase !== 'open') {
+    btn.textContent = 'BETS CLOSED';
+    btn.className = 'submit-btn';
+    return;
+  }
+  if (!selectedDir) {
+    btn.textContent = 'SELECT UP OR DOWN';
+    btn.className = 'submit-btn';
+    return;
+  }
+  if (!amt || amt <= 0) {
+    btn.textContent = 'ENTER AMOUNT';
+    btn.className = 'submit-btn';
+    return;
+  }
+
+  const arrow = selectedDir === 'up' ? '▲' : '▼';
+  btn.textContent = `${arrow} BET ${selectedDir.toUpperCase()} — ${amt.toFixed(3)} SOL`;
+  btn.className = 'submit-btn ready-' + selectedDir;
+}
+
+function placeBet() {
+  if (!walletPubkey || roundPhase !== 'open' || !selectedDir) return;
+  const amt = parseFloat(document.getElementById('betAmount').value) || 0;
+  if (!amt || amt <= 0) return;
+
+  // DEMO MODE: simulate bet locally (real version calls smart contract)
+  if (selectedDir === 'up') {
+    pool.up += amt;
+    pool.upBettors++;
+  } else {
+    pool.down += amt;
+    pool.downBettors++;
+  }
+
+  // Record position
+  const totalPool = pool.up + pool.down;
+  const myPool    = selectedDir === 'up' ? pool.up : pool.down;
+  const multi     = totalPool > 0 && myPool > 0 ? ((totalPool * 0.99) / myPool).toFixed(2) : '2.00';
+
+  myPositions.push({
+    round: roundNum,
+    dir: selectedDir,
+    amount: amt,
+    multi,
+    status: 'open',
+  });
+
+  updatePool();
+  renderPositions();
+  updatePayout();
+  updateSubmitBtn();
+
+  // Visual feedback
+  const btn = document.getElementById('submitBtn');
+  const orig = btn.textContent;
+  btn.textContent = '✓ BET PLACED!';
+  setTimeout(() => {
+    document.getElementById('betAmount').value = '';
+    selectedDir = null;
+    document.getElementById('upBtn').classList.remove('selected');
+    document.getElementById('downBtn').classList.remove('selected');
+    updateSubmitBtn();
+    updatePayout();
+  }, 1200);
+}
+
+function updatePool() {
+  const tot  = pool.up + pool.down;
+  const upPct  = tot > 0 ? Math.round((pool.up / tot) * 100) : 50;
+  const downPct = 100 - upPct;
+
+  document.getElementById('poolUpSol').textContent   = pool.up.toFixed(3);
+  document.getElementById('poolDownSol').textContent = pool.down.toFixed(3);
+  document.getElementById('poolTotal').textContent   = tot.toFixed(3);
+  document.getElementById('poolUpPct').textContent   = upPct;
+  document.getElementById('poolDownPct').textContent = downPct;
+  document.getElementById('poolUpPct2').textContent  = upPct + '%';
+  document.getElementById('poolDownPct2').textContent= downPct + '%';
+  document.getElementById('poolBarUp').style.width   = upPct + '%';
+  document.getElementById('statUpBettors').textContent   = pool.upBettors;
+  document.getElementById('statDownBettors').textContent = pool.downBettors;
+
+  // Update odds
+  const upMult   = tot > 0 && pool.up   > 0 ? ((tot * 0.99) / pool.up).toFixed(2)   : '—';
+  const downMult = tot > 0 && pool.down > 0 ? ((tot * 0.99) / pool.down).toFixed(2) : '—';
+  document.getElementById('upOdds').textContent   = upMult + 'x';
+  document.getElementById('downOdds').textContent = downMult + 'x';
+}
+
+function settleMyPositions(result, payout) {
+  myPositions.forEach(p => {
+    if (p.round === roundNum - 1 || p.round === roundNum) {
+      p.status  = p.dir === result ? 'won' : 'lost';
+      p.payout  = p.dir === result ? (p.amount * payout).toFixed(3) : '0';
+    }
+  });
+  renderPositions();
+}
+
+function renderPositions() {
+  const el = document.getElementById('positionsList');
+  if (!walletPubkey) {
+    el.innerHTML = '<div class="no-positions">connect wallet to see positions</div>';
+    return;
+  }
+  if (!myPositions.length) {
+    el.innerHTML = '<div class="no-positions">no bets placed yet this session</div>';
+    return;
+  }
+  el.innerHTML = [...myPositions].reverse().slice(0,5).map(p => `
+    <div class="position-card">
+      <span class="pos-dir ${p.dir}">${p.dir === 'up' ? '▲ UP' : '▼ DOWN'}</span>
+      <span class="pos-amount">${p.amount.toFixed(3)} SOL</span>
+      <span class="pos-payout">${p.status === 'won' ? '✓ +'+p.payout+' SOL' : p.status === 'lost' ? '✗ lost' : '~'+p.multi+'x est.'}</span>
+      <span class="pos-status">R#${String(p.round).padStart(3,'0')}</span>
+    </div>
+  `).join('');
+}
+
+function renderHistory() {
+  const el = document.getElementById('historyGrid');
+  if (!roundHistory.length) return;
+  el.innerHTML = roundHistory.slice(0,10).map(r => `
+    <div class="history-row">
+      <span class="history-round">#${String(r.round).padStart(3,'0')}</span>
+      <span class="history-prices">
+        ${formatPrice(r.openPrice)}<span class="arrow">→</span>${formatPrice(r.closePrice)}
+      </span>
+      <span class="history-result ${r.result}">${r.result === 'up' ? '▲ UP' : '▼ DOWN'}</span>
+      <span class="history-pool">${r.totalPool} SOL</span>
+      <span class="history-payout">${r.payout}x</span>
+    </div>
+  `).join('');
+}
+
+function formatPrice(p) {
+  if (!p) return '——';
+  return p < 0.000001 ? '$' + p.toExponential(2) : '$' + p.toFixed(p < 0.01 ? 7 : 6);
+}
+
+// ── INIT ──
+async function init() {
+  await fetchPrice();
+  roundOpenPrice = currentPrice;
+  document.getElementById('openPrice').textContent = formatPrice(currentPrice);
+  startRoundTimer();
+  setInterval(fetchPrice, 10000); // refresh price every 10s
+
+  // Auto-connect
+  await new Promise(r => setTimeout(r, 400));
+  const provider = getProvider();
+  if (provider?.isConnected && provider.publicKey) {
+    walletPubkey = provider.publicKey.toString();
+    const short = walletPubkey.slice(0,4) + '...' + walletPubkey.slice(-4);
+    document.getElementById('walletAddr').textContent = short;
+    document.getElementById('walletAddr').style.color = 'var(--green)';
+    document.getElementById('walletBtn').textContent = 'CONNECTED ✓';
+    document.getElementById('walletBtn').classList.add('connected');
+    fetchBalance();
+    updateSubmitBtn();
+    renderPositions();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
