@@ -1635,7 +1635,9 @@ async function getQuote() {
   quoteTimer = setTimeout(async () => {
     try {
       const lamports = Math.round(solAmt * 1e9);
-      const url = `https://quote-api.jup.ag/v6/quote?inputMint=${SOL_MINT}&outputMint=${NEET_MINT}&amount=${lamports}&slippageBps=300&platformFeeBps=${FEE_BPS}`;
+      // NOTE: platformFeeBps removed from quote — it blocks routes for pump tokens
+      // Fee is applied at swap stage only
+      const url = `https://quote-api.jup.ag/v6/quote?inputMint=${SOL_MINT}&outputMint=${NEET_MINT}&amount=${lamports}&slippageBps=500`;
       const res  = await fetch(url);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -1647,8 +1649,8 @@ async function getQuote() {
       document.getElementById('quote-info').textContent = `price impact: ${impact}%  |  route: ${data.routePlan?.[0]?.swapInfo?.label || 'jupiter'}`;
       updateSwapBtn();
     } catch(e) {
-      console.error('Quote error:', e);
-      document.getElementById('quote-info').textContent = 'quote failed: ' + (e.message || 'no route found — try a different amount');
+      console.error('Quote error full:', e);
+      document.getElementById('quote-info').textContent = 'quote failed: ' + (e.message || 'no route — try different amount');
       currentQuote = null;
       updateSwapBtn();
     }
@@ -1695,7 +1697,6 @@ async function executeSwap() {
         quoteResponse: currentQuote,
         userPublicKey: walletPubkey,
         wrapAndUnwrapSol: true,
-        feeAccount: FEE_ACCT,
         dynamicComputeUnitLimit: true,
         prioritizationFeeLamports: 'auto',
       }),
