@@ -142,7 +142,9 @@
 
   .pos-sec{padding:1.2rem 1.5rem;border-bottom:1px solid var(--border)}
   .postag{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--green);letter-spacing:3px;opacity:.7;margin-bottom:.75rem}
-  .posmt{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align:center;padding:.75rem 0}
+  .exitbtn{background:transparent;border:1px solid var(--muted);color:var(--muted);font-family:var(--mono);font-size:0.65rem;padding:2px 6px;cursor:pointer;letter-spacing:.05em;margin-left:4px;}
+.exitbtn:hover{border-color:var(--red);color:var(--red);}
+font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align:center;padding:.75rem 0}
   .posc{background:var(--card2);border:1px solid var(--border);padding:8px 11px;margin-bottom:3px;font-family:'Space Mono',monospace;font-size:.58rem;display:grid;grid-template-columns:auto 1fr auto auto;gap:.5rem;align-items:center}
   .pdir{font-weight:700;font-size:.62rem}
   .pdir.up{color:var(--up)}.pdir.down{color:var(--down)}
@@ -630,6 +632,8 @@ async function placeBet(){
     });
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Backend error');
+    // Store position with bet_id for early exit
+    myP.push({round:round.id,dir:seld,amount:amt,status:'open',multi:'—',bet_id:data.bet_id});
     // Success UI
     document.getElementById('txtt').textContent=seld==='up'?'▲ BET UP PLACED':'▼ BET DOWN PLACED';
     document.getElementById('txmg').innerHTML=
@@ -673,9 +677,31 @@ function rendPos(){
     <div class="posc">
       <span class="pdir ${p.dir}">${p.dir==='up'?'▲ UP':'▼ DN'}</span>
       <span class="pamt">${p.amount.toFixed(3)} SOL</span>
-      <span class="ppay">${p.status==='won'?'✓ +'+p.payout:p.status==='lost'?'✗ lost':'~'+p.multi+'x'}</span>
+      <span class="ppay">${p.status==='won'?'✓ +'+p.payout:p.status==='lost'?'✗ lost':p.status==='exited'?'↩ exited':'~'+p.multi+'x'}</span>
       <span class="ptag">R#${String(p.round).padStart(3,'0')}</span>
+      ${p.status==='open'&&p.bet_id?`<button class="exitbtn" onclick="exitBet(${p.bet_id},this)">EXIT</button>`:''}
     </div>`).join('');
+}
+
+async function exitBet(betId, btn){
+  if(!confirm('Exit this position early? You\'ll receive the current odds value minus fee.')) return;
+  btn.textContent='...';btn.disabled=true;
+  try{
+    const res=await fetch(`${API_URL}/exit`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({wallet:wpk,bet_id:betId})
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Exit failed');
+    // Mark position as exited
+    const pos=myP.find(p=>p.bet_id===betId);
+    if(pos){pos.status='exited';pos.payout=data.payout.toFixed(3);}
+    rendPos();fetchBal();
+    alert(`Position exited! Received ${data.payout.toFixed(4)} SOL\nTX: ${data.signature.slice(0,20)}...`);
+  }catch(e){
+    alert('Exit failed: '+e.message);
+    btn.textContent='EXIT';btn.disabled=false;
+  }
 }
 function rendHist(){
   const el=document.getElementById('hg');
