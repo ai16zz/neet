@@ -673,7 +673,7 @@ function rendPos(){
       <span class="pamt">${p.amount.toFixed(3)} SOL</span>
       <span class="ppay">${p.status==='won'?'✓ +'+p.payout:p.status==='lost'?'✗ lost':p.status==='exited'?'↩ exited':'~'+p.multi+'x'}</span>
       <span class="ptag">R#${String(p.round).padStart(3,'0')}</span>
-      ${p.status==='open'&&p.bet_id&&p.isCurrentRound?`<button class="exitbtn" onclick="exitBet(${p.bet_id},this)">SELL</button>`:''}
+      ${p.status==='open'&&p.bet_id?`<button class="exitbtn" onclick="exitBet(${p.bet_id},this)">SELL</button>`:''}
     </div>`).join('');
 }
 
@@ -770,11 +770,11 @@ async function syncRound(){
           round: p.round_id,
           dir: p.direction.toLowerCase(),
           amount: p.amount,
-          status: p.exited ? 'exited' : p.paid_out ? (p.outcome ? (p.direction===p.outcome?'won':'lost') : 'settled') : 'open',
+          status: p.exited ? 'exited' : p.settled ? (p.outcome ? (p.direction===p.outcome?'won':'lost') : 'settled') : 'open',
           multi: '—',
           bet_id: p.id,
           payout: p.payout_sig ? '✓' : null,
-          isCurrentRound: p.round_id === currentRound,
+          isCurrentRound: true,
         }));
         rendPos();
       }
