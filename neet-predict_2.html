@@ -632,7 +632,7 @@ async function placeBet(){
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Backend error');
     // Store position with bet_id for early exit
-    myP.push({round:data.round_id,dir:seld,amount:amt,status:'open',multi:'—',bet_id:data.bet_id});
+    myP.push({round:data.round_id,dir:seld,amount:amt,status:'open',multi:'—',bet_id:data.bet_id,isCurrentRound:true});
     // Success UI
     document.getElementById('txtt').textContent=seld==='up'?'▲ BET UP PLACED':'▼ BET DOWN PLACED';
     document.getElementById('txmg').innerHTML=
@@ -678,7 +678,7 @@ function rendPos(){
       <span class="pamt">${p.amount.toFixed(3)} SOL</span>
       <span class="ppay">${p.status==='won'?'✓ +'+p.payout:p.status==='lost'?'✗ lost':p.status==='exited'?'↩ exited':'~'+p.multi+'x'}</span>
       <span class="ptag">R#${String(p.round).padStart(3,'0')}</span>
-      ${p.status==='open'&&p.bet_id?`<button class="exitbtn" onclick="exitBet(${p.bet_id},this)">EXIT</button>`:''}
+      ${p.status==='open'&&p.bet_id&&p.isCurrentRound?`<button class="exitbtn" onclick="exitBet(${p.bet_id},this)">EXIT</button>`:''}
     </div>`).join('');
 }
 
@@ -749,11 +749,17 @@ async function syncRound(){
     if(wpk){
       const pres=await fetch(`${API_URL}/positions/${wpk}`);
       const {positions}=await pres.json();
-      if(positions){
+      if(positions&&positions.length){
+        const currentRound=round?round.id:null;
         myP=positions.map(p=>({
-          round:p.round_id,dir:p.direction.toLowerCase(),
-          amount:p.amount,status:p.paid_out?'settled':p.outcome?p.direction===p.outcome?'won':'lost':'open',
-          payout:p.payout_sig?'paid':'—',multi:'—'
+          round: p.round_id,
+          dir: p.direction.toLowerCase(),
+          amount: p.amount,
+          status: p.exited ? 'exited' : p.paid_out ? (p.outcome ? (p.direction===p.outcome?'won':'lost') : 'settled') : 'open',
+          multi: '—',
+          bet_id: p.id,
+          payout: p.payout_sig ? '✓' : null,
+          isCurrentRound: p.round_id === currentRound,
         }));
         rendPos();
       }
