@@ -353,6 +353,8 @@
 const NEET_CA='Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
 const PAIR='5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy';
 const RSEC=300,FEE=.01,MINB=.05;
+const API_URL='https://neet-predict-backend.onrender.com';
+const TREASURY='DVjhpStJD6UKGM6EfSXBtp5n6wayiPttRYms2cXBN7JM';
 const RPCS=['https://rpc.ankr.com/solana','https://api.mainnet-beta.solana.com'];
 
 let wpk=null,cpx=0,ropx=0,rnum=1,secs=RSEC,phase='open',seld=null,rtimer=null;
@@ -588,30 +590,54 @@ function updBtn(){
   btn.textContent=(seld==='up'?'▲':'▼')+' BET '+seld.toUpperCase()+' — '+amt.toFixed(3)+' SOL';
   btn.className='subbtn '+(seld==='up'?'gu':'gd');
 }
-function placeBet(){
+async function placeBet(){
   if(!wpk||phase!=='open'||!seld)return;
   const amt=parseFloat(document.getElementById('ba').value)||0;
   if(amt<MINB){alert('Minimum bet is '+MINB+' SOL');return;}
-  if(seld==='up'){pool.up+=amt;pool.upN++;}else{pool.dn+=amt;pool.dnN++;}
-  const tot=pool.up+pool.dn,mp=seld==='up'?pool.up:pool.dn;
-  const multi=mp>0?((tot*.99)/mp).toFixed(2):'2.00';
-  myP.push({round:rnum,dir:seld,amount:amt,multi,status:'open',payout:null});
-  updPool();rendPos();updPay();updBtn();
-  // Show info modal
-  const fee=(tot*FEE).toFixed(4);
-  document.getElementById('txtt').textContent=seld==='up'?'▲ BET UP PLACED':'▼ BET DOWN PLACED';
-  document.getElementById('txmg').innerHTML=
-    `<b style="color:var(--green)">DEMO MODE</b> — simulated locally.<br><br>`+
-    `when on-chain contract is live:<br>`+
-    `• <b style="color:var(--green)">${amt.toFixed(3)} SOL</b> sent to round vault<br>`+
-    `• locked until round settles in <b style="color:var(--green)">${Math.floor(secs/60)}:${(secs%60).toString().padStart(2,'0')}</b><br>`+
-    `• 1% fee = ${fee} SOL from total pool at settlement<br>`+
-    `• winners get proportional share of loser pool<br><br>`+
-    `<span style="color:var(--muted)">est. payout: <b style="color:var(--green)">${(amt*parseFloat(multi)).toFixed(3)} SOL</b> (${multi}x)</span>`;
-  document.getElementById('txm').classList.add('show');
-  document.getElementById('ba').value='';seld=null;
-  document.getElementById('ubb').classList.remove('sel');document.getElementById('dbb').classList.remove('sel');
-  updBtn();updPay();
+  const btn=document.getElementById('sb');
+  btn.textContent='SENDING...';btn.disabled=true;
+  try{
+    // Send SOL to treasury on-chain
+    const p=getProv();
+    if(!p)throw new Error('Wallet not connected');
+    const conn=new solanaWeb3.Connection(RPCS[0],'confirmed');
+    const fromPk=new solanaWeb3.PublicKey(wpk);
+    const toPk=new solanaWeb3.PublicKey(TREASURY);
+    const lamports=Math.round(amt*1e9);
+    const tx=new solanaWeb3.Transaction().add(
+      solanaWeb3.SystemProgram.transfer({fromPubkey:fromPk,toPubkey:toPk,lamports})
+    );
+    const {blockhash}=await conn.getLatestBlockhash();
+    tx.recentBlockhash=blockhash;tx.feePayer=fromPk;
+    btn.textContent='APPROVE IN WALLET...';
+    const signed=await p.signTransaction(tx);
+    btn.textContent='CONFIRMING...';
+    const txSig=await conn.sendRawTransaction(signed.serialize());
+    await conn.confirmTransaction(txSig,'confirmed');
+    // Register bet with backend
+    const res=await fetch(`${API_URL}/bet`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({wallet:wpk,direction:seld.toUpperCase(),amount:amt,tx_sig:txSig})
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Backend error');
+    // Success UI
+    document.getElementById('txtt').textContent=seld==='up'?'▲ BET UP PLACED':'▼ BET DOWN PLACED';
+    document.getElementById('txmg').innerHTML=
+      `<b style="color:var(--green)">${amt.toFixed(3)} SOL</b> sent on-chain ✓<br><br>`+
+      `Direction: <b style="color:var(--green)">${seld.toUpperCase()}</b><br>`+
+      `TX: <a href="https://solscan.io/tx/${txSig}" target="_blank" style="color:var(--green);font-size:0.75rem">${txSig.slice(0,16)}...</a><br><br>`+
+      `<span style="color:var(--muted)">Payout sent automatically when round settles.</span>`;
+    document.getElementById('txm').classList.add('show');
+    document.getElementById('ba').value='';seld=null;
+    document.getElementById('ubb').classList.remove('sel');document.getElementById('dbb').classList.remove('sel');
+    fetchBal();syncRound();
+  }catch(e){
+    alert('Bet failed: '+e.message);
+    console.error(e);
+  }finally{
+    updBtn();btn.disabled=false;updPay();
+  }
 }
 function updPool(){
   const tot=pool.up+pool.dn,up=tot>0?Math.round((pool.up/tot)*100):50,dn=100-up;
@@ -656,6 +682,51 @@ function rendHist(){
 }
 function fmtP(p){if(!p)return'——';return p<0.000001?'$'+p.toExponential(2):'$'+p.toFixed(p<0.01?7:6);}
 
+// ── Backend sync ──────────────────────────────────────────
+async function syncRound(){
+  try{
+    const res=await fetch(`${API_URL}/round/current`);
+    const {round}=await res.json();
+    if(!round)return;
+    // Update pool display from backend
+    pool.up=round.total_up||0;pool.dn=round.total_down||0;
+    secs=Math.max(0,Math.round((round.ms_left||0)/1000));
+    rnum=round.id;
+    if(round.live_price&&round.live_price!==cpx){
+      cpx=round.live_price;
+      if(!ropx)ropx=round.start_price||cpx;
+    }
+    document.getElementById('rn').textContent='#'+String(rnum).padStart(3,'0');
+    document.getElementById('srn').textContent=rnum;
+    updPool();
+    // Update history from backend
+    const hres=await fetch(`${API_URL}/rounds/history`);
+    const {rounds}=await hres.json();
+    if(rounds&&rounds.length){
+      hist=rounds.map(r=>({
+        round:r.id,op:r.start_price,cl:r.end_price,
+        res:r.outcome==='UP'?'up':'down',
+        tot:(r.total_up+r.total_down).toFixed(3),
+        multi:'—',fee:'—'
+      }));
+      rendHist();
+    }
+    // Update positions from backend if wallet connected
+    if(wpk){
+      const pres=await fetch(`${API_URL}/positions/${wpk}`);
+      const {positions}=await pres.json();
+      if(positions){
+        myP=positions.map(p=>({
+          round:p.round_id,dir:p.direction.toLowerCase(),
+          amount:p.amount,status:p.paid_out?'settled':p.outcome?p.direction===p.outcome?'won':'lost':'open',
+          payout:p.payout_sig?'paid':'—',multi:'—'
+        }));
+        rendPos();
+      }
+    }
+  }catch(e){console.warn('[sync]',e.message);}
+}
+
 async function init(){
   // delay so DOM is fully rendered and container has real dimensions
   await new Promise(r=>setTimeout(r,200));
@@ -666,6 +737,8 @@ async function init(){
   startTimer();
   setInterval(fetchPx,10000);
   setInterval(()=>loadChart(ctf),60000);
+  syncRound();
+  setInterval(syncRound,10000);
   await new Promise(r=>setTimeout(r,400));
   const p=getProv();
   if(p?.isConnected&&p.publicKey){
