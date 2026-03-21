@@ -684,8 +684,15 @@ function rendPos(){
         '~'+p.multi+'x'
       }</span>
       <span class="ptag">R#${String(p.round).padStart(3,'0')}</span>
-      ${p.status==='open'&&p.bet_id?`<button class="exitbtn" onclick="exitBet(${p.bet_id},this)">SELL</button>`:''}
+      ${p.status==='open'&&p.bet_id?`<button class="exitbtn" data-betid="${p.bet_id}">SELL</button>`:''}
     </div>`).join('');
+  // Event delegation — attach ONE listener to container, no inline onclick
+  el.onclick = function(e){
+    const btn = e.target.closest('.exitbtn');
+    if(!btn) return;
+    const betId = parseInt(btn.dataset.betid);
+    if(betId) exitBet(betId, btn);
+  };
 }
 
 async function exitBet(betId, btn){
@@ -694,15 +701,27 @@ async function exitBet(betId, btn){
   document.getElementById('txmg').innerHTML=
     `sell this position early?<br><br>`+
     `<span style="color:var(--muted)">you'll receive current odds value minus 3% fee.</span><br><br>`+
-    `<button onclick="document.getElementById('txm').classList.remove('show');doExit(${betId})" `+
-    `style="font-family:var(--mono);font-size:.65rem;font-weight:700;background:var(--green);color:#000;border:none;padding:8px 18px;cursor:pointer;margin-right:8px">CONFIRM SELL</button>`+
-    `<button onclick="document.getElementById('txm').classList.remove('show')" `+
-    `style="font-family:var(--mono);font-size:.65rem;background:transparent;color:var(--muted);border:1px solid var(--muted);padding:8px 14px;cursor:pointer">CANCEL</button>`;
+    `<button id="confirmSellBtn" style="font-family:var(--mono);font-size:.65rem;font-weight:700;background:var(--green);color:#000;border:none;padding:8px 18px;cursor:pointer;margin-right:8px">CONFIRM SELL</button>`+
+    `<button id="cancelSellBtn" style="font-family:var(--mono);font-size:.65rem;background:transparent;color:var(--muted);border:1px solid var(--muted);padding:8px 14px;cursor:pointer">CANCEL</button>`;
   document.getElementById('txcl').style.display='none';
   document.getElementById('txm').classList.add('show');
+  // Attach listeners after DOM update
+  setTimeout(()=>{
+    const confirmBtn = document.getElementById('confirmSellBtn');
+    const cancelBtn = document.getElementById('cancelSellBtn');
+    if(confirmBtn) confirmBtn.addEventListener('click', ()=>{
+      document.getElementById('txm').classList.remove('show');
+      document.getElementById('txcl').style.display='';
+      doExit(betId, btn);
+    });
+    if(cancelBtn) cancelBtn.addEventListener('click', ()=>{
+      document.getElementById('txm').classList.remove('show');
+      document.getElementById('txcl').style.display='';
+    });
+  }, 50);
 }
 
-async function doExit(betId){
+async function doExit(betId, btn){
   document.getElementById('txcl').style.display='';
   const btn=document.querySelector('.exitbtn');
   if(btn){btn.textContent='...';btn.disabled=true;}
