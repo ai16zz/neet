@@ -600,20 +600,29 @@ async function placeBet(){
     // Send SOL to treasury on-chain
     const p=getProv();
     if(!p)throw new Error('Wallet not connected');
-    const conn=new solanaWeb3.Connection(RPCS[1],'confirmed');
+    // Get blockhash from backend (browser can't call RPC directly)
+    btn.textContent='PREPARING TX...';
+    const bhRes = await fetch(`${API_URL}/blockhash`);
+    const {blockhash, lastValidBlockHeight} = await bhRes.json();
+    if(!blockhash) throw new Error('Could not get blockhash');
     const fromPk=new solanaWeb3.PublicKey(wpk);
     const toPk=new solanaWeb3.PublicKey(TREASURY);
     const lamports=Math.round(amt*1e9);
     const tx=new solanaWeb3.Transaction().add(
       solanaWeb3.SystemProgram.transfer({fromPubkey:fromPk,toPubkey:toPk,lamports})
     );
-    const {blockhash}=await conn.getLatestBlockhash();
     tx.recentBlockhash=blockhash;tx.feePayer=fromPk;
     btn.textContent='APPROVE IN WALLET...';
     const signed=await p.signTransaction(tx);
     btn.textContent='CONFIRMING...';
-    const txSig=await conn.sendRawTransaction(signed.serialize());
-    await conn.confirmTransaction(txSig,'confirmed');
+    // Send via backend RPC proxy to avoid browser RPC restrictions
+    const sendRes = await fetch(`${API_URL}/send-tx`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({tx: Array.from(signed.serialize())})
+    });
+    const sendData = await sendRes.json();
+    if(!sendRes.ok) throw new Error(sendData.error||'Send failed');
+    const txSig = sendData.signature;
     // Register bet with backend
     const res=await fetch(`${API_URL}/bet`,{
       method:'POST',headers:{'Content-Type':'application/json'},
