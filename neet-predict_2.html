@@ -761,20 +761,20 @@ async function syncRound(){
       rendHist();
     }
     // Update positions from backend if wallet connected
-    if(wpk){
-      const pres=await fetch(`${API_URL}/positions/${wpk}`);
+    const activeWpk = wpk || getProv()?.publicKey?.toString();
+    if(activeWpk){
+      if(!wpk) wpk = activeWpk;
+      const pres=await fetch(`${API_URL}/positions/${activeWpk}`);
       const {positions}=await pres.json();
       if(positions&&positions.length){
-        const currentRound=round?round.id:null;
         myP=positions.map(p=>({
           round: p.round_id,
           dir: p.direction.toLowerCase(),
           amount: p.amount,
-          status: p.exited ? 'exited' : p.settled ? (p.outcome ? (p.direction===p.outcome?'won':'lost') : 'settled') : 'open',
+          status: p.exited ? 'exited' : p.settled ? (p.outcome ? (p.direction.toUpperCase()===p.outcome?'won':'lost') : 'settled') : 'open',
           multi: '—',
           bet_id: p.id,
           payout: p.payout_sig ? '✓' : null,
-          isCurrentRound: true,
         }));
         rendPos();
       }
