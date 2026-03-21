@@ -673,33 +673,28 @@ function rendPos(){
       <span class="pamt">${p.amount.toFixed(3)} SOL</span>
       <span class="ppay">${p.status==='won'?'✓ +'+p.payout:p.status==='lost'?'✗ lost':p.status==='exited'?'↩ exited':'~'+p.multi+'x'}</span>
       <span class="ptag">R#${String(p.round).padStart(3,'0')}</span>
-      ${p.status==='open'&&p.bet_id&&p.isCurrentRound?`<button class="exitbtn" onclick="exitBet(${p.bet_id},this)">EXIT</button>`:''}
+      ${p.status==='open'&&p.bet_id&&p.isCurrentRound?`<button class="exitbtn" onclick="exitBet(${p.bet_id},this)">SELL</button>`:''}
     </div>`).join('');
 }
 
 async function exitBet(betId, btn){
-  window._pendingExitId = betId;
-  window._pendingExitBtn = btn;
-  showModal('↩ EXIT POSITION',
-    `exit this position early?<br><br>`+
-    `<span style="color:var(--muted)">you'll receive the current odds value minus 3% fee.</span>`,
-    'green'
-  );
-  // Swap close button to "CONFIRM EXIT"
-  const closeBtn = document.querySelector('.txcl');
-  closeBtn.textContent = 'CONFIRM EXIT';
-  closeBtn.onclick = async () => {
-    document.getElementById('txm').classList.remove('show');
-    closeBtn.textContent = 'CLOSE';
-    closeBtn.onclick = () => document.getElementById('txm').classList.remove('show');
-    await doExit(window._pendingExitId, window._pendingExitBtn);
-  };
-  // Add cancel link
-  document.getElementById('txmg').innerHTML +=
-    `<br><br><span style="color:var(--muted);cursor:pointer;font-size:.65rem" onclick="document.getElementById('txm').classList.remove('show');document.querySelector('.txcl').textContent='CLOSE';document.querySelector('.txcl').onclick=()=>document.getElementById('txm').classList.remove('show')">cancel</span>`;
+  // Simple inline confirm using the modal
+  document.getElementById('txtt').textContent = '↩ SELL POSITION';
+  document.getElementById('txtt').style.color = 'var(--green)';
+  document.getElementById('txmg').innerHTML =
+    `sell this position early?<br><br>`+
+    `<span style="color:var(--muted)">you'll receive current odds value minus 3% fee.</span><br><br>`+
+    `<button onclick="document.getElementById('txm').style.display='none';doExit(${betId})" `+
+    `style="font-family:var(--mono);font-size:.65rem;font-weight:700;background:var(--green);color:var(--black);border:none;padding:8px 16px;cursor:pointer;margin-right:8px;">CONFIRM SELL</button>`+
+    `<button onclick="document.getElementById('txm').style.display='none'" `+
+    `style="font-family:var(--mono);font-size:.65rem;background:transparent;color:var(--muted);border:1px solid var(--muted);padding:8px 16px;cursor:pointer;">CANCEL</button>`;
+  document.getElementById('txcl').style.display = 'none';
+  document.getElementById('txm').style.display = 'flex';
 }
 
-async function doExit(betId, btn){
+async function doExit(betId){
+  document.getElementById('txcl').style.display = '';
+  const btn = document.querySelector('.exitbtn');
   if(btn){btn.textContent='...';btn.disabled=true;}
   try{
     const res=await fetch(`${API_URL}/exit`,{
@@ -712,7 +707,7 @@ async function doExit(betId, btn){
     const pos=myP.find(p=>p.bet_id===betId);
     if(pos){pos.status='exited';pos.payout=data.payout.toFixed(3);}
     rendPos();fetchBal();
-    showModal('↩ POSITION EXITED',
+    showModal('↩ POSITION SOLD',
       `<b style="color:var(--green)">${data.payout.toFixed(4)} SOL</b> returned to your wallet ✓<br><br>`+
       `TX: <a href="https://solscan.io/tx/${data.signature}" target="_blank" style="color:var(--green);font-size:.75rem">${data.signature.slice(0,20)}...</a>`,
       'green'
