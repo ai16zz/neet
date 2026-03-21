@@ -355,7 +355,7 @@ const PAIR='5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy';
 const RSEC=300,FEE=.01,MINB=.05;
 const API_URL='https://neet-predict-backend.onrender.com';
 const TREASURY='DVjhpStJD6UKGM6EfSXBtp5n6wayiPttRYms2cXBN7JM';
-const RPCS=['https://rpc.ankr.com/solana','https://api.mainnet-beta.solana.com'];
+const RPCS=['https://api.mainnet-beta.solana.com','https://solana-rpc.publicnode.com','https://rpc.helius.xyz/?api-key='];
 
 let wpk=null,cpx=0,ropx=0,rnum=1,secs=RSEC,phase='open',seld=null,rtimer=null;
 let pool={up:0,dn:0,upN:0,dnN:0},myP=[],hist=[],chart=null,cseries=null,ctf=5;
@@ -472,7 +472,7 @@ async function connectWallet(){
 async function fetchBal(){
   if(!wpk)return;
   try{
-    const r=await fetch(RPCS[0],{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch(RPCS[1],{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getBalance',params:[wpk,{commitment:'confirmed'}]})});
     const d=await r.json();
     document.getElementById('wb2').textContent=((d?.result?.value||0)/1e9).toFixed(4);
@@ -600,7 +600,7 @@ async function placeBet(){
     // Send SOL to treasury on-chain
     const p=getProv();
     if(!p)throw new Error('Wallet not connected');
-    const conn=new solanaWeb3.Connection(RPCS[0],'confirmed');
+    const conn=new solanaWeb3.Connection(RPCS[1],'confirmed');
     const fromPk=new solanaWeb3.PublicKey(wpk);
     const toPk=new solanaWeb3.PublicKey(TREASURY);
     const lamports=Math.round(amt*1e9);
