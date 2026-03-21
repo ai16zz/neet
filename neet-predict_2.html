@@ -178,9 +178,9 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
 
 <div class="ticker-wrap">
   <div class="ticker-inner">
-    <span class="ticker-item">$NEET PREDICT • 5MIN ROUNDS • UP OR DOWN • 1% POOL FEE</span>
+    <span class="ticker-item">$NEET PREDICT • 5MIN ROUNDS • UP OR DOWN • 3% POOL FEE</span>
     <span class="ticker-item">// predict the price · win the pool · never work again //</span>
-    <span class="ticker-item">$NEET PREDICT • 5MIN ROUNDS • UP OR DOWN • 1% POOL FEE</span>
+    <span class="ticker-item">$NEET PREDICT • 5MIN ROUNDS • UP OR DOWN • 3% POOL FEE</span>
     <span class="ticker-item">// predict the price · win the pool · never work again //</span>
   </div>
 </div>
@@ -309,18 +309,12 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
 
       <div class="pbox">
         <div class="pr"><span>your bet</span><span class="pv" id="ppb">—</span></div>
-        <div class="pr"><span>1% pool fee <span class="fn">(at settlement)</span></span><span class="pv" id="ppf">—</span></div>
+        <div class="pr"><span>3% pool fee <span class="fn">(at settlement)</span></span><span class="pv" id="ppf">—</span></div>
         <div class="pr"><span>est. multiplier</span><span class="pv" id="ppm">—x</span></div>
         <div class="pr tot"><span>est. payout if correct</span><span class="pv" id="ppo">—</span></div>
       </div>
 
       <button class="subbtn" id="sb" onclick="placeBet()">CONNECT WALLET FIRST</button>
-    </div>
-
-    <div class="fee-box">
-      <strong>fee model:</strong> 1% from <strong>total pool</strong> each round.<br>
-      example: 50 SOL pool → <strong>0.50 SOL to treasury</strong>, 49.5 to winners.<br>
-      you earn both sides, every round, win or lose. ↑
     </div>
 
     <div class="pos-sec">
@@ -353,7 +347,7 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
 <script>
 const NEET_CA='Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
 const PAIR='5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy';
-const RSEC=300,FEE=.01,MINB=.05;
+const RSEC=300,FEE=.03,MINB=.05;
 const API_URL='https://neet-predict-backend.onrender.com';
 const TREASURY='DVjhpStJD6UKGM6EfSXBtp5n6wayiPttRYms2cXBN7JM';
 const RPCS=['https://api.mainnet-beta.solana.com','https://solana-rpc.publicnode.com','https://rpc.helius.xyz/?api-key='];
@@ -684,8 +678,16 @@ function rendPos(){
 }
 
 async function exitBet(betId, btn){
-  if(!confirm('Exit this position early? You\'ll receive the current odds value minus fee.')) return;
-  btn.textContent='...';btn.disabled=true;
+  showModal('↩ EXIT POSITION',
+    `exit this position early?<br><br>`+
+    `<span style="color:var(--muted)">you'll receive the current odds value minus fee.</span><br><br>`+
+    `<button class="txcl" style="margin-right:8px" onclick="document.getElementById('txm').classList.remove('show');doExit(${betId})">CONFIRM EXIT</button>`,
+    'green'
+  );
+}
+async function doExit(betId){
+  const btn = document.querySelector(`.exitbtn[onclick*="${betId}"]`);
+  if(btn){btn.textContent='...';btn.disabled=true;}
   try{
     const res=await fetch(`${API_URL}/exit`,{
       method:'POST',headers:{'Content-Type':'application/json'},
