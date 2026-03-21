@@ -678,15 +678,28 @@ function rendPos(){
 }
 
 async function exitBet(betId, btn){
+  window._pendingExitId = betId;
+  window._pendingExitBtn = btn;
   showModal('↩ EXIT POSITION',
     `exit this position early?<br><br>`+
-    `<span style="color:var(--muted)">you'll receive the current odds value minus fee.</span><br><br>`+
-    `<button class="txcl" style="margin-right:8px" onclick="document.getElementById('txm').classList.remove('show');doExit(${betId})">CONFIRM EXIT</button>`,
+    `<span style="color:var(--muted)">you'll receive the current odds value minus 3% fee.</span>`,
     'green'
   );
+  // Swap close button to "CONFIRM EXIT"
+  const closeBtn = document.querySelector('.txcl');
+  closeBtn.textContent = 'CONFIRM EXIT';
+  closeBtn.onclick = async () => {
+    document.getElementById('txm').classList.remove('show');
+    closeBtn.textContent = 'CLOSE';
+    closeBtn.onclick = () => document.getElementById('txm').classList.remove('show');
+    await doExit(window._pendingExitId, window._pendingExitBtn);
+  };
+  // Add cancel link
+  document.getElementById('txmg').innerHTML +=
+    `<br><br><span style="color:var(--muted);cursor:pointer;font-size:.65rem" onclick="document.getElementById('txm').classList.remove('show');document.querySelector('.txcl').textContent='CLOSE';document.querySelector('.txcl').onclick=()=>document.getElementById('txm').classList.remove('show')">cancel</span>`;
 }
-async function doExit(betId){
-  const btn = document.querySelector(`.exitbtn[onclick*="${betId}"]`);
+
+async function doExit(betId, btn){
   if(btn){btn.textContent='...';btn.disabled=true;}
   try{
     const res=await fetch(`${API_URL}/exit`,{
@@ -706,7 +719,7 @@ async function doExit(betId){
     );
   }catch(e){
     showModal('⚠ EXIT FAILED', `<span style="color:var(--red)">${e.message}</span>`, 'red');
-    btn.textContent='EXIT';btn.disabled=false;
+    if(btn){btn.textContent='EXIT';btn.disabled=false;}
   }
 }
 function rendHist(){
