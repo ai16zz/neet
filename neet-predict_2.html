@@ -671,7 +671,13 @@ function rendPos(){
     <div class="posc">
       <span class="pdir ${p.dir}">${p.dir==='up'?'▲ UP':'▼ DN'}</span>
       <span class="pamt">${p.amount.toFixed(3)} SOL</span>
-      <span class="ppay">${p.status==='won'?'✓ +'+p.payout:p.status==='lost'?'✗ lost':p.status==='exited'?'↩ exited':'~'+p.multi+'x'}</span>
+      <span class="ppay">${
+        p.status==='won' ? '<span style="color:var(--green)">✓ won</span>' :
+        p.status==='lost' ? '<span style="color:var(--red)">✗ lost</span>' :
+        p.status==='draw' ? '<span style="color:var(--muted)">↩ refund</span>' :
+        p.status==='exited' ? '<span style="color:var(--muted)">↩ sold</span>' :
+        '~'+p.multi+'x'
+      }</span>
       <span class="ptag">R#${String(p.round).padStart(3,'0')}</span>
       ${p.status==='open'&&p.bet_id?`<button class="exitbtn" onclick="exitBet(${p.bet_id},this)">SELL</button>`:''}
     </div>`).join('');
@@ -771,7 +777,10 @@ async function syncRound(){
           round: p.round_id,
           dir: p.direction.toLowerCase(),
           amount: p.amount,
-          status: p.exited ? 'exited' : p.settled ? (p.outcome ? (p.direction.toUpperCase()===p.outcome?'won':'lost') : 'settled') : 'open',
+          status: p.exited ? 'exited'
+            : !p.settled ? 'open'
+            : p.outcome === 'DRAW' ? 'draw'
+            : p.direction.toUpperCase() === p.outcome ? 'won' : 'lost',
           multi: '—',
           bet_id: p.id,
           payout: p.payout_sig ? '✓' : null,
@@ -793,7 +802,6 @@ function showModal(title, html, color='green'){
 }
 
 async function init(){
-  // delay so DOM is fully rendered and container has real dimensions
   await new Promise(r=>setTimeout(r,200));
   initChart();
   await fetchPx();
@@ -802,17 +810,24 @@ async function init(){
   startTimer();
   setInterval(fetchPx,10000);
   setInterval(()=>loadChart(ctf),60000);
-  syncRound();
-  setInterval(syncRound,10000);
-  await new Promise(r=>setTimeout(r,400));
-  const p=getProv();
-  if(p?.isConnected&&p.publicKey){
-    wpk=p.publicKey.toString();
-    const sh=wpk.slice(0,4)+'...'+wpk.slice(-4);
-    document.getElementById('wa').textContent=sh;document.getElementById('wa').style.color='var(--green)';
-    document.getElementById('wb').textContent='CONNECTED ✓';document.getElementById('wb').classList.add('connected');
-    fetchBal();updBtn();rendPos();
-  }
+  // Wait for Phantom to inject, then sync
+  let attempts = 0;
+  const trySyncWithWallet = async () => {
+    const p = getProv();
+    if(p?.isConnected && p.publicKey) {
+      wpk = p.publicKey.toString();
+      const sh = wpk.slice(0,4)+'...'+wpk.slice(-4);
+      document.getElementById('wa').textContent=sh;
+      document.getElementById('wa').style.color='var(--green)';
+      document.getElementById('wb').textContent='CONNECTED ✓';
+      document.getElementById('wb').classList.add('connected');
+      fetchBal(); updBtn();
+    }
+    await syncRound();
+    if(!wpk && attempts++ < 5) setTimeout(trySyncWithWallet, 1000);
+  };
+  setTimeout(trySyncWithWallet, 500);
+  setInterval(syncRound, 10000);
 }
 init();
 </script>
