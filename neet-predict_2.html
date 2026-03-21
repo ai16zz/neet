@@ -634,20 +634,20 @@ async function placeBet(){
     // Store position with bet_id for early exit
     myP.push({round:data.round_id,dir:seld,amount:amt,status:'open',multi:'—',bet_id:data.bet_id,isCurrentRound:true});
     // Success UI
-    document.getElementById('txtt').textContent=seld==='up'?'▲ BET UP PLACED':'▼ BET DOWN PLACED';
-    document.getElementById('txmg').innerHTML=
+    showModal(
+      seld==='up'?'▲ BET UP PLACED':'▼ BET DOWN PLACED',
       `<b style="color:var(--green)">${amt.toFixed(3)} SOL</b> sent on-chain ✓<br><br>`+
       `Direction: <b style="color:var(--green)">${seld.toUpperCase()}</b><br>`+
       `TX: <a href="https://solscan.io/tx/${txSig}" target="_blank" style="color:var(--green);font-size:0.75rem">${txSig.slice(0,16)}...</a><br><br>`+
-      `<span style="color:var(--muted)">Payout sent automatically when round settles.</span>`;
-    document.getElementById('txm').classList.add('show');
+      `<span style="color:var(--muted)">Payout sent automatically when round settles.<br>You can EXIT early from MY_POSITIONS below.</span>`
+    );
     document.getElementById('ba').value='';seld=null;
     document.getElementById('ubb').classList.remove('sel');document.getElementById('dbb').classList.remove('sel');
     fetchBal();syncRound();
   }catch(e){
     const msg = e?.message || e?.toString() || JSON.stringify(e) || 'Unexpected error';
     console.error('[placeBet] full error:', e);
-    alert('Bet failed: '+msg);
+    showModal('⚠ BET FAILED', `<span style="color:var(--red)">${msg}</span>`, 'red');
   }finally{
     updBtn();btn.disabled=false;updPay();
   }
@@ -697,9 +697,13 @@ async function exitBet(betId, btn){
     const pos=myP.find(p=>p.bet_id===betId);
     if(pos){pos.status='exited';pos.payout=data.payout.toFixed(3);}
     rendPos();fetchBal();
-    alert(`Position exited! Received ${data.payout.toFixed(4)} SOL\nTX: ${data.signature.slice(0,20)}...`);
+    showModal('↩ POSITION EXITED',
+      `<b style="color:var(--green)">${data.payout.toFixed(4)} SOL</b> returned to your wallet ✓<br><br>`+
+      `TX: <a href="https://solscan.io/tx/${data.signature}" target="_blank" style="color:var(--green);font-size:.75rem">${data.signature.slice(0,20)}...</a>`,
+      'green'
+    );
   }catch(e){
-    alert('Exit failed: '+e.message);
+    showModal('⚠ EXIT FAILED', `<span style="color:var(--red)">${e.message}</span>`, 'red');
     btn.textContent='EXIT';btn.disabled=false;
   }
 }
@@ -766,6 +770,16 @@ async function syncRound(){
       }
     }
   }catch(e){console.warn('[sync]',e.message);}
+}
+
+// ── Styled modal helper ───────────────────────────────────
+function showModal(title, html, color='green'){
+  const c = color==='red' ? 'var(--red)' : 'var(--green)';
+  document.getElementById('txtt').textContent = title;
+  document.getElementById('txtt').style.color = c;
+  document.getElementById('txmg').innerHTML = html;
+  document.getElementById('txcl').style.background = c;
+  document.getElementById('txm').classList.add('show');
 }
 
 async function init(){
