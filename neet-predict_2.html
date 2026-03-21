@@ -619,7 +619,7 @@ async function placeBet(){
     // Send via backend RPC proxy to avoid browser RPC restrictions
     const sendRes = await fetch(`${API_URL}/send-tx`, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({tx: Array.from(signed.serialize())})
+      body: JSON.stringify({tx: Array.from(signed.serialize({requireAllSignatures:false,verifySignatures:false}))})
     });
     const sendData = await sendRes.json();
     if(!sendRes.ok) throw new Error(sendData.error||'Send failed');
@@ -645,8 +645,9 @@ async function placeBet(){
     document.getElementById('ubb').classList.remove('sel');document.getElementById('dbb').classList.remove('sel');
     fetchBal();syncRound();
   }catch(e){
-    alert('Bet failed: '+e.message);
-    console.error(e);
+    const msg = e?.message || e?.toString() || JSON.stringify(e) || 'Unexpected error';
+    console.error('[placeBet] full error:', e);
+    alert('Bet failed: '+msg);
   }finally{
     updBtn();btn.disabled=false;updPay();
   }
