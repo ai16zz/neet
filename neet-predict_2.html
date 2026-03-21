@@ -689,23 +689,22 @@ function rendPos(){
 }
 
 async function exitBet(betId, btn){
-  // Simple inline confirm using the modal
-  document.getElementById('txtt').textContent = '↩ SELL POSITION';
-  document.getElementById('txtt').style.color = 'var(--green)';
-  document.getElementById('txmg').innerHTML =
+  document.getElementById('txtt').textContent='↩ SELL POSITION';
+  document.getElementById('txtt').style.color='var(--green)';
+  document.getElementById('txmg').innerHTML=
     `sell this position early?<br><br>`+
     `<span style="color:var(--muted)">you'll receive current odds value minus 3% fee.</span><br><br>`+
-    `<button onclick="document.getElementById('txm').style.display='none';doExit(${betId})" `+
-    `style="font-family:var(--mono);font-size:.65rem;font-weight:700;background:var(--green);color:var(--black);border:none;padding:8px 16px;cursor:pointer;margin-right:8px;">CONFIRM SELL</button>`+
-    `<button onclick="document.getElementById('txm').style.display='none'" `+
-    `style="font-family:var(--mono);font-size:.65rem;background:transparent;color:var(--muted);border:1px solid var(--muted);padding:8px 16px;cursor:pointer;">CANCEL</button>`;
-  document.getElementById('txcl').style.display = 'none';
-  document.getElementById('txm').style.display = 'flex';
+    `<button onclick="document.getElementById('txm').classList.remove('show');doExit(${betId})" `+
+    `style="font-family:var(--mono);font-size:.65rem;font-weight:700;background:var(--green);color:#000;border:none;padding:8px 18px;cursor:pointer;margin-right:8px">CONFIRM SELL</button>`+
+    `<button onclick="document.getElementById('txm').classList.remove('show')" `+
+    `style="font-family:var(--mono);font-size:.65rem;background:transparent;color:var(--muted);border:1px solid var(--muted);padding:8px 14px;cursor:pointer">CANCEL</button>`;
+  document.getElementById('txcl').style.display='none';
+  document.getElementById('txm').classList.add('show');
 }
 
 async function doExit(betId){
-  document.getElementById('txcl').style.display = '';
-  const btn = document.querySelector('.exitbtn');
+  document.getElementById('txcl').style.display='';
+  const btn=document.querySelector('.exitbtn');
   if(btn){btn.textContent='...';btn.disabled=true;}
   try{
     const res=await fetch(`${API_URL}/exit`,{
@@ -798,11 +797,11 @@ async function syncRound(){
 
 // ── Styled modal helper ───────────────────────────────────
 function showModal(title, html, color='green'){
-  const c = color==='red' ? 'var(--red)' : 'var(--green)';
-  document.getElementById('txtt').textContent = title;
-  document.getElementById('txtt').style.color = c;
-  document.getElementById('txmg').innerHTML = html;
-  document.getElementById('txcl').style.background = c;
+  const c=color==='red'?'var(--red)':'var(--green)';
+  document.getElementById('txtt').textContent=title;
+  document.getElementById('txtt').style.color=c;
+  document.getElementById('txmg').innerHTML=html;
+  document.getElementById('txcl').style.cssText='display:;background:'+c;
   document.getElementById('txm').classList.add('show');
 }
 
