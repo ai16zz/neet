@@ -632,7 +632,7 @@ async function placeBet(){
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Backend error');
     // Store position with bet_id for early exit
-    myP.push({round:round.id,dir:seld,amount:amt,status:'open',multi:'—',bet_id:data.bet_id});
+    myP.push({round:data.round_id,dir:seld,amount:amt,status:'open',multi:'—',bet_id:data.bet_id});
     // Success UI
     document.getElementById('txtt').textContent=seld==='up'?'▲ BET UP PLACED':'▼ BET DOWN PLACED';
     document.getElementById('txmg').innerHTML=
