@@ -667,15 +667,20 @@ function rendPos(){
   const el=document.getElementById('pl');
   if(!wpk){el.innerHTML='<div class="posmt">connect wallet to see positions</div>';return;}
   if(!myP.length){el.innerHTML='<div class="posmt">no bets placed yet this session</div>';return;}
-  el.innerHTML=myP.slice(0,8).map(p=>`
+  const sorted=[...myP].sort((a,b)=>{
+    if(a.status==='open'&&b.status!=='open')return -1;
+    if(b.status==='open'&&a.status!=='open')return 1;
+    return b.round-a.round;
+  });
+  el.innerHTML=sorted.slice(0,8).map(p=>`
     <div class="posc">
       <span class="pdir ${p.dir}">${p.dir==='up'?'▲ UP':'▼ DN'}</span>
       <span class="pamt">${p.amount.toFixed(3)} SOL</span>
       <span class="ppay">${
-        p.status==='won' ? '<span style="color:var(--green)">✓ won</span>' :
-        p.status==='lost' ? '<span style="color:var(--red)">✗ lost</span>' :
-        p.status==='draw' ? '<span style="color:var(--muted)">↩ refund</span>' :
-        p.status==='exited' ? '<span style="color:var(--muted)">↩ sold</span>' :
+        p.status==='won'?'<span style="color:var(--green)">✓ won</span>':
+        p.status==='lost'?'<span style="color:var(--red)">✗ lost</span>':
+        p.status==='draw'?'<span style="color:var(--muted)">↩ refund</span>':
+        p.status==='exited'?'<span style="color:var(--muted)">↩ sold</span>':
         '~'+p.multi+'x'
       }</span>
       <span class="ptag">R#${String(p.round).padStart(3,'0')}</span>
