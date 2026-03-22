@@ -817,7 +817,7 @@ async function switchMarket(market){
   document.querySelectorAll('.mktab').forEach(b=>{
     b.classList.toggle('active', b.dataset.market===market);
   });
-  document.getElementById('mktlabel').textContent=MARKET_CONFIG[market].label+' 5MIN';
+  const _lbl=document.getElementById('mktlabel'); if(_lbl) _lbl.textContent=MARKET_CONFIG[market].label+' 5MIN';
   pool={up:0,dn:0,upN:0,dnN:0};hist=[];myP=[];seld=null;ropx=0;cpx=0;
   document.getElementById('ubb').classList.remove('sel');
   document.getElementById('dbb').classList.remove('sel');
