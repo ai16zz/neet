@@ -13,14 +13,14 @@
     --black:#000;--card:#060d06;--card2:#0a120a;
     --border:rgba(0,255,65,0.15);--text:#e0ffe0;--muted:#4a7a4a;
     --red:#ff4444;--up:#00ff41;--down:#ff4444;
-  }
+  }h
   *{margin:0;padding:0;box-sizing:border-box}
   body{background:var(--black);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
   body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,65,0.012) 2px,rgba(0,255,65,0.012) 4px);pointer-events:none;z-index:9999}
 
   .ticker-wrap{overflow:hidden;background:var(--green);padding:5px 0}
   .ticker-inner{display:flex;white-space:nowrap;animation:ticker 28s linear infinite;gap:4rem}
-  .ticker-item{font-family:'Space Mono',monospace;font-size:.62rem;font-weight:700;color:var(--black);letter-spacing:1px}
+  .ticker-item{font-family:'Space Mono',monospace;font-size:.62rem;font-weight:700;color:vahr(--black);letter-spacing:1px}
   @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
   nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;height:52px;background:rgba(0,0,0,.96);border-bottom:1px solid var(--border);backdrop-filter:blur(12px)}
@@ -465,7 +465,7 @@ async function connectWallet(){
 async function fetchBal(){
   if(!wpk)return;
   try{
-    const r=await fetch(RPCS[1],{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch(RPCS[0],{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getBalance',params:[wpk,{commitment:'confirmed'}]})});
     const d=await r.json();
     document.getElementById('wb2').textContent=((d?.result?.value||0)/1e9).toFixed(4);
