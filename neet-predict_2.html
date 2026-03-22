@@ -865,11 +865,13 @@ async function switchMarket(market){
     chart=null;cseries=null;
     initChart();
   } else {
-    const tvsym=TV_SYMBOLS[market];
-    el.innerHTML=`<iframe
-      src="https://s.tradingview.com/widgetembed/?frameElementId=tv&symbol=${tvsym}&interval=5&hidesidetoolbar=1&hidetoptoolbar=1&symboledit=0&saveimage=0&toolbarbg=060d06&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=0&showpopupbutton=0&locale=en&colorTheme=dark&backgroundColor=rgb%286%2C13%2C6%29"
-      style="width:100%;height:280px;border:none"
-      frameborder="0" allowtransparency="true" scrolling="no"></iframe>`;
+    // DexScreener pairs - works for all assets, no CSP issues
+    const DS={
+      BTC:'https://dexscreener.com/solana/4fuUiYxTQ6QCrdSq9ouBYcTM7bqSwYTSyLueGZLTy4T4',
+      SOL:'https://dexscreener.com/solana/83v8iPyZihDEjDdY8RdZddyZNyUtXngz69Lgo9Kt5d6Q',
+      HYPE:'https://dexscreener.com/hyperevm/0x1eaa1a100f4b1b4fc45d6aa5a36f972e99a3b5ce',
+    };
+    el.innerHTML=`<iframe src="${DS[market]}?embed=1&theme=dark&trades=0&info=0" style="width:100%;height:280px;border:none" frameborder="0"></iframe>`;
   }
   await fetchPx();
   ropx=cpx;
