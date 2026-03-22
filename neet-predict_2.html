@@ -498,9 +498,11 @@ async function fetchPx(){
           const fmt=px>=1000?'$'+px.toLocaleString('en-US',{maximumFractionDigits:2}):px>=1?'$'+px.toFixed(2):'$'+px.toFixed(4);
           document.getElementById('cp').textContent=fmt;
           document.getElementById('np').textContent=fmt;
+                    document.getElementById('cp2').textContent=fmt;
           document.getElementById('nc').textContent='';
           if(ropx>0){const d2=((px-ropx)/ropx)*100;const el=document.getElementById('db');el.style.opacity='1';el.textContent=(d2>=0?'▲ +':'▼ ')+Math.abs(d2).toFixed(3)+'%';el.className='dbadge '+(d2>=0?'up':'down');}
           updPay();
+                    updatePriceBeat();
         }
       }catch(e){console.warn('price fetch failed:',e.message);}
       return;
