@@ -368,7 +368,7 @@ const MARKET_CONFIG={
   HYPE:{label:'HYPE',  chain:'hyperliquid', gt:'hyperliquid/0x1eaa1a100f4b1b4fc45d6aa5a36f972e99a3b5ce'},
 };
 let activeMarket='NEET';
-let PAIR=MARKET_CONFIG.NEET.pair;
+let PAIR='5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy'; // NEET DexScreener pair
 
 let wpk=null,cpx=0,ropx=0,rnum=1,secs=RSEC,phase='open',seld=null,rtimer=null;
 let pool={up:0,dn:0,upN:0,dnN:0},myP=[],hist=[],chart=null,cseries=null,ctf=5;
@@ -405,15 +405,15 @@ function initChart(){
 }
 
 function showDexChart(){
-  // fallback: embed DexScreener iframe
+  // Fallback: show a placeholder with current price
   const el=document.getElementById('cc');
-  const dexPairs={NEET:`solana/${PAIR}`,BTC:'solana/4fuUiYxTQ6QCrdSq9ouBYcTM7bqSwYTSyLueGZLTy4T4',SOL:'solana/83v8iPyZihDEjDdY8RdZddyZNyUtXngz69Lgo9Kt5d6Q',HYPE:'hyperevm/0x1eaa1a100f4b1b4fc45d6aa5a36f972e99a3b5ce'};
-  el.innerHTML=`<iframe src="https://dexscreener.com/${dexPairs[activeMarket]||'solana/'+PAIR}?embed=1&theme=dark&trades=0&info=0"
-    style="width:100%;height:280px;border:none;" frameborder="0"></iframe>`;
+  el.innerHTML=`<div style="height:280px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:var(--mono);font-size:.8rem">chart loading...</div>`;
+  // Try reloading chart after delay
+  setTimeout(()=>{ if(chart&&cseries) loadChart(ctf); }, 1000);
 }
 
 async function loadChart(tf){
-  if(!chart||!cseries){showDexChart();return;}
+  if(!chart||!cseries){setTimeout(()=>loadChart(tf),300);return;}
   try{
     const agg=tf>=1440?1:tf>=60?1:tf;
     const per=tf>=1440?'day':tf>=60?'hour':'minute';
@@ -841,7 +841,7 @@ function showModal(title, html, color='green'){
 async function switchMarket(market){
   if(market===activeMarket)return;
   activeMarket=market;
-  PAIR=MARKET_CONFIG[market].pair;
+  PAIR=null; // market uses gt path now
   document.querySelectorAll('.mktab').forEach(b=>{
     b.classList.toggle('active', b.dataset.market===market);
   });
