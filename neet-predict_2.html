@@ -831,6 +831,7 @@ async function switchMarket(market){
 
 async function init(){
   await new Promise(r=>setTimeout(r,200));
+  preloadCharts();
   showChart(activeMarket);
   await fetchPx();
   ropx=cpx;
