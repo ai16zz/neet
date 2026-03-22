@@ -374,87 +374,29 @@ let wpk=null,cpx=0,ropx=0,rnum=1,secs=RSEC,phase='open',seld=null,rtimer=null;
 let pool={up:0,dn:0,upN:0,dnN:0},myP=[],hist=[],chart=null,cseries=null,ctf=5;
 
 // CHART
+// Chart URLs for each market - DexScreener embeds (reliable, no CORS issues)
+const CHART_EMBEDS={
+  NEET:'https://dexscreener.com/solana/5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy?embed=1&theme=dark&trades=0&info=0',
+  BTC: 'https://dexscreener.com/ethereum/0x4e68ccd3e89f51c3074ca5072bbac773960dfa36?embed=1&theme=dark&trades=0&info=0',
+  SOL: 'https://dexscreener.com/solana/83v8iPyZihDEjDdY8RdZddyZNyUtXngz69Lgo9Kt5d6Q?embed=1&theme=dark&trades=0&info=0',
+  HYPE:'https://dexscreener.com/hyperevm/0x1eaa1a100f4b1b4fc45d6aa5a36f972e99a3b5ce?embed=1&theme=dark&trades=0&info=0',
+};
+
 function initChart(){
   const el=document.getElementById('cc');
-  // ensure container has dimensions before init
   el.style.height='280px';
-  const w=el.offsetWidth||800;
-  try{
-    chart=LightweightCharts.createChart(el,{
-      layout:{background:{color:'#060d06'},textColor:'#4a7a4a'},
-      grid:{vertLines:{color:'rgba(0,255,65,0.05)'},horzLines:{color:'rgba(0,255,65,0.05)'}},
-      crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
-      rightPriceScale:{borderColor:'rgba(0,255,65,0.15)'},
-      timeScale:{borderColor:'rgba(0,255,65,0.15)',timeVisible:true,secondsVisible:false},
-      width:w,height:280
-    });
-    cseries=chart.addCandlestickSeries({
-      upColor:'#00ff41',downColor:'#ffffff',
-      borderUpColor:'#00ff41',borderDownColor:'#ffffff',
-      wickUpColor:'#00ff41',wickDownColor:'#aaaaaa'
-    });
-    window.addEventListener('resize',()=>{
-      const nw=el.offsetWidth;
-      if(nw>0)chart.applyOptions({width:nw});
-    });
-    loadChart(5);
-  }catch(e){
-    console.warn('Chart init failed:',e);
-    showDexChart();
-  }
+  const url=CHART_EMBEDS[activeMarket]||CHART_EMBEDS.NEET;
+  el.innerHTML=`<iframe src="${url}" style="width:100%;height:280px;border:none" frameborder="0" allowfullscreen></iframe>`;
 }
 
-function showDexChart(){
-  // Fallback: show a placeholder with current price
-  const el=document.getElementById('cc');
-  el.innerHTML=`<div style="height:280px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-family:var(--mono);font-size:.8rem">chart loading...</div>`;
-  // Try reloading chart after delay
-  setTimeout(()=>{ if(chart&&cseries) loadChart(ctf); }, 1000);
-}
-
-async function loadChart(tf){
-  if(!chart||!cseries){setTimeout(()=>loadChart(tf),300);return;}
-  try{
-    const agg=tf>=1440?1:tf>=60?1:tf;
-    const per=tf>=1440?'day':tf>=60?'hour':'minute';
-    const gtPath=MARKET_CONFIG[activeMarket]?.gt||`solana/${PAIR}`;
-    const url=`https://api.geckoterminal.com/api/v2/networks/${gtPath}/ohlcv/${per}?aggregate=${agg}&limit=200&currency=usd`;
-    const r=await fetch(url,{headers:{Accept:'application/json'}});
-    if(!r.ok)throw new Error('status '+r.status);
-    const d=await r.json();
-    const raw=d?.data?.attributes?.ohlcv_list||[];
-    if(!raw.length){showDexChart();return;}
-    const candles=raw.reverse().map(c=>({
-      time:Math.floor(c[0]),open:parseFloat(c[1]),high:parseFloat(c[2]),
-      low:parseFloat(c[3]),close:parseFloat(c[4])
-    })).filter(c=>c.open&&c.high&&c.low&&c.close);
-    if(candles.length){
-      cseries.setData(candles);
-      chart.timeScale().fitContent();
-      // fix width after data loads
-      const w=document.getElementById('cc').offsetWidth;
-      if(w>0)chart.applyOptions({width:w});
-    } else {
-      showDexChart();
-    }
-  }catch(e){
-    console.warn('chart data failed, using iframe fallback:',e);
-    showDexChart();
-  }
-}
+function showDexChart(){ initChart(); }
+function loadChart(tf){ initChart(); }
 
 function setTf(tf,btn){
   ctf=tf;
   document.querySelectorAll('.tfb').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  // if iframe is showing, switch back to lightweight charts
-  const el=document.getElementById('cc');
-  if(el.querySelector('iframe')){
-    el.innerHTML='';
-    initChart();
-  } else {
-    loadChart(tf);
-  }
+  initChart();
 }
 
 // WALLET
@@ -850,11 +792,7 @@ async function switchMarket(market){
   document.getElementById('ubb').classList.remove('sel');
   document.getElementById('dbb').classList.remove('sel');
   updPool();updPay();updBtn();
-  // Reinit lightweight-charts for every market (GeckoTerminal provides data for all)
-  const el=document.getElementById('cc');
-  el.innerHTML='';
-  el.style.height='280px';
-  chart=null; cseries=null;
+  // Load chart for new market
   initChart();
   await fetchPx();
   ropx=cpx;
