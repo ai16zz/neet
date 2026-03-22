@@ -389,9 +389,9 @@ function initChart(){
       width:w,height:280
     });
     cseries=chart.addCandlestickSeries({
-      upColor:'#00ff41',downColor:'#ff4444',
-      borderUpColor:'#00ff41',borderDownColor:'#ff4444',
-      wickUpColor:'#00ff41',wickDownColor:'#ff4444'
+      upColor:'#00ff41',downColor:'#ffffff',
+      borderUpColor:'#00ff41',borderDownColor:'#ffffff',
+      wickUpColor:'#00ff41',wickDownColor:'#aaaaaa'
     });
     window.addEventListener('resize',()=>{
       const nw=el.offsetWidth;
@@ -848,30 +848,28 @@ async function switchMarket(market){
   document.getElementById('ubb').classList.remove('sel');
   document.getElementById('dbb').classList.remove('sel');
   updPool();updPay();updBtn();
-  // Show appropriate chart
-  if(market==='NEET' && PAIR){
-    const el=document.getElementById('cc');
+  // Show chart for selected market
+  const CHART_URLS={
+    NEET:`https://dexscreener.com/solana/5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy?embed=1&theme=dark&trades=0&info=0`,
+    BTC:`https://dexscreener.com/token-screener/latest?type=trending&embed=1&theme=dark&trades=0&info=0`,
+    SOL:`https://dexscreener.com/solana?embed=1&theme=dark`,
+    HYPE:`https://dexscreener.com/hyperevm?embed=1&theme=dark`,
+  };
+  // Use TradingView iframe — most reliable cross-browser approach
+  const TV_SYMBOLS={NEET:null,BTC:'BINANCE%3ABTCUSDT',SOL:'BINANCE%3ASOLUSDT',HYPE:'BINANCE%3AHYPEUSDT'};
+  const el=document.getElementById('cc');
+  el.style.height='280px';
+  if(market==='NEET'){
+    // Reset lightweight chart for NEET
     el.innerHTML='';
+    chart=null;cseries=null;
     initChart();
   } else {
-    // For BTC/SOL/HYPE show TradingView advanced chart widget
-    const symbols={BTC:'BINANCE:BTCUSDT',SOL:'BINANCE:SOLUSDT',HYPE:'BINANCE:HYPEUSDT'};
-    const sym=symbols[market]||'BINANCE:BTCUSDT';
-    const el=document.getElementById('cc');
-    el.style.height='280px';
-    el.innerHTML=`<div class="tradingview-widget-container" style="height:280px;width:100%">
-      <div class="tradingview-widget-container__widget" style="height:280px;width:100%"></div>
-    </div>`;
-    const s=document.createElement('script');
-    s.src='https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
-    s.async=true;
-    s.textContent=JSON.stringify({
-      autosize:true,height:280,symbol:sym,interval:'5',
-      timezone:'Etc/UTC',theme:'dark',style:'1',locale:'en',
-      backgroundColor:'rgba(6,13,6,1)',hide_top_toolbar:true,
-      hide_legend:true,hide_side_toolbar:true,allow_symbol_change:false
-    });
-    el.querySelector('.tradingview-widget-container').appendChild(s);
+    const tvsym=TV_SYMBOLS[market];
+    el.innerHTML=`<iframe
+      src="https://s.tradingview.com/widgetembed/?frameElementId=tv&symbol=${tvsym}&interval=5&hidesidetoolbar=1&hidetoptoolbar=1&symboledit=0&saveimage=0&toolbarbg=060d06&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC&withdateranges=0&showpopupbutton=0&locale=en&colorTheme=dark&backgroundColor=rgb%286%2C13%2C6%29"
+      style="width:100%;height:280px;border:none"
+      frameborder="0" allowtransparency="true" scrolling="no"></iframe>`;
   }
   await fetchPx();
   ropx=cpx;
