@@ -696,7 +696,6 @@ function rendPos(){
 }
 
 async function exitBet(betId, btn){
-  if(!confirm('Sell this position early?\n\nYou\'ll receive the current odds value minus 3% fee.')) return;
   if(btn){btn.textContent='...';btn.disabled=true;}
   try{
     const res=await fetch(`${API_URL}/exit`,{
