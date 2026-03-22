@@ -792,7 +792,8 @@ function showModal(title, html, color='green'){
   document.getElementById('txtt').textContent=title;
   document.getElementById('txtt').style.color=c;
   document.getElementById('txmg').innerHTML=html;
-  document.getElementById('txcl').style.cssText='display:;background:'+c;
+  const cl=document.getElementById('txcl');
+  if(cl){cl.style.display='';cl.style.background=c;}
   document.getElementById('txm').classList.add('show');
 }
 
