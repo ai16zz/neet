@@ -723,7 +723,6 @@ async function exitBet(betId, btn){
 
 async function doExit(betId, btn){
   document.getElementById('txcl').style.display='';
-  const btn=document.querySelector('.exitbtn');
   if(btn){btn.textContent='...';btn.disabled=true;}
   try{
     const res=await fetch(`${API_URL}/exit`,{
