@@ -375,26 +375,38 @@ let pool={up:0,dn:0,upN:0,dnN:0},myP=[],hist=[],chart=null,cseries=null,ctf=5;
 
 // CHART
 // Chart URLs for each market - DexScreener embeds (reliable, no CORS issues)
-const TV_BASE="https://s.tradingview.com/widgetembed/?interval=5&theme=dark&style=1&locale=en&hide_top_toolbar=0&hide_legend=0&hide_side_toolbar=1&allow_symbol_change=0&save_image=0&calendar=0&show_popup_button=0&no_referral_id=1";
+const TV_BASE="https://s.tradingview.com/widgetembed/?interval=5&theme=dark&style=1&locale=en&hide_top_toolbar=0&hide_side_toolbar=1&allow_symbol_change=0&save_image=0&no_referral_id=1";
 const CHART_EMBEDS={
   NEET:'https://dexscreener.com/solana/5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy?embed=1&theme=dark&trades=0&info=0',
   BTC: TV_BASE+'&symbol=BINANCE:BTCUSDT',
   SOL: TV_BASE+'&symbol=BINANCE:SOLUSDT',
-  HYPE:TV_BASE+'&symbol=BINANCE:HYPEUSDT',
+  HYPE:TV_BASE+'&symbol=BYBIT:HYPEUSDT',
 };
 
 function initChart(){
   const cc=document.getElementById('cc');
   cc.style.height='280px';
-  // Remove old iframe completely to prevent caching
-  while(cc.firstChild) cc.removeChild(cc.firstChild);
-  const url=CHART_EMBEDS[activeMarket]||CHART_EMBEDS.NEET;
-  const sep=url.includes('?')?'&':'?';
-  const frame=document.createElement('iframe');
-  frame.src=url+sep+'_t='+Date.now();
-  frame.style.cssText='width:100%;height:280px;border:none;display:block';
-  frame.setAttribute('frameborder','0');
-  cc.appendChild(frame);
+  // Show preloaded iframe for active market, hide others
+  Object.keys(CHART_EMBEDS).forEach(mkt=>{
+    const f=document.getElementById('chart_'+mkt);
+    if(f) f.style.display = mkt===activeMarket ? 'block' : 'none';
+  });
+}
+
+function preloadCharts(){
+  const cc=document.getElementById('cc');
+  cc.style.height='280px';
+  Object.keys(CHART_EMBEDS).forEach(mkt=>{
+    if(document.getElementById('chart_'+mkt)) return;
+    const url=CHART_EMBEDS[mkt];
+    const sep=url.includes('?')?'&':'?';
+    const frame=document.createElement('iframe');
+    frame.id='chart_'+mkt;
+    frame.src=url+sep+'_t='+Date.now();
+    frame.style.cssText='width:100%;height:280px;border:none;display:'+(mkt===activeMarket?'block':'none');
+    frame.setAttribute('frameborder','0');
+    cc.appendChild(frame);
+  });
 }
 
 function showDexChart(){ initChart(); }
@@ -800,11 +812,7 @@ async function switchMarket(market){
   document.getElementById('ubb').classList.remove('sel');
   document.getElementById('dbb').classList.remove('sel');
   updPool();updPay();updBtn();
-  // Clear old chart then load new one
-  const _cc=document.getElementById('cc');
-  _cc.innerHTML='';
-  await new Promise(r=>setTimeout(r,50));
-  initChart();
+  initChart(); // show/hide preloaded iframes instantly
   await fetchPx();
   ropx=cpx;
   document.getElementById('op').textContent=fmtP(cpx);
@@ -813,7 +821,7 @@ async function switchMarket(market){
 
 async function init(){
   await new Promise(r=>setTimeout(r,200));
-  initChart();
+  preloadCharts();
   await fetchPx();
   ropx=cpx;
   document.getElementById('op').textContent=fmtP(cpx);
