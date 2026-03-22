@@ -78,7 +78,7 @@
   .tfb{font-family:'Space Mono',monospace;font-size:.6rem;padding:4px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .15s}
   .tfb.active{background:var(--green);color:var(--black);border-color:var(--green);font-weight:700}
   .tfb:hover:not(.active){border-color:rgba(0,255,65,.4);color:var(--green)}
-  #cc{height:280px;background:var(--card)}
+  #cc{height:420px;overflow:hidden;background:var(--card)}
 
   .hist-sec{padding:1.2rem 1.5rem;overflow-y:auto;max-height:240px}
   .htag{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--green);letter-spacing:3px;opacity:.7;margin-bottom:.75rem}
@@ -219,7 +219,7 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
   <button class="mktab" data-market="SOL" onclick="switchMarket('SOL')">$SOL</button>
   <button class="mktab" data-market="HYPE" onclick="switchMarket('HYPE')">$HYPE</button>
 </div>
-<div class="rtag">// CURRENT_ROUND</div>
+<div class="rtag" style="display:none">// CURRENT_ROUND</div>
         <div class="rnum">ROUND <span id="rn">#001</span></div>
         <div class="rdesc">
           will $NEET be higher or lower in 5 minutes?<br>
@@ -259,7 +259,7 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
         <span style="color:var(--down)" id="bp2">50%</span>
       </div>
       <div class="pstats">
-        <div class="ps"><span class="psv" style="color:var(--up)" id="sun">0</span><span class="psl">UP BETTORS</span></div>
+        <div class="ps"><span class="psv" style="color:var(--up)" id="sun">0</span><span class="psl" style="display:none">UP BETTORS</span></div>
         <div class="ps"><span class="psv" style="color:var(--green)" id="vol_total">0.000</span><span class="psl">POOL SOL</span></div>
         <div class="ps"><span class="psv" style="color:var(--down)" id="sdn">0</span><span class="psl">DOWN BETTORS</span></div>
       </div>
@@ -276,7 +276,7 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
           <button class="tfb" onclick="setTf(1440,this)">1D</button>
         </div>
       </div>
-      <div id="chart_preload" style="position:fixed;left:-9999px;top:0;width:980px;height:280px;overflow:hidden;pointer-events:none;visibility:hidden"></div>
+      <div id="chart_preload" style="position:fixed;left:-9999px;top:0;width:980px;height:450px;overflow:hidden;pointer-events:none;visibility:hidden"></div>
       <div id="cc"></div>
     </div>
 
@@ -403,7 +403,7 @@ function preloadCharts(){
     f.id = 'chart_'+mkt;
     f.src = url + sep + '_t=' + ts;
     const show = mkt === activeMarket;
-    f.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:280px;border:none;'
+    f.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:450px;border:none;'
       + (show ? 'z-index:2;opacity:1;pointer-events:auto' : 'z-index:1;opacity:0;pointer-events:none');
     f.setAttribute('frameborder','0');
     cc.appendChild(f);
