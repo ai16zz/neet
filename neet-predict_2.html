@@ -812,7 +812,11 @@ async function switchMarket(market){
   document.getElementById('ubb').classList.remove('sel');
   document.getElementById('dbb').classList.remove('sel');
   updPool();updPay();updBtn();
-  initChart(); // show/hide preloaded iframes instantly
+  // Directly toggle iframes - don't rely on initChart
+  Object.keys(CHART_EMBEDS).forEach(mkt=>{
+    const f=document.getElementById('chart_'+mkt);
+    if(f) f.style.cssText='width:100%;height:280px;border:none;display:'+(mkt===market?'block':'none');
+  });
   await fetchPx();
   ropx=cpx;
   document.getElementById('op').textContent=fmtP(cpx);
