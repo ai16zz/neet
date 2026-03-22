@@ -793,7 +793,10 @@ async function switchMarket(market){
   document.getElementById('ubb').classList.remove('sel');
   document.getElementById('dbb').classList.remove('sel');
   updPool();updPay();updBtn();
-  // Load chart for new market
+  // Clear old chart then load new one
+  const _cc=document.getElementById('cc');
+  _cc.innerHTML='';
+  await new Promise(r=>setTimeout(r,50));
   initChart();
   await fetchPx();
   ropx=cpx;
