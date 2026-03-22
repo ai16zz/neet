@@ -465,7 +465,7 @@ async function connectWallet(){
 async function fetchBal(){
   if(!wpk)return;
   try{
-    const r=await fetch(RPCS[0],{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch(RPCS[1],{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getBalance',params:[wpk,{commitment:'confirmed'}]})});
     const d=await r.json();
     document.getElementById('wb2').textContent=((d?.result?.value||0)/1e9).toFixed(4);
@@ -862,7 +862,7 @@ async function init(){
     if(!wpk && attempts++ < 5) setTimeout(trySyncWithWallet, 1000);
   };
   setTimeout(trySyncWithWallet, 500);
-  setInterval(syncRound, 10000);
+  setInterval(syncRound, 10000); setInterval(fetchBal, 30000);
 }
 init();
 </script>
