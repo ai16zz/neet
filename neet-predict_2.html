@@ -238,13 +238,22 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
         <div class="pbig" id="cp">$——</div>
         <div class="plbl">$NEET/USD · live · dexscreener</div>
       </div>
-      <div class="pmeta">
+      <div class="pmeta" style="flex-direction:column;align-items:flex-end;gap:.4rem">
         <div id="db" class="dbadge up" style="opacity:0">——</div>
-        <div class="otag">
-          <span class="ol">ROUND OPEN PRICE</span>
-          <span class="ov" id="op">——</span>
-        </div>
       </div>
+    </div>
+    <div style="padding:.6rem 1.5rem;background:rgba(0,255,65,0.04);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">
+      <div>
+        <div style="font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted);letter-spacing:2px;margin-bottom:.15rem">PRICE TO BEAT</div>
+        <div id="op" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--text);line-height:1">——</div>
+      </div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--muted)">VS</div>
+      <div>
+        <div style="font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted);letter-spacing:2px;margin-bottom:.15rem">NOW</div>
+        <div id="cp2" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1">——</div>
+      </div>
+      <div id="ptb-pill" style="display:none;padding:3px 10px;font-family:'Space Mono',monospace;font-size:.65rem;font-weight:700;border-radius:2px"></div>
+      <div style="flex:1;text-align:right;font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted)" id="ptb-hint"></div>
     </div>
 
     <div class="pool-sec">
@@ -517,6 +526,7 @@ async function fetchPx(){
     cpx=px;if(!ropx)ropx=px;
     const fmt=px<0.000001?'$'+px.toExponential(3):'$'+px.toFixed(px<0.01?8:6);
     document.getElementById('cp').textContent=fmt;
+    document.getElementById('cp2').textContent=fmt;
     document.getElementById('np').textContent=fmt;
     document.getElementById('nc').textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';
     document.getElementById('nc').style.color=chg>=0?'var(--green)':'var(--red)';
@@ -527,7 +537,43 @@ async function fetchPx(){
       el.className='dbadge '+(d2>=0?'up':'down');
     }
     updPay();
+    updatePriceBeat();
   }catch(e){console.warn('px:',e);}
+}
+
+// ── PRICE TO BEAT: live delta + colour pill ──
+function updatePriceBeat(){
+  if(!ropx||!cpx)return;
+  const delta=cpx-ropx;
+  const pct=((delta/ropx)*100);
+  const pill=document.getElementById('ptb-pill');
+  const hint=document.getElementById('ptb-hint');
+  if(!pill)return;
+  // Format delta
+  const absDelta=Math.abs(delta);
+  const sign=delta>=0?'+':'-';
+  const fmtDelta=sign+(absDelta<0.000001?absDelta.toExponential(2):absDelta<0.01?absDelta.toFixed(8):absDelta.toFixed(absDelta<1?6:2));
+  const fmtPct=(delta>=0?'+':'')+pct.toFixed(3)+'%';
+  pill.style.display='block';
+  if(delta>0){
+    pill.textContent='▲ '+fmtDelta+' ('+fmtPct+')';
+    pill.style.background='rgba(0,255,65,.12)';
+    pill.style.color='var(--up)';
+    pill.style.border='1px solid rgba(0,255,65,.3)';
+    if(hint) hint.textContent='UP is currently winning · '+Math.abs(pct).toFixed(2)+'% above open';
+  } else if(delta<0){
+    pill.textContent='▼ '+fmtDelta+' ('+fmtPct+')';
+    pill.style.background='rgba(255,68,68,.12)';
+    pill.style.color='var(--down)';
+    pill.style.border='1px solid rgba(255,68,68,.3)';
+    if(hint) hint.textContent='DOWN is currently winning · '+Math.abs(pct).toFixed(2)+'% below open';
+  } else {
+    pill.textContent='— FLAT';
+    pill.style.background='transparent';
+    pill.style.color='var(--muted)';
+    pill.style.border='1px solid var(--border)';
+    if(hint) hint.textContent='at open price · no winner yet';
+  }
 }
 
 // TIMER
