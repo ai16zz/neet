@@ -374,7 +374,6 @@ let wpk=null,cpx=0,ropx=0,rnum=1,secs=RSEC,phase='open',seld=null,rtimer=null;
 let pool={up:0,dn:0,upN:0,dnN:0},myP=[],hist=[],chart=null,cseries=null,ctf=5;
 
 // CHART
-// Chart URLs for each market - DexScreener embeds (reliable, no CORS issues)
 const TV_BASE="https://s.tradingview.com/widgetembed/?interval=5&theme=dark&style=1&locale=en&hide_top_toolbar=0&hide_side_toolbar=1&allow_symbol_change=0&save_image=0&no_referral_id=1";
 const CHART_EMBEDS={
   NEET:'https://dexscreener.com/solana/5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy?embed=1&theme=dark&trades=0&info=0',
@@ -383,34 +382,26 @@ const CHART_EMBEDS={
   HYPE:TV_BASE+'&symbol=BYBIT:HYPEUSDT',
 };
 
-function initChart(){
+function showChart(market){
   const cc=document.getElementById('cc');
   cc.style.height='280px';
-  // Show preloaded iframe for active market, hide others
-  Object.keys(CHART_EMBEDS).forEach(mkt=>{
-    const f=document.getElementById('chart_'+mkt);
-    if(f) f.style.display = mkt===activeMarket ? 'block' : 'none';
-  });
+  // Remove existing iframe
+  const old=cc.querySelector('iframe');
+  if(old) cc.removeChild(old);
+  // Create fresh iframe for this market
+  const url=CHART_EMBEDS[market]||CHART_EMBEDS.NEET;
+  const sep=url.includes('?')?'&':'?';
+  const f=document.createElement('iframe');
+  f.src=url+sep+'_t='+Date.now();
+  f.style.cssText='width:100%;height:280px;border:none;display:block';
+  f.setAttribute('frameborder','0');
+  cc.appendChild(f);
 }
 
-function preloadCharts(){
-  const cc=document.getElementById('cc');
-  cc.style.height='280px';
-  Object.keys(CHART_EMBEDS).forEach(mkt=>{
-    if(document.getElementById('chart_'+mkt)) return;
-    const url=CHART_EMBEDS[mkt];
-    const sep=url.includes('?')?'&':'?';
-    const frame=document.createElement('iframe');
-    frame.id='chart_'+mkt;
-    frame.src=url+sep+'_t='+Date.now();
-    frame.style.cssText='width:100%;height:280px;border:none;display:'+(mkt===activeMarket?'block':'none');
-    frame.setAttribute('frameborder','0');
-    cc.appendChild(frame);
-  });
-}
-
-function showDexChart(){ initChart(); }
-function loadChart(tf){ initChart(); }
+function initChart(){ showChart(activeMarket); }
+function preloadCharts(){ showChart(activeMarket); }
+function showDexChart(){ showChart(activeMarket); }
+function loadChart(tf){ /* no-op, chart is always current */ }
 
 function setTf(tf,btn){
   ctf=tf;
@@ -825,7 +816,7 @@ async function switchMarket(market){
 
 async function init(){
   await new Promise(r=>setTimeout(r,200));
-  preloadCharts();
+  showChart(activeMarket);
   await fetchPx();
   ropx=cpx;
   document.getElementById('op').textContent=fmtP(cpx);
