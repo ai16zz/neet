@@ -317,7 +317,7 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
         <input type="number" class="ainp" id="ba" placeholder="0.00" min="0.05" step="0.01" oninput="updPay()">
       </div>
       <div class="mnote">minimum: 0.05 SOL</div>
-<div id="onesided-warn" style="display:none;font-family:'Space Mono',monospace;font-size:.56rem;color:#ffaa00;background:rgba(255,170,0,.08);border:1px solid rgba(255,170,0,.25);padding:6px 10px;margin-bottom:.6rem;line-height:1.5">⚠ no bets on opposite side<br>win = 0.97x refund (fee deducted)</div>
+<div id="onesided-warn" style="display:none;font-family:'Space Mono',monospace;font-size:.56rem;color:#ffaa00;background:rgba(255,170,0,.08);border:1px solid rgba(255,170,0,.25);padding:6px 10px;margin-bottom:.6rem;line-height:1.5">⚠ be first — odds grow as opposing bets come in<br>payout = your share of the losing side pool</div>
       <div class="qarow">
         <button class="qa" onclick="setA(0.05)">0.05</button>
         <button class="qa" onclick="setA(0.1)">0.1</button>
@@ -605,22 +605,30 @@ function setA(v){document.getElementById('ba').value=v;updPay();updBtn();}
 function updPay(){
   const amt=parseFloat(document.getElementById('ba').value)||0;
   if(!amt||!seld){['ppb','ppf','ppm','ppo'].forEach(i=>document.getElementById(i).textContent='—');return;}
+  const oppPool=seld==='up'?pool.dn:pool.up;
   const myPool=seld==='up'?pool.up+amt:pool.dn+amt;
   const tot=pool.up+pool.dn+amt;
+  const fee=(amt*FEE).toFixed(4);
+  const oneSidedWarn=document.getElementById('onesided-warn');
+  if(oppPool===0){
+    // No opposing bets yet — show helpful message instead of misleading 0.97x
+    if(oneSidedWarn) oneSidedWarn.style.display='block';
+    document.getElementById('ppb').textContent=amt.toFixed(3)+' SOL';
+    document.getElementById('ppf').textContent=fee+' SOL (pool)';
+    document.getElementById('ppm').textContent='live';
+    document.getElementById('ppo').textContent='grows as pool fills';
+    return;
+  }
+  if(oneSidedWarn) oneSidedWarn.style.display='none';
   const multi=myPool>0?((tot*(1-FEE))/myPool).toFixed(2):'2.00';
-  const fee=(tot*FEE).toFixed(4);
   const pout=(amt*parseFloat(multi)).toFixed(3);
-  // One-sided pool warning
-  const oppPool = seld==='up' ? pool.dn : pool.up;
-  const oneSidedWarn = document.getElementById('onesided-warn');
-  if(oneSidedWarn) oneSidedWarn.style.display = (oppPool===0 && (pool.up+pool.dn)>0) ? 'block' : 'none';
   document.getElementById('ppb').textContent=amt.toFixed(3)+' SOL';
-  document.getElementById('ppf').textContent=fee+' SOL (pool)';
+  document.getElementById('ppf').textContent=(tot*FEE).toFixed(4)+' SOL (pool)';
   document.getElementById('ppm').textContent=multi+'x';
   document.getElementById('ppo').textContent=pout+' SOL';
   const up2=pool.up+(seld==='up'?amt:0),dn2=pool.dn+(seld==='down'?amt:0),t2=up2+dn2;
-  document.getElementById('uo').textContent=t2>0&&up2>0?((t2*.99)/up2).toFixed(2)+'x':'—x';
-  document.getElementById('ddo').textContent=t2>0&&dn2>0?((t2*.99)/dn2).toFixed(2)+'x':'—x';
+  document.getElementById('uo').textContent=(t2>0&&up2>0&&dn2>0)?((t2*.99)/up2).toFixed(2)+'x':'—x';
+  document.getElementById('ddo').textContent=(t2>0&&dn2>0&&up2>0)?((t2*.99)/dn2).toFixed(2)+'x':'—x';
   updBtn();
 }
 function updBtn(){
