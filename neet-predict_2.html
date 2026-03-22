@@ -850,22 +850,13 @@ async function switchMarket(market){
   updPool();updPay();updBtn();
   // Show chart for selected market
   const CHART_URLS={
-    NEET:`https://dexscreener.com/solana/5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy?embed=1&theme=dark&trades=0&info=0`,
-    BTC:`https://dexscreener.com/token-screener/latest?type=trending&embed=1&theme=dark&trades=0&info=0`,
-    SOL:`https://dexscreener.com/solana?embed=1&theme=dark`,
-    HYPE:`https://dexscreener.com/hyperevm?embed=1&theme=dark`,
+    // chart urls defined below
   };
-  // Use TradingView iframe — most reliable cross-browser approach
-  const TV_SYMBOLS={NEET:null,BTC:'BINANCE%3ABTCUSDT',SOL:'BINANCE%3ASOLUSDT',HYPE:'BINANCE%3AHYPEUSDT'};
   const el=document.getElementById('cc');
   el.style.height='280px';
   if(market==='NEET'){
-    // Reset lightweight chart for NEET
-    el.innerHTML='';
-    chart=null;cseries=null;
-    initChart();
+    el.innerHTML=''; chart=null; cseries=null; initChart();
   } else {
-    // DexScreener pairs - works for all assets, no CSP issues
     const DS={
       BTC:'https://dexscreener.com/solana/4fuUiYxTQ6QCrdSq9ouBYcTM7bqSwYTSyLueGZLTy4T4',
       SOL:'https://dexscreener.com/solana/83v8iPyZihDEjDdY8RdZddyZNyUtXngz69Lgo9Kt5d6Q',
