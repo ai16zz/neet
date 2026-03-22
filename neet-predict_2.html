@@ -142,7 +142,12 @@
 
   .pos-sec{padding:1.2rem 1.5rem;border-bottom:1px solid var(--border)}
   .postag{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--green);letter-spacing:3px;opacity:.7;margin-bottom:.75rem}
-  .exitbtn{background:transparent;border:1px solid var(--muted);color:var(--muted);font-family:var(--mono);font-size:0.65rem;padding:2px 6px;cursor:pointer;letter-spacing:.05em;margin-left:4px;}
+  .mktabs{display:flex;gap:4px;margin:0 1.5rem 1rem;padding:0}
+.mktab{font-family:var(--mono);font-size:.65rem;font-weight:700;padding:6px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;letter-spacing:.05em;transition:all .15s}
+.mktab.active{background:var(--green);color:#000;border-color:var(--green)}
+.mktab:hover:not(.active){border-color:var(--green);color:var(--green)}
+#mktlabel{font-family:var(--bebas);font-size:1.1rem;color:var(--green);letter-spacing:.1em}
+.exitbtn{background:transparent;border:1px solid var(--muted);color:var(--muted);font-family:var(--mono);font-size:0.65rem;padding:2px 6px;cursor:pointer;letter-spacing:.05em;margin-left:4px;}
 .exitbtn:hover{border-color:var(--red);color:var(--red);}
 font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align:center;padding:.75rem 0}
   .posc{background:var(--card2);border:1px solid var(--border);padding:8px 11px;margin-bottom:3px;font-family:'Space Mono',monospace;font-size:.58rem;display:grid;grid-template-columns:auto 1fr auto auto;gap:.5rem;align-items:center}
@@ -202,7 +207,13 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
 
     <div class="round-hdr">
       <div>
-        <div class="rtag">// CURRENT_ROUND</div>
+        <div class="mktabs">
+  <button class="mktab active" data-market="NEET" onclick="switchMarket('NEET')">$NEET</button>
+  <button class="mktab" data-market="BTC" onclick="switchMarket('BTC')">BTC</button>
+  <button class="mktab" data-market="SOL" onclick="switchMarket('SOL')">SOL</button>
+  <button class="mktab" data-market="HYPE" onclick="switchMarket('HYPE')">HYPE</button>
+</div>
+<div class="rtag">// CURRENT_ROUND</div>
         <div class="rnum">ROUND <span id="rn">#001</span></div>
         <div class="rdesc">
           will $NEET be higher or lower in 5 minutes?<br>
@@ -346,11 +357,18 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
 
 <script>
 const NEET_CA='Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
-const PAIR='5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy';
 const RSEC=300,FEE=.03,MINB=.05;
 const API_URL='https://neet-predict-backend.onrender.com';
 const TREASURY='DVjhpStJD6UKGM6EfSXBtp5n6wayiPttRYms2cXBN7JM';
-const RPCS=['https://api.mainnet-beta.solana.com','https://solana-rpc.publicnode.com','https://rpc.helius.xyz/?api-key='];
+const RPCS=['https://api.mainnet-beta.solana.com','https://solana-rpc.publicnode.com'];
+const MARKET_CONFIG={
+  NEET:{label:'$NEET',pair:'5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy',chain:'solana'},
+  BTC: {label:'Bitcoin',pair:null,chain:null},
+  SOL: {label:'Solana', pair:null,chain:null},
+  HYPE:{label:'HYPE',  pair:null,chain:null},
+};
+let activeMarket='NEET';
+let PAIR=MARKET_CONFIG.NEET.pair;
 
 let wpk=null,cpx=0,ropx=0,rnum=1,secs=RSEC,phase='open',seld=null,rtimer=null;
 let pool={up:0,dn:0,upN:0,dnN:0},myP=[],hist=[],chart=null,cseries=null,ctf=5;
@@ -477,6 +495,21 @@ async function fetchBal(){
 // PRICE
 async function fetchPx(){
   try{
+    // For non-NEET markets, get price from backend
+    if(activeMarket!=='NEET'){
+      const pr=await fetch(`${API_URL}/price?market=${activeMarket}`);
+      const pd=await pr.json();
+      if(pd.price){
+        cpx=pd.price;if(!ropx)ropx=cpx;
+        const fmt=cpx<0.01?'$'+cpx.toFixed(4):'$'+cpx.toLocaleString('en-US',{maximumFractionDigits:2});
+        document.getElementById('cp').textContent=fmt;
+        document.getElementById('np').textContent=fmt;
+        document.getElementById('nc').textContent='';
+        if(ropx>0){const d2=((cpx-ropx)/ropx)*100;const el=document.getElementById('db');el.style.opacity='1';el.textContent=(d2>=0?'▲ +':'▼ ')+Math.abs(d2).toFixed(3)+'%';el.className='dbadge '+(d2>=0?'up':'down');}
+        updPay();
+      }
+      return;
+    }
     const r=await fetch(`https://api.dexscreener.com/latest/dex/tokens/${NEET_CA}`);
     const d=await r.json();
     const pair=d?.pairs?.find(p=>p.chainId==='solana')||d?.pairs?.[0];
@@ -621,7 +654,7 @@ async function placeBet(){
     // Register bet with backend
     const res=await fetch(`${API_URL}/bet`,{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({wallet:wpk,direction:seld.toUpperCase(),amount:amt,tx_sig:txSig})
+      body:JSON.stringify({wallet:wpk,direction:seld.toUpperCase(),amount:amt,tx_sig:txSig,market:activeMarket})
     });
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Backend error');
@@ -734,7 +767,7 @@ function fmtP(p){if(!p)return'——';return p<0.000001?'$'+p.toExponential(2):'
 // ── Backend sync ──────────────────────────────────────────
 async function syncRound(){
   try{
-    const res=await fetch(`${API_URL}/round/current`);
+    const res=await fetch(`${API_URL}/round/current?market=${activeMarket}`);
     const {round}=await res.json();
     if(!round)return;
     // Update pool display from backend
@@ -749,7 +782,7 @@ async function syncRound(){
     document.getElementById('srn').textContent=rnum;
     updPool();
     // Update history from backend
-    const hres=await fetch(`${API_URL}/rounds/history`);
+    const hres=await fetch(`${API_URL}/rounds/history?market=${activeMarket}`);
     const {rounds}=await hres.json();
     if(rounds&&rounds.length){
       hist=rounds.map(r=>({
@@ -794,6 +827,31 @@ function showModal(title, html, color='green'){
   const cl=document.getElementById('txcl');
   if(cl){cl.style.display='';cl.style.background=c;}
   document.getElementById('txm').classList.add('show');
+}
+
+
+// ── Market switcher ───────────────────────────────────────
+async function switchMarket(market){
+  if(market===activeMarket)return;
+  activeMarket=market;
+  PAIR=MARKET_CONFIG[market].pair;
+  // Update tab UI
+  document.querySelectorAll('.mktab').forEach(b=>{
+    b.classList.toggle('active', b.dataset.market===market);
+  });
+  // Update title
+  document.getElementById('mktlabel').textContent=MARKET_CONFIG[market].label+' 5MIN';
+  // Reset state
+  pool={up:0,dn:0,upN:0,dnN:0};hist=[];myP=[];seld=null;
+  document.getElementById('ubb').classList.remove('sel');
+  document.getElementById('dbb').classList.remove('sel');
+  ropx=0;
+  // Reload
+  await fetchPx();
+  ropx=cpx;
+  document.getElementById('op').textContent=fmtP(cpx);
+  if(PAIR) loadChart(ctf); else showDexChart();
+  await syncRound();
 }
 
 async function init(){
