@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+h<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"><!-- v45ec4ee -->
@@ -19,7 +19,7 @@
   body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,65,0.012) 2px,rgba(0,255,65,0.012) 4px);pointer-events:none;z-index:9999}
 
   .ticker-wrap{overflow:hidden;background:var(--green);padding:5px 0}
-  .ticker-inner{display:flex;white-space:nowrap;animation:ticker 28s linear infinite;gap:4rem}
+  .ticker-inner{display:flex;white-space:nowrap;animation:ticker 28s linear infinite;gaph:4rem}
   .ticker-item{font-family:'Space Mono',monospace;font-size:.62rem;font-weight:700;color:vahr(--black);letter-spacing:1px}
   @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
@@ -35,12 +35,12 @@
   .wbtn:hover{box-shadow:0 0 20px var(--green)}
   .wbtn.connected{background:var(--green-dim)}
 
-  .page{display:grid;grid-template-columns:1fr 360px;min-height:calc(100vh - 77px)}
+  .page{display:grid;grid-template-columns:1fr 360px}
   .left{border-right:1px solid var(--border);display:flex;flex-direction:column}
 
   .round-hdr{padding:1.5rem;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:start}
   .rtag{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--green);letter-spacing:3px;opacity:.7;margin-bottom:.3rem}
-  .rnum{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;line-height:1;color:var(--text)}
+  .rnum{display:none}
   .rnum span{color:var(--green);text-shadow:0 0 20px var(--green)}
   .rdesc{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);margin-top:.3rem;line-height:1.5}
   .tblock{text-align:right}
@@ -66,7 +66,7 @@
   .bwrap{height:10px;background:rgba(255,68,68,.25);border-radius:2px;overflow:hidden}
   .bup{height:100%;background:var(--green);border-radius:2px;transition:width .5s ease}
   .bpcts{display:flex;justify-content:space-between;margin-top:3px;font-family:'Space Mono',monospace;font-size:.55rem}
-  .pstats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-top:.75rem}
+  .pstats{display:grid;grid-template-columns:1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:.75rem}
   .ps{background:var(--card);padding:.6rem;text-align:center}
   .psv{font-family:'Space Mono',monospace;font-size:.85rem;font-weight:700;display:block}
   .psl{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--muted);letter-spacing:1px;margin-top:1px;display:block}
@@ -157,7 +157,7 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
 
   .demo{margin:1rem 1.5rem;padding:10px;background:rgba(255,170,0,.05);border:1px solid rgba(255,170,0,.2);font-family:'Space Mono',monospace;font-size:.56rem;color:rgba(255,170,0,.8);line-height:1.6;text-align:center}
 
-  .bbar{padding:.9rem 1.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted)}
+  .bbar{display:none}
 
   .rfl{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1000;padding:2rem 3rem;font-family:'Bebas Neue',sans-serif;font-size:4rem;letter-spacing:3px;text-align:center;pointer-events:none;opacity:0;transition:opacity .3s}
   .rfl.show{opacity:1}
@@ -259,9 +259,9 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
         <span style="color:var(--down)" id="bp2">50%</span>
       </div>
       <div class="pstats">
-        <div class="ps"><span class="psv" style="color:var(--up)" id="sun">0</span><span class="psl" style="display:none">UP BETTORS</span></div>
+        <div class="ps" style="display:none"><span class="psv" style="color:var(--up)" id="sun">0</span><span class="psl">UP BETTORS</span></div>
         <div class="ps"><span class="psv" style="color:var(--green)" id="vol_total">0.000</span><span class="psl">POOL SOL</span></div>
-        <div class="ps"><span class="psv" style="color:var(--down)" id="sdn">0</span><span class="psl">DOWN BETTORS</span></div>
+        <div class="ps" style="display:none"><span class="psv" style="color:var(--down)" id="sdn">0</span><span class="psl">DOWN BETTORS</span></div>
       </div>
     </div>
 
@@ -393,7 +393,7 @@ const CHART_EMBEDS={
 // Switching = CSS only (z-index + visibility). Never move iframes = no reload.
 function preloadCharts(){
   const cc = document.getElementById('cc');
-  cc.style.cssText = 'position:relative;height:280px;overflow:hidden';
+  cc.style.cssText = 'position:relative;height:420px;overflow:hidden';
   const ts = Date.now();
   Object.keys(CHART_EMBEDS).forEach(mkt=>{
     if(document.getElementById('chart_'+mkt)) return;
