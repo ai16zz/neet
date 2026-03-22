@@ -495,19 +495,24 @@ async function fetchBal(){
 // PRICE
 async function fetchPx(){
   try{
-    // For non-NEET markets, get price from backend
+    // For non-NEET markets, fetch price directly from browser (Render blocks external APIs)
     if(activeMarket!=='NEET'){
-      const pr=await fetch(`${API_URL}/price?market=${activeMarket}`);
-      const pd=await pr.json();
-      if(pd.price){
-        cpx=pd.price;if(!ropx)ropx=cpx;
-        const fmt=cpx<0.01?'$'+cpx.toFixed(4):'$'+cpx.toLocaleString('en-US',{maximumFractionDigits:2});
-        document.getElementById('cp').textContent=fmt;
-        document.getElementById('np').textContent=fmt;
-        document.getElementById('nc').textContent='';
-        if(ropx>0){const d2=((cpx-ropx)/ropx)*100;const el=document.getElementById('db');el.style.opacity='1';el.textContent=(d2>=0?'▲ +':'▼ ')+Math.abs(d2).toFixed(3)+'%';el.className='dbadge '+(d2>=0?'up':'down');}
-        updPay();
-      }
+      const BINANCE_IDS={BTC:'BTCUSDT',SOL:'SOLUSDT',HYPE:'HYPEUSDT'};
+      const sym=BINANCE_IDS[activeMarket];
+      try{
+        const r=await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`);
+        const d=await r.json();
+        const px=parseFloat(d?.price);
+        if(px&&!isNaN(px)){
+          cpx=px;if(!ropx)ropx=px;
+          const fmt=px>=1000?'$'+px.toLocaleString('en-US',{maximumFractionDigits:2}):px>=1?'$'+px.toFixed(2):'$'+px.toFixed(4);
+          document.getElementById('cp').textContent=fmt;
+          document.getElementById('np').textContent=fmt;
+          document.getElementById('nc').textContent='';
+          if(ropx>0){const d2=((px-ropx)/ropx)*100;const el=document.getElementById('db');el.style.opacity='1';el.textContent=(d2>=0?'▲ +':'▼ ')+Math.abs(d2).toFixed(3)+'%';el.className='dbadge '+(d2>=0?'up':'down');}
+          updPay();
+        }
+      }catch(e){console.warn('price fetch failed:',e.message);}
       return;
     }
     const r=await fetch(`https://api.dexscreener.com/latest/dex/tokens/${NEET_CA}`);
