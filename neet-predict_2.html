@@ -362,10 +362,10 @@ const API_URL='https://neet-predict-backend.onrender.com';
 const TREASURY='DVjhpStJD6UKGM6EfSXBtp5n6wayiPttRYms2cXBN7JM';
 const RPCS=['https://api.mainnet-beta.solana.com','https://solana-rpc.publicnode.com'];
 const MARKET_CONFIG={
-  NEET:{label:'$NEET',pair:'5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy',chain:'solana'},
-  BTC: {label:'Bitcoin',pair:null,chain:null},
-  SOL: {label:'Solana', pair:null,chain:null},
-  HYPE:{label:'HYPE',  pair:null,chain:null},
+  NEET:{label:'$NEET', chain:'solana', gt:'solana/5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy'},
+  BTC: {label:'BTC',   chain:'eth',    gt:'eth/0x4e68ccd3e89f51c3074ca5072bbac773960dfa36'},
+  SOL: {label:'SOL',   chain:'solana', gt:'solana/83v8iPyZihDEjDdY8RdZddyZNyUtXngz69Lgo9Kt5d6Q'},
+  HYPE:{label:'HYPE',  chain:'hyperliquid', gt:'hyperliquid/0x1eaa1a100f4b1b4fc45d6aa5a36f972e99a3b5ce'},
 };
 let activeMarket='NEET';
 let PAIR=MARKET_CONFIG.NEET.pair;
@@ -407,7 +407,8 @@ function initChart(){
 function showDexChart(){
   // fallback: embed DexScreener iframe
   const el=document.getElementById('cc');
-  el.innerHTML=`<iframe src="https://dexscreener.com/solana/${PAIR}?embed=1&theme=dark&trades=0&info=0"
+  const dexPairs={NEET:`solana/${PAIR}`,BTC:'solana/4fuUiYxTQ6QCrdSq9ouBYcTM7bqSwYTSyLueGZLTy4T4',SOL:'solana/83v8iPyZihDEjDdY8RdZddyZNyUtXngz69Lgo9Kt5d6Q',HYPE:'hyperevm/0x1eaa1a100f4b1b4fc45d6aa5a36f972e99a3b5ce'};
+  el.innerHTML=`<iframe src="https://dexscreener.com/${dexPairs[activeMarket]||'solana/'+PAIR}?embed=1&theme=dark&trades=0&info=0"
     style="width:100%;height:280px;border:none;" frameborder="0"></iframe>`;
 }
 
@@ -416,7 +417,8 @@ async function loadChart(tf){
   try{
     const agg=tf>=1440?1:tf>=60?1:tf;
     const per=tf>=1440?'day':tf>=60?'hour':'minute';
-    const url=`https://api.geckoterminal.com/api/v2/networks/solana/pools/${PAIR}/ohlcv/${per}?aggregate=${agg}&limit=200&currency=usd`;
+    const gtPath=MARKET_CONFIG[activeMarket]?.gt||`solana/${PAIR}`;
+    const url=`https://api.geckoterminal.com/api/v2/networks/${gtPath}/ohlcv/${per}?aggregate=${agg}&limit=200&currency=usd`;
     const r=await fetch(url,{headers:{Accept:'application/json'}});
     if(!r.ok)throw new Error('status '+r.status);
     const d=await r.json();
@@ -848,22 +850,12 @@ async function switchMarket(market){
   document.getElementById('ubb').classList.remove('sel');
   document.getElementById('dbb').classList.remove('sel');
   updPool();updPay();updBtn();
-  // Show chart for selected market
-  const CHART_URLS={
-    // chart urls defined below
-  };
+  // Reinit lightweight-charts for every market (GeckoTerminal provides data for all)
   const el=document.getElementById('cc');
+  el.innerHTML='';
   el.style.height='280px';
-  if(market==='NEET'){
-    el.innerHTML=''; chart=null; cseries=null; initChart();
-  } else {
-    const DS={
-      BTC:'https://dexscreener.com/solana/4fuUiYxTQ6QCrdSq9ouBYcTM7bqSwYTSyLueGZLTy4T4',
-      SOL:'https://dexscreener.com/solana/83v8iPyZihDEjDdY8RdZddyZNyUtXngz69Lgo9Kt5d6Q',
-      HYPE:'https://dexscreener.com/hyperevm/0x1eaa1a100f4b1b4fc45d6aa5a36f972e99a3b5ce',
-    };
-    el.innerHTML=`<iframe src="${DS[market]}?embed=1&theme=dark&trades=0&info=0" style="width:100%;height:280px;border:none" frameborder="0"></iframe>`;
-  }
+  chart=null; cseries=null;
+  initChart();
   await fetchPx();
   ropx=cpx;
   document.getElementById('op').textContent=fmtP(cpx);
