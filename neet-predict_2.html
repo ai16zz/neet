@@ -835,22 +835,28 @@ async function switchMarket(market){
   if(market===activeMarket)return;
   activeMarket=market;
   PAIR=MARKET_CONFIG[market].pair;
-  // Update tab UI
   document.querySelectorAll('.mktab').forEach(b=>{
     b.classList.toggle('active', b.dataset.market===market);
   });
-  // Update title
   document.getElementById('mktlabel').textContent=MARKET_CONFIG[market].label+' 5MIN';
-  // Reset state
-  pool={up:0,dn:0,upN:0,dnN:0};hist=[];myP=[];seld=null;
+  pool={up:0,dn:0,upN:0,dnN:0};hist=[];myP=[];seld=null;ropx=0;cpx=0;
   document.getElementById('ubb').classList.remove('sel');
   document.getElementById('dbb').classList.remove('sel');
-  ropx=0;
-  // Reload
+  updPool();updPay();updBtn();
+  // Show appropriate chart
+  if(market==='NEET' && PAIR){
+    const el=document.getElementById('cc');
+    el.innerHTML='';
+    initChart();
+  } else {
+    // For BTC/SOL/HYPE show TradingView chart
+    const symbols={BTC:'BINANCE:BTCUSDT',SOL:'BINANCE:SOLUSDT',HYPE:'BINANCE:HYPEUSDT'};
+    const el=document.getElementById('cc');
+    el.innerHTML=`<iframe src="https://s.tradingview.com/widgetembed/?symbol=${symbols[market]||'BINANCE:BTCUSDT'}&interval=5&theme=dark&style=1&locale=en&hide_top_toolbar=1&hide_legend=1&hide_side_toolbar=1&backgroundColor=rgba(6,13,6,1)&gridColor=rgba(0,255,65,0.05)" style="width:100%;height:280px;border:none" frameborder="0"></iframe>`;
+  }
   await fetchPx();
   ropx=cpx;
   document.getElementById('op').textContent=fmtP(cpx);
-  if(PAIR) loadChart(ctf); else showDexChart();
   await syncRound();
 }
 
