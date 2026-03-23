@@ -489,7 +489,8 @@ async function fetchPx(){
     if(activeMarket!=='NEET'){
       const SYMS={BTC:'BTCUSDT',SOL:'SOLUSDT',HYPE:'HYPEUSDT'};
       const sym=SYMS[activeMarket];
-      const r=await fetch('https://api.bybit.com/v5/market/tickers?category=spot&symbol='+sym);
+try{
+            const r=await fetch('https://api.bybit.com/v5/market/tickers?category=spot&symbol='+sym);
         const d=await r.json();
         const px=parseFloat(d?.result?.list?.[0]?.lastPrice);
         if(px&&!isNaN(px)){
