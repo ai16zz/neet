@@ -487,12 +487,12 @@ async function fetchPx(){
   try{
     // For non-NEET markets, use CryptoCompare (CORS-friendly, no key needed)
     if(activeMarket!=='NEET'){
-      const SYMS={BTC:'BTCUSDT',SOL:'SOLUSDT',HYPE:'HYPEUSDT'};
+      const SYMS={BTC:'BTC',SOL:'SOL',HYPE:'HYPE'};
       const sym=SYMS[activeMarket];
 try{
-            const r=await fetch('https://api.bybit.com/v5/market/tickers?category=spot&symbol='+sym);
+            const r=await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${sym}&tsyms=USD`);
         const d=await r.json();
-        const px=parseFloat(d?.result?.list?.[0]?.lastPrice);
+        const px=parseFloat(d?.USD);
         if(px&&!isNaN(px)){
           cpx=px;if(!ropx)ropx=px;
           const fmt=px>=1000?'$'+px.toLocaleString('en-US',{maximumFractionDigits:2}):px>=1?'$'+px.toFixed(2):'$'+px.toFixed(4);
