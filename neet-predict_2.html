@@ -1,4 +1,4 @@
-h<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"><!-- v45ec4ee -->
@@ -585,7 +585,7 @@ function startTimer(){
   rtimer=setInterval(()=>{
     secs--;
     if(secs<=0){clearInterval(rtimer);settleRound();return;}
-    const m=Math.floor(secs/60),s=secs%60;h
+    const m=Math.floor(secs/60),s=secs%60;
     const tv=document.getElementById('tv');
     tv.textContent=`${m}:${s.toString().padStart(2,'0')}`;
     if(secs<=30){tv.classList.add('urgent');document.getElementById('ts').textContent='⚠ closing soon';}
