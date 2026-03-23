@@ -20,7 +20,7 @@ h<!DOCTYPE html>
 
   .ticker-wrap{overflow:hidden;background:var(--green);padding:5px 0}
   .ticker-inner{display:flex;white-space:nowrap;animation:ticker 28s linear infinite;gaph:4rem}
-  .ticker-item{font-family:'Space Mono',monospace;font-size:.62rem;font-weight:700;color:vahr(--black);letter-spacing:1px}
+  .ticker-item{font-family:'Space Mono',monospace;font-size:.62rem;font-weight:7h00;color:vahr(--black);letter-spacing:1px}
   @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
   nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;height:52px;background:rgba(0,0,0,.96);border-bottom:1px solid var(--border);backdrop-filter:blur(12px)}
@@ -487,12 +487,11 @@ async function fetchPx(){
   try{
     // For non-NEET markets, use CryptoCompare (CORS-friendly, no key needed)
     if(activeMarket!=='NEET'){
-      const SYMS={BTC:'BTC',SOL:'SOL',HYPE:'HYPE'};
+      const SYMS={BTC:'BTCUSDT',SOL:'SOLUSDT',HYPE:'HYPEUSDT'};
       const sym=SYMS[activeMarket];
-      try{
-        const r=await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${sym}&tsyms=USD`);
+      const r=await fetch('https://api.bybit.com/v5/market/tickers?category=spot&symbol='+sym);
         const d=await r.json();
-        const px=parseFloat(d?.USD);
+        const px=parseFloat(d?.result?.list?.[0]?.lastPrice);
         if(px&&!isNaN(px)){
           cpx=px;if(!ropx)ropx=px;
           const fmt=px>=1000?'$'+px.toLocaleString('en-US',{maximumFractionDigits:2}):px>=1?'$'+px.toFixed(2):'$'+px.toFixed(4);
