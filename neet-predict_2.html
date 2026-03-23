@@ -486,7 +486,7 @@ async function fetchBal(){
 async function fetchPx(){
   try{
     // For non-NEET markets, use CryptoCompare (CORS-friendly, no key needed)
-    if(activeMarket!=='NEET'){
+    if(activeMarket!=='NEET'){if(typeof _liveWsPx!=='undefined'&&_liveWsPx[activeMarket])return;
       const SYMS={BTC:'BTC',SOL:'SOL',HYPE:'HYPE'};
       const sym=SYMS[activeMarket];
       if(!ropx){const _lk='ropx_'+activeMarket+'_'+Math.floor(Date.now()/300000);const _sv=parseFloat(localStorage.getItem(_lk)||'0');if(_sv>0)ropx=_sv;}
