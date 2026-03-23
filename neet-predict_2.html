@@ -482,7 +482,7 @@ async function fetchBal(){
   }catch{}
 }
 
-// PRICE
+// PRICEh
 async function fetchPx(){
   try{
     // For non-NEET markets, use CryptoCompare (CORS-friendly, no key needed)
@@ -541,7 +541,7 @@ try{
       el.className='dbadge '+(d2>=0?'up':'down');
     }
     updPay();
-fmtP(cpx);}
+fmtP(cpx);}catch(e){console.warn('[fetchPx]',e.message);}
 
 // fmtP(ropx);── PRICE TO BEAT: live delta + colour pill ──
 function fmtP
