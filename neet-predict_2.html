@@ -924,8 +924,8 @@ async function switchMarket(market){
   pool={up:0,dn:0,upN:0,dnN:0};hist=[];myP=[];seld=null;ropx=0;cpx=0;
       var _plbl=document.getElementById('plbl');
       if(_plbl)_plbl.textContent=market==='NEET'?'$NEET/USD · live · dexscreener':
-        market==='HYPE'?'$HYPE/USD · live · binance ws':
-        market==='BTC'?'BTC/USD · live · binance ws':'SOL/USD · live · binance ws';
+        market==='HYPE'?'$HYPE/USD · live · bybit ws':
+        market==='BTC'?'BTC/USD · live · bybit ws':'SOL/USD · live · bybit ws';
       if(market!=='NEET'&&typeof _liveWsPx!=='undefined'&&_liveWsPx[market]){
         cpx=_liveWsPx[market];
         var _fmt=cpx>=1000?cpx.toLocaleString('en-US',{maximumFractionDigits:2}):cpx>=1?cpx.toFixed(2):cpx.toFixed(4);
@@ -949,21 +949,23 @@ async function init(){
   ropx=cpx;
   document.getElementById('op').textContent=fmtP(ropx);
   startTimer();
-  // === BINANCE WEBSOCKET — real-time prices for HYPE / BTC / SOL ===
-var WS_MARKETS={hypeusdt:'HYPE',btcusdt:'BTC',solusdt:'SOL'};
+  // === BYBIT WEBSOCKET — real-time prices for HYPE / BTC / SOL ===
 var _binWS=null,_liveWsPx={};
 function connectBinanceWS(){
-  var streams='hypeusdt@aggTrade/btcusdt@aggTrade/solusdt@aggTrade';
   function connect(){
     try{
-      _binWS=new WebSocket('wss://stream.binance.com:9443/stream?streams='+streams);
+      _binWS=new WebSocket('wss://stream.bybit.com/v5/public/spot');
+      _binWS.onopen=function(){
+        _binWS.send(JSON.stringify({op:'subscribe',args:['tickers.HYPEUSDT','tickers.BTCUSDT','tickers.SOLUSDT']}));
+      };
       _binWS.onmessage=function(e){
         try{
           var msg=JSON.parse(e.data);
-          var sym=(msg.stream||'').split('@')[0];
-          var mkt=WS_MARKETS[sym];
+          if(!msg.topic||!msg.data)return;
+          var sym=msg.topic.split('.')[1];
+          var mkt=sym==='HYPEUSDT'?'HYPE':sym==='BTCUSDT'?'BTC':sym==='SOLUSDT'?'SOL':null;
           if(!mkt)return;
-          var px=parseFloat(msg.data&&msg.data.p);
+          var px=parseFloat(msg.data.lastPrice);
           if(!px||isNaN(px))return;
           _liveWsPx[mkt]=px;
           if(mkt!==activeMarket)return;
@@ -974,7 +976,7 @@ function connectBinanceWS(){
           if(ropx>0){var d2=((px-ropx)/ropx)*100;var el2=document.getElementById('db');
             if(el2){el2.style.opacity='1';el2.textContent=(d2>=0?'▲ +':'▼ ')+Math.abs(d2).toFixed(3)+'%';el2.className='dbadge '+(d2>=0?'up':'down');}}
           if(typeof updatePriceBeat==='function')updatePriceBeat();
-          var op=document.getElementById('op');if(op&&ropx)op.textContent=fmtP(ropx);
+          var op2=document.getElementById('op');if(op2&&ropx)op2.textContent=fmtP(ropx);
         }catch(err){}
       };
       _binWS.onclose=function(){setTimeout(connect,3000);};
