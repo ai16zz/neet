@@ -236,7 +236,7 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
     <div class="price-row">
       <div>
         <div class="pbig" id="cp">$——</div>
-        <div class="plbl" id="plbl">$NEET/USD · live · dexscreener</div>
+        <div class="plbl" id="plbl">$NEET/USD · live · tradingview</div>
       </div>
       <div class="pmeta" style="flex-direction:column;align-items:flex-end;gap:.4rem">
         <div id="db" class="dbadge up" style="opacity:0">——</div>
@@ -377,7 +377,7 @@ let pool={up:0,dn:0,upN:0,dnN:0},myP=[],hist=[],chart=null,cseries=null,ctf=5;
 // CHART
 const TV_BASE="https://s.tradingview.com/widgetembed/?interval=5&theme=dark&style=1&locale=en&hide_top_toolbar=0&hide_side_toolbar=1&allow_symbol_change=0&save_image=0&no_referral_id=1";
 const CHART_EMBEDS={
-  NEET:'https://dexscreener.com/solana/5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy?embed=1&theme=dark&trades=0&info=0',
+  NEET:TV_BASE+'&symbol=MEXC:NEETUSDT',
   BTC: TV_BASE+'&symbol=BINANCE:BTCUSDT',
   SOL: TV_BASE+'&symbol=BINANCE:SOLUSDT',
   HYPE:TV_BASE+'&symbol=BYBIT:HYPEUSDT',
@@ -734,7 +734,7 @@ async function placeBet(){
     updBtn();btn.disabled=false;updPay();
   }
 }
-function updPool(){
+function updPool(){if(!document.getElementById('bc'))return;
   const tot=pool.up+pool.dn,up=tot>0?Math.round((pool.up/tot)*100):50,dn=100-up;
   document.getElementById('pus').textContent=pool.up.toFixed(3);
   document.getElementById('pds').textContent=pool.dn.toFixed(3);
@@ -907,7 +907,7 @@ async function switchMarket(market){
   const _lbl=document.getElementById('mktlabel'); if(_lbl) _lbl.textContent=MARKET_CONFIG[market].label+' 5MIN';
   pool={up:0,dn:0,upN:0,dnN:0};hist=[];myP=[];seld=null;ropx=0;cpx=0;
       var _plbl=document.getElementById('plbl');
-      if(_plbl)_plbl.textContent=market==='NEET'?'$NEET/USD · live · dexscreener':
+      if(_plbl)_plbl.textContent=market==='NEET'?'$NEET/USD · live · tradingview':
         market==='HYPE'?'$HYPE/USD · live · bybit ws':
         market==='BTC'?'BTC/USD · live · bybit ws':'SOL/USD · live · bybit ws';
       if(market!=='NEET'&&typeof _liveWsPx!=='undefined'&&_liveWsPx[market]){
