@@ -844,7 +844,7 @@ function rendHist(){
       <span class="hpa">${r.multi}x</span>
     </div>`).join('');
 }
-function fmtP(p){if(!p)return'——';return p<0.000001?'$'+p.toExponential(2):'$'+p.toFixed(p<0.01?7:6);}
+function fmtP(p){if(!p)return'——';return p>=1000?'$'+p.toLocaleString('en-US',{maximumFractionDigits:2}):p>=1?'$'+p.toFixed(2):p<0.000001?'$'+p.toExponential(2):'$'+p.toFixed(p<0.01?7:6);}
 
 // ── Backend sync ──────────────────────────────────────────
 async function syncRound(){
