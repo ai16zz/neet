@@ -504,6 +504,7 @@ try{
           if(ropx>0){const d2=((px-ropx)/ropx)*100;const el=document.getElementById('db');el.style.opacity='1';el.textContent=(d2>=0?'▲ +':'▼ ')+Math.abs(d2).toFixed(3)+'%';el.className='dbadge '+(d2>=0?'up':'down');}
           updPay();
                     updatePriceBeat();
+          document.getElementById('op').textContent=fmtP(ropx);
         }
       }catch(e){console.warn('price fetch failed:',e.message);}
       return;
@@ -540,12 +541,11 @@ try{
       el.className='dbadge '+(d2>=0?'up':'down');
     }
     updPay();
-    updatePriceBeat();
-  }catch(e){console.warn('px:',e);}
-}
+fmtP(cpx);}
 
-// ── PRICE TO BEAT: live delta + colour pill ──
-function updatePriceBeat(){
+// fmtP(ropx);── PRICE TO BEAT: live delta + colour pill ──
+function fmtP
+  (){
   if(!ropx||!cpx)return;
   const delta=cpx-ropx;
   const pct=((delta/ropx)*100);
@@ -585,7 +585,7 @@ function startTimer(){
   rtimer=setInterval(()=>{
     secs--;
     if(secs<=0){clearInterval(rtimer);settleRound();return;}
-    const m=Math.floor(secs/60),s=secs%60;
+    const m=Math.floor(secs/60),s=secs%60;h
     const tv=document.getElementById('tv');
     tv.textContent=`${m}:${s.toString().padStart(2,'0')}`;
     if(secs<=30){tv.classList.add('urgent');document.getElementById('ts').textContent='⚠ closing soon';}
@@ -628,7 +628,7 @@ async function settleRound(){
     document.getElementById('rn').textContent='#'+String(rnum).padStart(3,'0');
     document.getElementById('vol_total').textContent=(pool.up+pool.dn).toFixed(3);
     document.getElementById('tv').classList.remove('urgent');
-    document.getElementById('op').textContent=fmtP(cpx);
+    document.getElementById('op').textContent=fmtP(ropx);
     setSt('live','round open · bets accepted');
     document.getElementById('ts').textContent='round open';
     updPool();updPay();updBtn();startTimer();
@@ -928,7 +928,7 @@ async function switchMarket(market){
   showChart(market);
   await fetchPx();
   if(!ropx)ropx=cpx;
-  document.getElementById('op').textContent=fmtP(cpx);
+  document.getElementById('op').textContent=fmtP(ropx);
   await syncRound();
 }
 
@@ -938,7 +938,7 @@ async function init(){
   showChart(activeMarket);
   await fetchPx();
   ropx=cpx;
-  document.getElementById('op').textContent=fmtP(cpx);
+  document.getElementById('op').textContent=fmtP(ropx);
   startTimer();
   setInterval(fetchPx,3000);
   setInterval(()=>loadChart(ctf),60000);
