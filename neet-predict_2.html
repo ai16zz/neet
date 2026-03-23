@@ -927,7 +927,7 @@ async function switchMarket(market){
   updPool();updPay();updBtn();
   showChart(market);
   await fetchPx();
-  ropx=cpx;
+  if(!ropx)ropx=cpx;
   document.getElementById('op').textContent=fmtP(cpx);
   await syncRound();
 }
