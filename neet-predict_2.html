@@ -236,7 +236,7 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
     <div class="price-row">
       <div>
         <div class="pbig" id="cp">$——</div>
-        <div class="plbl">$NEET/USD · live · dexscreener</div>
+        <div class="plbl" id="plbl">$NEET/USD · live · dexscreener</div>
       </div>
       <div class="pmeta" style="flex-direction:column;align-items:flex-end;gap:.4rem">
         <div id="db" class="dbadge up" style="opacity:0">——</div>
@@ -922,6 +922,15 @@ async function switchMarket(market){
   });
   const _lbl=document.getElementById('mktlabel'); if(_lbl) _lbl.textContent=MARKET_CONFIG[market].label+' 5MIN';
   pool={up:0,dn:0,upN:0,dnN:0};hist=[];myP=[];seld=null;ropx=0;cpx=0;
+      var _plbl=document.getElementById('plbl');
+      if(_plbl)_plbl.textContent=market==='NEET'?'$NEET/USD · live · dexscreener':
+        market==='HYPE'?'$HYPE/USD · live · binance ws':
+        market==='BTC'?'BTC/USD · live · binance ws':'SOL/USD · live · binance ws';
+      if(market!=='NEET'&&typeof _liveWsPx!=='undefined'&&_liveWsPx[market]){
+        cpx=_liveWsPx[market];
+        var _fmt=cpx>=1000?cpx.toLocaleString('en-US',{maximumFractionDigits:2}):cpx>=1?cpx.toFixed(2):cpx.toFixed(4);
+        ['cp','np','cp2'].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=_fmt;});
+      }
   document.getElementById('ubb').classList.remove('sel');
   document.getElementById('dbb').classList.remove('sel');
   updPool();updPay();updBtn();
@@ -940,7 +949,42 @@ async function init(){
   ropx=cpx;
   document.getElementById('op').textContent=fmtP(ropx);
   startTimer();
-  setInterval(fetchPx,3000);
+  // === BINANCE WEBSOCKET — real-time prices for HYPE / BTC / SOL ===
+var WS_MARKETS={hypeusdt:'HYPE',btcusdt:'BTC',solusdt:'SOL'};
+var _binWS=null,_liveWsPx={};
+function connectBinanceWS(){
+  var streams='hypeusdt@aggTrade/btcusdt@aggTrade/solusdt@aggTrade';
+  function connect(){
+    try{
+      _binWS=new WebSocket('wss://stream.binance.com:9443/stream?streams='+streams);
+      _binWS.onmessage=function(e){
+        try{
+          var msg=JSON.parse(e.data);
+          var sym=(msg.stream||'').split('@')[0];
+          var mkt=WS_MARKETS[sym];
+          if(!mkt)return;
+          var px=parseFloat(msg.data&&msg.data.p);
+          if(!px||isNaN(px))return;
+          _liveWsPx[mkt]=px;
+          if(mkt!==activeMarket)return;
+          cpx=px;
+          if(!ropx)ropx=px;
+          var fmt=px>=1000?px.toLocaleString('en-US',{maximumFractionDigits:2}):px>=1?px.toFixed(2):px.toFixed(4);
+          ['cp','np','cp2'].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=fmt;});
+          if(ropx>0){var d2=((px-ropx)/ropx)*100;var el2=document.getElementById('db');
+            if(el2){el2.style.opacity='1';el2.textContent=(d2>=0?'▲ +':'▼ ')+Math.abs(d2).toFixed(3)+'%';el2.className='dbadge '+(d2>=0?'up':'down');}}
+          if(typeof updatePriceBeat==='function')updatePriceBeat();
+          var op=document.getElementById('op');if(op&&ropx)op.textContent=fmtP(ropx);
+        }catch(err){}
+      };
+      _binWS.onclose=function(){setTimeout(connect,3000);};
+      _binWS.onerror=function(){};
+    }catch(err){setTimeout(connect,5000);}
+  }
+  connect();
+}
+connectBinanceWS();
+setInterval(fetchPx,3000);
   setInterval(()=>loadChart(ctf),60000);
   // Wait for Phantom to inject, then sync
   let attempts = 0;
