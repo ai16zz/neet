@@ -371,7 +371,7 @@ const MARKET_CONFIG={
 let activeMarket='NEET';
 let PAIR='5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy'; // NEET DexScreener pair
 
-let wpk=null,cpx=0,ropx=0,rnum=1,secs=RSEC,phase='open',seld=null,rtimer=null;
+let wpk=null,cpx=0,ropx=0,rnum=1,secs=RSEC,phase='open',seld=null,rtimer=null;let _ropxMap={};
 let pool={up:0,dn:0,upN:0,dnN:0},myP=[],hist=[],chart=null,cseries=null,ctf=5;
 
 // CHART
@@ -479,7 +479,7 @@ try{
         const d=await r.json();
         const px=parseFloat(d?.USD);
         if(px&&!isNaN(px)){
-          cpx=px;if(!ropx){ropx=px;localStorage.setItem('ropx_'+activeMarket+'_'+Math.floor(Date.now()/300000),String(px));}
+          cpx=px;if(!ropx){ropx=px;_ropxMap[activeMarket]=ropx;localStorage.setItem('ropx_'+activeMarket+'_'+Math.floor(Date.now()/300000),String(px));}
           const fmt=px>=1000?'$'+px.toLocaleString('en-US',{maximumFractionDigits:2}):px>=1?'$'+px.toFixed(2):'$'+px.toFixed(4);
           document.getElementById('cp').textContent=fmt;
           document.getElementById('np').textContent=fmt;
@@ -607,7 +607,7 @@ async function settleRound(){
   rendHist();settleMyP(res,parseFloat(multi),oneSided);
   setTimeout(()=>{
   try{
-    rnum++;pool={up:0,dn:0,upN:0,dnN:0};ropx=cpx;secs=RSEC;phase='open';seld=null;
+    rnum++;pool={up:0,dn:0,upN:0,dnN:0};_ropxMap={};ropx=cpx;_ropxMap[activeMarket]=ropx;secs=RSEC;phase='open';seld=null;
     document.getElementById('ubb').disabled=false;document.getElementById('dbb').disabled=false;
     document.getElementById('ubb').classList.remove('sel');document.getElementById('dbb').classList.remove('sel');
     document.getElementById('ba').value='';
@@ -908,7 +908,7 @@ async function switchMarket(market){
     b.classList.toggle('active', b.dataset.market===market);
   });
   const _lbl=document.getElementById('mktlabel'); if(_lbl) _lbl.textContent=MARKET_CONFIG[market].label+' 5MIN';
-  pool={up:0,dn:0,upN:0,dnN:0};hist=[];myP=[];seld=null;ropx=0;cpx=0;
+  pool={up:0,dn:0,upN:0,dnN:0};hist=[];myP=[];seld=null;ropx=_ropxMap[market]||0;cpx=0;
       var _plbl=document.getElementById('plbl');
       if(_plbl)_plbl.textContent=market==='NEET'?'$NEET/USD · live · tradingview':
         market==='HYPE'?'$HYPE/USD · live · bybit ws':
