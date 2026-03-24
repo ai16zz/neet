@@ -494,7 +494,6 @@ try{
       return;
     }
     // Try DexScreener first, fall back to Jupiter Price API
-    if(_liveWsPx['NEET'])return;
     let px=0,chg=0;
     try{
       const r=await fetch(`https://api.dexscreener.com/latest/dex/tokens/${NEET_CA}`);
@@ -845,7 +844,7 @@ async function syncRound(){
     rnum=round.id;
     if(round.live_price&&round.live_price!==cpx){
       cpx=round.live_price;
-      if(!ropx)ropx=round.start_price||cpx;
+      if(round.start_price){ropx=round.start_price;_ropxMap[activeMarket]=ropx;}else if(!ropx)ropx=cpx;
     }
     document.getElementById('rn').textContent='#'+String(rnum).padStart(3,'0');
     document.getElementById('vol_total').textContent=(pool.up+pool.dn).toFixed(3);
