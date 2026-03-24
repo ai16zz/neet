@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<Z!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"><!-- v45ec4ee -->
@@ -606,6 +606,7 @@ async function settleRound(){
   hist.unshift({round:rnum,op,cl,res,tot:tot.toFixed(3),multi,fee});
   rendHist();settleMyP(res,parseFloat(multi),oneSided);
   setTimeout(()=>{
+  try{
     rnum++;pool={up:0,dn:0,upN:0,dnN:0};ropx=cpx;secs=RSEC;phase='open';seld=null;
     document.getElementById('ubb').disabled=false;document.getElementById('dbb').disabled=false;
     document.getElementById('ubb').classList.remove('sel');document.getElementById('dbb').classList.remove('sel');
@@ -616,6 +617,7 @@ async function settleRound(){
     document.getElementById('op').textContent=fmtP(ropx);
     setSt('live','round open · bets accepted');
     document.getElementById('ts').textContent='round open';
+  }catch(e){console.warn('[newRound]',e.message);}
     updPool();updPay();updBtn();startTimer();
   },3000);
 }
