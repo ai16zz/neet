@@ -926,6 +926,7 @@ async function switchMarket(market){
   await syncRound();
 }
 
+var _liveWsPx={};
 async function init(){
   await new Promise(r=>setTimeout(r,200));
   preloadCharts();
@@ -935,7 +936,7 @@ async function init(){
   document.getElementById('op').textContent=fmtP(ropx);
   startTimer();
   // === BYBIT WEBSOCKET — real-time prices for HYPE / BTC / SOL ===
-var _binWS=null,_liveWsPx={};
+var _binWS=null;
 function connectBinanceWS(){
   function connect(){
     try{
