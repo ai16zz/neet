@@ -1014,6 +1014,18 @@ function updOdds(){
   var elU=document.getElementById('uo');if(elU)elU.textContent=oddsUp.toFixed(2)+'x';
   var elD=document.getElementById('ddo');if(elD)elD.textContent=oddsDn.toFixed(2)+'x';
 }
+window.updOdds=function(){
+  try{
+    var cpEl=document.getElementById('cp'),opEl=document.getElementById('op');
+    if(!cpEl||!opEl)return;
+    var cpv=parseFloat(cpEl.textContent.replace(/[^0-9.e\-]/g,'')),rpv=parseFloat(opEl.textContent.replace(/[^0-9.e\-]/g,''));
+    if(!cpv||!rpv||isNaN(cpv)||isNaN(rpv))return;
+    var pct=(cpv-rpv)/rpv,pUp=1/(1+Math.exp(-15*pct)),pDn=1-pUp;
+    var elU=document.getElementById('uo'),elD=document.getElementById('ddo');
+    if(elU)elU.textContent=Math.min(19,Math.max(1.05,(0.95/pUp))).toFixed(2)+'x';
+    if(elD)elD.textContent=Math.min(19,Math.max(1.05,(0.95/pDn))).toFixed(2)+'x';
+  }catch(e){}
+};
 connectMexcWS();
 connectBinanceWS();
 setInterval(fetchPx,3000);
