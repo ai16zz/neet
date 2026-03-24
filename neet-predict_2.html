@@ -473,13 +473,13 @@ async function fetchPx(){
     if(activeMarket!=='NEET'){if(typeof _liveWsPx!=='undefined'&&_liveWsPx[activeMarket])return;
       const SYMS={BTC:'BTC',SOL:'SOL',HYPE:'HYPE'};
       const sym=SYMS[activeMarket];
-      if(!ropx){const _lk='ropx_'+activeMarket+'_'+Math.floor(Date.now()/300000);const _sv=parseFloat(localStorage.getItem(_lk)||'0');if(_sv>0)ropx=_sv;_ropxMap[activeMarket]=ropx;}
+      if(!ropx){const _lk='ropx_'+activeMarket+'_'+Math.floor(Date.now()/3000000);const _sv=parseFloat(localStorage.getItem(_lk)||'0');if(_sv>0)ropx=_sv;_ropxMap[activeMarket]=ropx;}
 try{
             const r=await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${sym}&tsyms=USD`);
         const d=await r.json();
         const px=parseFloat(d?.USD);
         if(px&&!isNaN(px)){
-          cpx=px;if(!ropx){ropx=px;_ropxMap[activeMarket]=ropx;localStorage.setItem('ropx_'+activeMarket+'_'+Math.floor(Date.now()/300000),String(px));}
+          cpx=px;if(!ropx){ropx=px;_ropxMap[activeMarket]=ropx;localStorage.setItem('ropx_'+activeMarket+'_'+Math.floor(Date.now()/3000000),String(px));}
           const fmt=px>=1000?'$'+px.toLocaleString('en-US',{maximumFractionDigits:2}):px>=1?'$'+px.toFixed(2):'$'+px.toFixed(4);
           document.getElementById('cp').textContent=fmt;
           document.getElementById('np').textContent=fmt;
