@@ -512,7 +512,7 @@ try{
       }catch(e2){console.warn('[price] both feeds failed');return;}
     }
     if(!px||px<=0)return;
-    cpx=px;if(!ropx)ropx=px;
+    cpx=px;if(!ropx){const _lk='ropx_NEET_'+Math.floor(Date.now()/300000);const _sv=parseFloat(localStorage.getItem(_lk)||'0');if(_sv>0)ropx=_sv;else{ropx=px;localStorage.setItem(_lk,String(px));}_ropxMap['NEET']=ropx;}
     const fmt=px<0.000001?'$'+px.toExponential(3):'$'+px.toFixed(px<0.01?8:6);
     document.getElementById('cp').textContent=fmt;
     document.getElementById('cp2').textContent=fmt;
@@ -958,7 +958,7 @@ function connectBinanceWS(){
           _liveWsPx[mkt]=px;
           if(mkt!==activeMarket)return;
           cpx=px;
-          if(!ropx)ropx=px;
+          if(!ropx){const _lk='ropx_NEET_'+Math.floor(Date.now()/300000);const _sv=parseFloat(localStorage.getItem(_lk)||'0');if(_sv>0)ropx=_sv;else{ropx=px;localStorage.setItem(_lk,String(px));}_ropxMap['NEET']=ropx;}
           var fmt=px>=1000?px.toLocaleString('en-US',{maximumFractionDigits:2}):px>=1?px.toFixed(2):px.toFixed(4);
           ['cp','np','cp2'].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=fmt;});
           if(ropx>0){var d2=((px-ropx)/ropx)*100;var el2=document.getElementById('db');
@@ -990,7 +990,7 @@ function connectMexcWS(){
           _liveWsPx['NEET']=px;
           if(activeMarket!=='NEET')return;
           cpx=px;
-          if(!ropx)ropx=px;
+          if(!ropx){const _lk='ropx_NEET_'+Math.floor(Date.now()/300000);const _sv=parseFloat(localStorage.getItem(_lk)||'0');if(_sv>0)ropx=_sv;else{ropx=px;localStorage.setItem(_lk,String(px));}_ropxMap['NEET']=ropx;}
           var fmt=px<0.000001?px.toExponential(3):px.toFixed(px<0.01?8:6);
           ['cp','np','cp2'].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=fmt;});
           if(ropx>0){var d2=((px-ropx)/ropx)*100;var el2=document.getElementById('db');
