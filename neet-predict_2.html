@@ -182,6 +182,33 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
 .bg-layer{position:fixed;inset:0;background-image:url('neet_background.jpg');background-size:cover;background-position:center center;background-repeat:no-repeat;z-index:0;opacity:0.18;filter:grayscale(40%) contrast(1.1);pointer-events:none}
 .bg-layer::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0.3) 50%,rgba(0,0,0,0.55) 100%)}
 
+
+/* NEET CARTEL */
+.cartel-section{display:none;padding:1.5rem;max-width:1200px;margin:0 auto;}
+.cartel-section.visible{display:block;}
+.cartel-header{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--green);letter-spacing:3px;margin-bottom:1.5rem;text-align:center;border-bottom:1px solid var(--border);padding-bottom:1rem;}
+.cartel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.5rem;}
+.trader-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;position:relative;}
+.trader-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem;padding-bottom:1rem;border-bottom:1px solid var(--border);}
+.trader-avatar{width:52px;height:52px;border-radius:50%;border:2px solid var(--green);object-fit:cover;flex-shrink:0;}
+.trader-avatar-placeholder{width:52px;height:52px;border-radius:50%;border:2px solid var(--green);background:var(--border);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--green);flex-shrink:0;}
+.trader-name{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:#fff;letter-spacing:1px;}
+.trader-name a{color:inherit;text-decoration:none;}
+.trader-name a:hover{color:var(--green);}
+.trader-total{font-size:0.75rem;color:var(--text-muted);margin-top:2px;}
+.token-list{display:flex;flex-direction:column;gap:0.5rem;}
+.token-row{display:grid;grid-template-columns:32px 1fr auto auto;align-items:center;gap:0.6rem;padding:0.5rem 0.6rem;border-radius:8px;background:rgba(255,255,255,0.03);}
+.token-row.neet-row{background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.15);}
+.token-logo{width:28px;height:28px;border-radius:50%;object-fit:cover;}
+.token-logo-placeholder{width:28px;height:28px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:0.6rem;color:var(--text-muted);}
+.token-sym{font-family:'Bebas Neue',sans-serif;font-size:0.95rem;color:#fff;letter-spacing:0.5px;}
+.token-amt{font-size:0.7rem;color:var(--text-muted);margin-top:1px;}
+.token-usd{font-size:0.9rem;color:#fff;font-weight:600;text-align:right;}
+.token-pnl{font-size:0.75rem;text-align:right;min-width:52px;}
+.token-pnl.pos{color:var(--green);}
+.token-pnl.neg{color:var(--red);}
+.cartel-loading{text-align:center;padding:3rem;color:var(--text-muted);font-family:'Bebas Neue',sans-serif;letter-spacing:2px;}
+.cartel-refresh{font-size:0.7rem;color:var(--text-muted);text-align:center;margin-top:1rem;}
 </style>
 </head>
 <body>
@@ -218,6 +245,7 @@ font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align
   <button class="mktab" data-market="BTC" onclick="switchMarket('BTC')">$BTC</button>
   <button class="mktab" data-market="SOL" onclick="switchMarket('SOL')">$SOL</button>
   <button class="mktab" data-market="HYPE" onclick="switchMarket('HYPE')">$HYPE</button>
+    <button class="mktab" id="cartelTab" onclick="switchToCartel()">🐀 CARTEL</button>
 </div>
 <div class="rtag" style="display:none">// CURRENT_ROUND</div>
         <div class="rnum">ROUND <span id="rn">#001</span></div>
@@ -1051,6 +1079,162 @@ setInterval(fetchPx,3000);
   setInterval(syncRound, 10000); setInterval(fetchBal, 30000);
 }
 init();
+
+/* ── NEET CARTEL ── */
+const _CRPC='https://nd-326-444-187.p2pify.com/9de47db917d4f69168e3fed02217d15b/';
+const _CNEET='Ce2gx9KGXj6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
+const _CPROGS=['TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA','TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'];
+const _CTRADERS=[
+  {id:'logjam',name:'logjam',wallet:'5fkAwNVpT8A1UHEnY62VEFpqgagdoP8FYrv5ideiQp5c',twitter:'https://x.com/_logjam'},
+  {id:'mitch',name:'mitch',wallet:'4Be9CvxqHW6BYiRAxW9Q3xu1ycTMWaL5z8NX4HR3ha7t',twitter:null}
+];
+let _cInterval=null;
+
+async function _cWallet(wallet){
+  const results=[];
+  for(const prog of _CPROGS){
+    try{
+      const r=await fetch(_CRPC,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getTokenAccountsByOwner',
+          params:[wallet,{programId:prog},{encoding:'jsonParsed',commitment:'confirmed'}]})});
+      const j=await r.json();
+      for(const acc of (j.result?.value||[])){
+        const info=acc.account.data.parsed?.info;
+        if(!info) continue;
+        const mint=info.mint;
+        const amt=parseFloat(info.tokenAmount?.uiAmountString||'0');
+        if(amt>0) results.push({mint,amount:amt});
+      }
+    }catch(e){}
+  }
+  const map={};
+  for(const t of results){
+    if(map[t.mint]) map[t.mint].amount+=t.amount;
+    else map[t.mint]={mint:t.mint,amount:t.amount};
+  }
+  return Object.values(map);
+}
+
+async function _cPrice(tokens){
+  const mints=tokens.map(t=>t.mint);
+  const priceMap={};
+  for(let i=0;i<mints.length;i+=30){
+    const batch=mints.slice(i,i+30).join(',');
+    try{
+      const r=await fetch('https://api.dexscreener.com/tokens/v1/solana/'+batch);
+      const j=await r.json();
+      for(const p of (Array.isArray(j)?j:[])){
+        if(!priceMap[p.baseToken?.address]){
+          priceMap[p.baseToken?.address]={
+            price:parseFloat(p.priceUsd||0),
+            symbol:p.baseToken?.symbol||'?',
+            name:p.baseToken?.name||'?',
+            change24h:parseFloat(p.priceChange?.h24||0),
+            logo:p.info?.imageUrl||null
+          };
+        }
+      }
+    }catch(e){}
+  }
+  const missing=mints.filter(m=>!priceMap[m]);
+  if(missing.length){
+    for(let i=0;i<missing.length;i+=30){
+      const batch=missing.slice(i,i+30).join(',');
+      try{
+        const r=await fetch('https://lite-api.jup.ag/price/v2?ids='+batch);
+        const j=await r.json();
+        for(const [mint,d] of Object.entries(j.data||{})){
+          if(d?.price) priceMap[mint]={price:parseFloat(d.price),symbol:d.mintSymbol||'?',name:d.mintSymbol||'?',change24h:0,logo:null};
+        }
+      }catch(e){}
+    }
+  }
+  return priceMap;
+}
+
+function _cFmt(n){
+  if(n>=1e6) return '$'+(n/1e6).toFixed(2)+'M';
+  if(n>=1e3) return '$'+(n/1e3).toFixed(1)+'K';
+  return '$'+n.toFixed(2);
+}
+
+function _cCard(trader,holdings,total){
+  const twHandle=trader.twitter?trader.twitter.split('/').pop():null;
+  const avatarHtml=twHandle
+    ?'<img class="trader-avatar" src="https://unavatar.io/x/'+twHandle+'" onerror="this.style.display='none'">'
+    :'<div class="trader-avatar-placeholder">'+trader.name[0].toUpperCase()+'</div>';
+  const nameHtml=trader.twitter
+    ?'<a href="'+trader.twitter+'" target="_blank">'+trader.name+'</a>'
+    :trader.name;
+  const rows=holdings.map(h=>{
+    const isNeet=h.mint===_CNEET;
+    const pnl=h.change24h||0;
+    const pnlClass=pnl>=0?'pos':'neg';
+    const pnlStr=(pnl>=0?'+':'')+pnl.toFixed(2)+'%';
+    const logoHtml=h.logo
+      ?'<img class="token-logo" src="'+h.logo+'" onerror="this.style.display='none'">'
+      :'<div class="token-logo-placeholder">'+((h.symbol||'?')[0])+'</div>';
+    const amtStr=h.amount>=1e6?(h.amount/1e6).toFixed(2)+'M':h.amount>=1e3?(h.amount/1e3).toFixed(1)+'K':h.amount.toFixed(2);
+    return '<div class="token-row'+(isNeet?' neet-row':'')+'">'+logoHtml+'<div><div class="token-sym">'+(h.symbol||'?')+'</div><div class="token-amt">'+amtStr+'</div></div><div class="token-usd">'+_cFmt(h.usdVal)+'</div><div class="token-pnl '+pnlClass+'">'+pnlStr+'</div></div>';
+  }).join('');
+  return '<div class="trader-card"><div class="trader-header">'+avatarHtml+'<div><div class="trader-name">'+nameHtml+'</div><div class="trader-total">Portfolio ≈ '+_cFmt(total)+'</div></div></div><div class="token-list">'+rows+'</div></div>';
+}
+
+async function refreshCartel(){
+  const grid=document.getElementById('cartelGrid');
+  if(!grid) return;
+  try{
+    const cards=await Promise.all(_CTRADERS.map(async trader=>{
+      try{
+        const tokens=await _cWallet(trader.wallet);
+        const prices=await _cPrice(tokens);
+        const enriched=tokens.map(t=>{
+          const p=prices[t.mint]||{price:0,symbol:'???',name:'???',change24h:0,logo:null};
+          return Object.assign({},t,p,{usdVal:t.amount*(p.price||0)});
+        });
+        const neet=enriched.find(t=>t.mint===_CNEET);
+        const others=enriched.filter(t=>t.mint!==_CNEET).sort((a,b)=>b.usdVal-a.usdVal).slice(0,3);
+        const display=neet?[neet,...others]:others.slice(0,4);
+        const total=enriched.reduce((s,t)=>s+t.usdVal,0);
+        return _cCard(trader,display,total);
+      }catch(e){
+        return '<div class="trader-card"><div class="cartel-loading">ERROR: '+trader.name.toUpperCase()+'</div></div>';
+      }
+    }));
+    grid.innerHTML=cards.join('');
+  }catch(e){}
+  const rt=document.getElementById('cartelRefreshTime');
+  if(rt) rt.textContent='Updated: '+new Date().toLocaleTimeString();
+}
+
+function switchToCartel(){
+  document.querySelector('.page')?.classList.remove('visible');
+  document.querySelectorAll('.mktab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('cartelTab')?.classList.add('active');
+  document.getElementById('cartelSection')?.classList.add('visible');
+  refreshCartel();
+  if(_cInterval) clearInterval(_cInterval);
+  _cInterval=setInterval(refreshCartel,30000);
+}
+
+(function(){
+  const _orig=window.switchMarket;
+  if(typeof _orig==='function'){
+    window.switchMarket=function(m){
+      document.getElementById('cartelSection')?.classList.remove('visible');
+      document.getElementById('cartelTab')?.classList.remove('active');
+      if(_cInterval){clearInterval(_cInterval);_cInterval=null;}
+      _orig(m);
+    };
+  }
+})();
 </script>
+
+<!-- NEET CARTEL SECTION -->
+<div class="cartel-section" id="cartelSection">
+  <div class="cartel-header">🐀 NEET CARTEL — LIVE PORTFOLIOS</div>
+  <div id="cartelGrid" class="cartel-grid"><div class="cartel-loading">LOADING WALLETS...</div></div>
+  <div class="cartel-refresh" id="cartelRefreshTime"></div>
+</div>
 </body>
 </html>
