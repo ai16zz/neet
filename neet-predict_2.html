@@ -1161,7 +1161,7 @@ function _cFmt(n){
 function _cCard(trader,holdings,total){
   const twHandle=trader.twitter?trader.twitter.split('/').pop():null;
   const avatarHtml=twHandle
-    ?'<img class="trader-avatar" src="https://unavatar.io/x/'+twHandle+'" onerror="this.style.display='none'">'
+    ?'<img class="trader-avatar" src="https://unavatar.io/x/'+twHandle+'" onerror="this.hidden=true">'
     :'<div class="trader-avatar-placeholder">'+trader.name[0].toUpperCase()+'</div>';
   const nameHtml=trader.twitter
     ?'<a href="'+trader.twitter+'" target="_blank">'+trader.name+'</a>'
@@ -1172,7 +1172,7 @@ function _cCard(trader,holdings,total){
     const pnlClass=pnl>=0?'pos':'neg';
     const pnlStr=(pnl>=0?'+':'')+pnl.toFixed(2)+'%';
     const logoHtml=h.logo
-      ?'<img class="token-logo" src="'+h.logo+'" onerror="this.style.display='none'">'
+      ?'<img class="token-logo" src="'+h.logo+'" onerror="this.hidden=true">'
       :'<div class="token-logo-placeholder">'+((h.symbol||'?')[0])+'</div>';
     const amtStr=h.amount>=1e6?(h.amount/1e6).toFixed(2)+'M':h.amount>=1e3?(h.amount/1e3).toFixed(1)+'K':h.amount.toFixed(2);
     return '<div class="token-row'+(isNeet?' neet-row':'')+'">'+logoHtml+'<div><div class="token-sym">'+(h.symbol||'?')+'</div><div class="token-amt">'+amtStr+'</div></div><div class="token-usd">'+_cFmt(h.usdVal)+'</div><div class="token-pnl '+pnlClass+'">'+pnlStr+'</div></div>';
