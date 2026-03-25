@@ -1208,7 +1208,7 @@ async function refreshCartel(){
 }
 
 function switchToCartel(){
-  document.querySelector('.page')?.classList.remove('visible');
+  const _pg=document.querySelector('.page');if(_pg)_pg.style.display='none';
   document.querySelectorAll('.mktab').forEach(b=>b.classList.remove('active'));
   document.getElementById('cartelTab')?.classList.add('active');
   document.getElementById('cartelSection')?.classList.add('visible');
@@ -1224,7 +1224,7 @@ function switchToCartel(){
       document.getElementById('cartelSection')?.classList.remove('visible');
       document.getElementById('cartelTab')?.classList.remove('active');
       if(_cInterval){clearInterval(_cInterval);_cInterval=null;}
-      _orig(m);
+      const _pg2=document.querySelector('.page');if(_pg2)_pg2.style.display='';_orig(m);
     };
   }
 })();
