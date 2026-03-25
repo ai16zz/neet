@@ -1162,7 +1162,7 @@ function _cCard(trader,holdings,total){
   const twHandle=trader.twitter?trader.twitter.split('/').pop():null;
   const avatarHtml=twHandle
     ?'<img class="trader-avatar" src="https://unavatar.io/x/'+twHandle+'" onerror="this.hidden=true">'
-    :'<div class="trader-avatar-placeholder">'+trader.name[0].toUpperCase()+'</div>';
+    :trader.avatarUrl?'<img class="trader-avatar" src="'+trader.avatarUrl+'" onerror="this.hidden=true">':'<div class="trader-avatar-placeholder">'+trader.name[0].toUpperCase()+'</div>';
   const nameHtml=trader.twitter
     ?'<a href="'+trader.twitter+'" target="_blank">'+trader.name+'</a>'
     :trader.name;
@@ -1196,7 +1196,7 @@ async function refreshCartel(){
         const others=enriched.filter(t=>t.mint!==_CNEET).sort((a,b)=>b.usdVal-a.usdVal).slice(0,3);
         const display=neet?[neet,...others]:others.slice(0,4);
         const total=enriched.reduce((s,t)=>s+t.usdVal,0);
-        return _cCard(trader,display,total);
+        const _topLogo=!trader.twitter?others.find(t=>t.logo)?.logo:null;return _cCard(Object.assign({},trader,{avatarUrl:_topLogo}),display,total);
       }catch(e){
         return '<div class="trader-card"><div class="cartel-loading">ERROR: '+trader.name.toUpperCase()+'</div></div>';
       }
