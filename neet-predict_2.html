@@ -1544,52 +1544,39 @@ window.addEventListener('load', function() {
       priceFormat: { type: 'price', precision: 7, minMove: 0.0000001 }
     });
 
-    window._lcChart = lc;
-    window._lcSeries = areaSeries;
     var chartData = {};
     var lastPrice = null;
 
-    function addPoint(price) {
-      if (isNaN(price) || price <= 0) return;
-      var now = Math.floor(Date.now() / 1000);
-      chartData[now] = price;
-      lastPrice = price;
-      var arr = Object.keys(chartData).sort(function(a,b){return a-b;}).map(function(t){return{time:+t,value:chartData[t]};});
-      try { areaSeries.setData(arr); lc.timeScale().scrollToRealTime(); } catch(e) {}
+    function flushChart() {
+      var arr = Object.keys(chartData).sort(function(a,b){return +a-+b;}).map(function(t){return{time:+t,value:chartData[t]};});
+      if (arr.length > 0) { try { areaSeries.setData(arr); lc.timeScale().scrollToRealTime(); } catch(e){} }
     }
 
     function pollPrice() {
       var cp = document.getElementById('cp');
       if (!cp) return;
       var price = parseFloat(cp.textContent.replace(/[$,\s]/g,''));
-      if (!isNaN(price) && price > 0 && price !== lastPrice) addPoint(price);
+      if (isNaN(price) || price <= 0 || price === lastPrice) return;
+      lastPrice = price;
+      chartData[Math.floor(Date.now()/1000)] = price;
+      flushChart();
     }
 
-    // Fetch historical candles from GeckoTerminal
-    var NEET_CA = 'Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
-    fetch('https://api.geckoterminal.com/api/v2/networks/solana/tokens/' + NEET_CA + '/ohlcv/minute?aggregate=1&limit=300&currency=usd', {headers:{'Accept':'application/json'}})
+    // Load historical 1-min candles from GeckoTerminal (NEET/SOL pool on Solana)
+    var POOL = '5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy';
+    fetch('https://api.geckoterminal.com/api/v2/networks/solana/pools/'+POOL+'/ohlcv/minute?aggregate=1&limit=300&currency=usd', {headers:{Accept:'application/json'}})
       .then(function(r){return r.json();})
       .then(function(d){
         var ohlcv = (d.data && d.data.attributes && d.data.attributes.ohlcv_list) || [];
         ohlcv.forEach(function(c){
-          var t = Math.floor(c[0]/1000);
+          var t = +c[0]; // GeckoTerminal timestamps are already in seconds
           var close = parseFloat(c[4]);
-          if (t > 0 && !isNaN(close) && close > 0) chartData[t] = close;
+          if (t > 1000000000 && !isNaN(close) && close > 0) chartData[t] = close;
         });
         pollPrice();
+        flushChart();
       })
       .catch(function(){ pollPrice(); });
-
-    // Also seed from DexScreener pair data
-    fetch('https://api.dexscreener.com/latest/dex/tokens/' + NEET_CA)
-      .then(function(r){return r.json();})
-      .then(function(d){
-        if (d.pairs && d.pairs[0]) {
-          var p = parseFloat(d.pairs[0].priceUsd);
-          if (!isNaN(p) && p > 0) addPoint(p);
-        }
-      })
-      .catch(function(){});
 
     setInterval(pollPrice, 3000);
 
@@ -1601,9 +1588,9 @@ window.addEventListener('load', function() {
     document.querySelectorAll('[onclick*="setTf"]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var tf = btn.textContent.trim();
-        var s = {'5M':300,'15M':900,'1H':3600,'1D':86400}[tf] || 300;
+        var s = {'5M':300,'15M':900,'1H':3600,'1D':86400}[tf]||300;
         var now = Math.floor(Date.now()/1000);
-        try { lc.timeScale().setVisibleRange({from:now-s,to:now+30}); } catch(e){}
+        try{lc.timeScale().setVisibleRange({from:now-s,to:now+30});}catch(e){}
       });
     });
 
