@@ -1518,35 +1518,24 @@ function setScFil(f,btn){_scFil=f;document.querySelectorAll('.sc-fb').forEach(fu
 <span id="txmg" style="display:none"></span>
 <script>
 window.addEventListener('load', function() {
-  // Show predict page (JS hides it on init; switchMarket reveals it)
   if (typeof switchMarket === 'function') switchMarket('NEET');
   else { var pg = document.getElementById('pg'); if (pg) pg.style.display = ''; }
 
-  // Build glowing LightweightCharts price-tracking chart
   setTimeout(function() {
     var cc = document.getElementById('cc');
     if (!cc || typeof LightweightCharts === 'undefined') return;
-
-    // Remove any TradingView iframes created by initChart()
     cc.innerHTML = '';
 
-    // Create chart
     var lc = LightweightCharts.createChart(cc, {
-      width: cc.offsetWidth,
-      height: cc.offsetHeight || 420,
+      width: cc.offsetWidth, height: cc.offsetHeight || 420,
       layout: { background: { color: 'transparent' }, textColor: '#6b7799' },
-      grid: {
-        vertLines: { color: 'rgba(255,255,255,0.04)' },
-        horzLines: { color: 'rgba(255,255,255,0.04)' }
-      },
+      grid: { vertLines: { color: 'rgba(255,255,255,0.04)' }, horzLines: { color: 'rgba(255,255,255,0.04)' } },
       crosshair: { mode: 1 },
       rightPriceScale: { borderColor: 'rgba(255,255,255,0.07)', scaleMargins: { top: 0.1, bottom: 0.1 } },
       timeScale: { borderColor: 'rgba(255,255,255,0.07)', timeVisible: true, secondsVisible: false },
-      handleScroll: true,
-      handleScale: true
+      handleScroll: true, handleScale: true
     });
 
-    // Glowing green area series
     var areaSeries = lc.addAreaSeries({
       lineColor: '#00ff87',
       topColor: 'rgba(0,255,135,0.35)',
@@ -1555,44 +1544,69 @@ window.addEventListener('load', function() {
       priceFormat: { type: 'price', precision: 7, minMove: 0.0000001 }
     });
 
-    var chartData = [];
+    window._lcChart = lc;
+    window._lcSeries = areaSeries;
+    var chartData = {};
     var lastPrice = null;
 
-    function updateChart() {
-      var cp = document.getElementById('cp');
-      if (!cp) return;
-      var price = parseFloat(cp.textContent.replace(/[$,\s]/g, ''));
+    function addPoint(price) {
       if (isNaN(price) || price <= 0) return;
       var now = Math.floor(Date.now() / 1000);
-      if (lastPrice === price && chartData.length > 0) return;
+      chartData[now] = price;
       lastPrice = price;
-      chartData.push({ time: now, value: price });
-      // Keep 2h max, deduplicate by second
-      var cutoff = now - 7200;
-      var map = {};
-      chartData.filter(function(d){ return d.time >= cutoff; }).forEach(function(d){ map[d.time] = d; });
-      chartData = Object.keys(map).sort().map(function(t){ return map[t]; });
-      try { areaSeries.setData(chartData); lc.timeScale().scrollToRealTime(); } catch(e) {}
+      var arr = Object.keys(chartData).sort(function(a,b){return a-b;}).map(function(t){return{time:+t,value:chartData[t]};});
+      try { areaSeries.setData(arr); lc.timeScale().scrollToRealTime(); } catch(e) {}
     }
 
-    updateChart();
-    setInterval(updateChart, 3000);
-    window.addEventListener('resize', function() {
+    function pollPrice() {
+      var cp = document.getElementById('cp');
+      if (!cp) return;
+      var price = parseFloat(cp.textContent.replace(/[$,\s]/g,''));
+      if (!isNaN(price) && price > 0 && price !== lastPrice) addPoint(price);
+    }
+
+    // Fetch historical candles from GeckoTerminal
+    var NEET_CA = 'Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
+    fetch('https://api.geckoterminal.com/api/v2/networks/solana/tokens/' + NEET_CA + '/ohlcv/minute?aggregate=1&limit=300&currency=usd', {headers:{'Accept':'application/json'}})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var ohlcv = (d.data && d.data.attributes && d.data.attributes.ohlcv_list) || [];
+        ohlcv.forEach(function(c){
+          var t = Math.floor(c[0]/1000);
+          var close = parseFloat(c[4]);
+          if (t > 0 && !isNaN(close) && close > 0) chartData[t] = close;
+        });
+        pollPrice();
+      })
+      .catch(function(){ pollPrice(); });
+
+    // Also seed from DexScreener pair data
+    fetch('https://api.dexscreener.com/latest/dex/tokens/' + NEET_CA)
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if (d.pairs && d.pairs[0]) {
+          var p = parseFloat(d.pairs[0].priceUsd);
+          if (!isNaN(p) && p > 0) addPoint(p);
+        }
+      })
+      .catch(function(){});
+
+    setInterval(pollPrice, 3000);
+
+    window.addEventListener('resize', function(){
       if (cc.offsetWidth > 0) lc.resize(cc.offsetWidth, cc.offsetHeight);
     });
 
-    // Override setTf to change timeScale range instead of swapping iframe
-    window._lcChart = lc;
-    var tfBtns = document.querySelectorAll('[onclick^="setTf"]');
-    tfBtns.forEach(function(btn) {
-      btn.addEventListener('click', function() {
+    // Timeframe buttons control visible range
+    document.querySelectorAll('[onclick*="setTf"]').forEach(function(btn){
+      btn.addEventListener('click', function(){
         var tf = btn.textContent.trim();
-        var seconds = { '5M': 300, '15M': 900, '1H': 3600, '1D': 86400 };
-        var range = seconds[tf] || 300;
-        var now = Math.floor(Date.now() / 1000);
-        lc.timeScale().setVisibleRange({ from: now - range, to: now + 30 });
+        var s = {'5M':300,'15M':900,'1H':3600,'1D':86400}[tf] || 300;
+        var now = Math.floor(Date.now()/1000);
+        try { lc.timeScale().setVisibleRange({from:now-s,to:now+30}); } catch(e){}
       });
     });
+
   }, 250);
 });
 </script>
