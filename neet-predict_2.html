@@ -1,391 +1,343 @@
-<Z!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"><!-- v45ec4ee -->
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>$NEET PREDICT — 5min prediction market</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>$NEET PREDICT</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
 <style>
-  :root {
-    --green:#00ff41;--green-dim:#00cc33;--green-soft:rgba(0,255,65,0.07);
-    --black:#000;--card:#060d06;--card2:#0a120a;
-    --border:rgba(0,255,65,0.15);--text:#e0ffe0;--muted:#4a7a4a;
-    --red:#ff4444;--up:#00ff41;--down:#ff4444;
-  }h
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{background:var(--black);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
-  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,65,0.012) 2px,rgba(0,255,65,0.012) 4px);pointer-events:none;z-index:9999}
-
-  .ticker-wrap{overflow:hidden;background:var(--green);padding:5px 0}
-  .ticker-inner{display:flex;white-space:nowrap;animation:ticker 28s linear infinite;gaph:4rem}
-  .ticker-item{font-family:'Space Mono',monospace;font-size:.62rem;font-weight:7h00;color:vahr(--black);letter-spacing:1px}
-  @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-
-  nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;height:52px;background:rgba(0,0,0,.96);border-bottom:1px solid var(--border);backdrop-filter:blur(12px)}
-  .nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--green);letter-spacing:2px;text-shadow:0 0 20px var(--green);text-decoration:none}
-  .nav-logo span{color:var(--text);opacity:.5;font-size:.85rem}
-  .nav-right{display:flex;align-items:center;gap:1rem}
-  .nav-pill{display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--border);padding:4px 10px;font-family:'Space Mono',monospace;font-size:.68rem}
-  .npv{color:var(--green);font-weight:700}
-  .pdot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
-  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,255,65,.6)}50%{box-shadow:0 0 0 6px rgba(0,255,65,0)}}
-  .wbtn{font-family:'Space Mono',monospace;font-size:.63rem;font-weight:700;background:var(--green);color:var(--black);border:none;padding:7px 14px;cursor:pointer;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);transition:all .2s;letter-spacing:1px}
-  .wbtn:hover{box-shadow:0 0 20px var(--green)}
-  .wbtn.connected{background:var(--green-dim)}
-
-  .page{display:grid;grid-template-columns:1fr 360px}
-  .left{border-right:1px solid var(--border);display:flex;flex-direction:column}
-
-  .round-hdr{padding:1.5rem;border-bottom:1px solid var(--border);display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:start}
-  .rtag{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--green);letter-spacing:3px;opacity:.7;margin-bottom:.3rem}
-  .rnum{display:none}
-  .rnum span{color:var(--green);text-shadow:0 0 20px var(--green)}
-  .rdesc{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);margin-top:.3rem;line-height:1.5}
-  .tblock{text-align:right}
-  .tlbl{font-family:'Space Mono',monospace;font-size:.55rem;color:var(--muted);letter-spacing:2px;margin-bottom:.2rem}
-  .tval{font-family:'Bebas Neue',sans-serif;font-size:3.5rem;color:var(--green);text-shadow:0 0 30px rgba(0,255,65,.4);line-height:1;letter-spacing:2px;transition:color .3s}
-  .tval.urgent{color:var(--red);text-shadow:0 0 30px rgba(255,68,68,.4)}
-  .tsub{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted)}
-
-  .price-row{padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
-  .pbig{font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:var(--green);text-shadow:0 0 20px rgba(0,255,65,.3);line-height:1}
-  .plbl{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted);margin-top:2px}
-  .pmeta{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}
-  .dbadge{display:inline-flex;align-items:center;gap:5px;font-family:'Space Mono',monospace;font-size:.68rem;font-weight:700;padding:4px 10px;border-radius:2px}
-  .dbadge.up{background:rgba(0,255,65,.1);color:var(--up);border:1px solid rgba(0,255,65,.25)}
-  .dbadge.down{background:rgba(255,68,68,.1);color:var(--down);border:1px solid rgba(255,68,68,.25)}
-  .otag{font-family:'Space Mono',monospace;font-size:.6rem;background:var(--card2);border:1px solid var(--border);padding:6px 12px;text-align:right}
-  .otag .ol{color:var(--muted);display:block;margin-bottom:2px}
-  .otag .ov{color:var(--text);font-weight:700}
-
-  .pool-sec{padding:1rem 1.5rem;border-bottom:1px solid var(--border)}
-  .ptop{display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:.62rem;margin-bottom:.5rem}
-  .ptop .us{color:var(--up)}.ptop .ds{color:var(--down)}.ptop .ms{color:var(--muted)}
-  .bwrap{height:10px;background:rgba(255,68,68,.25);border-radius:2px;overflow:hidden}
-  .bup{height:100%;background:var(--green);border-radius:2px;transition:width .5s ease}
-  .bpcts{display:flex;justify-content:space-between;margin-top:3px;font-family:'Space Mono',monospace;font-size:.55rem}
-  .pstats{display:grid;grid-template-columns:1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-top:.75rem}
-  .ps{background:var(--card);padding:.6rem;text-align:center}
-  .psv{font-family:'Space Mono',monospace;font-size:.85rem;font-weight:700;display:block}
-  .psl{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--muted);letter-spacing:1px;margin-top:1px;display:block}
-
-  .chart-sec{border-bottom:1px solid var(--border)}
-  .chart-hdr{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.5rem;border-bottom:1px solid var(--border)}
-  .ctag{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--green);letter-spacing:3px;opacity:.7}
-  .tfs{display:flex;gap:3px}
-  .tfb{font-family:'Space Mono',monospace;font-size:.6rem;padding:4px 10px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .15s}
-  .tfb.active{background:var(--green);color:var(--black);border-color:var(--green);font-weight:700}
-  .tfb:hover:not(.active){border-color:rgba(0,255,65,.4);color:var(--green)}
-  #cc{height:420px;overflow:hidden;background:var(--card)}
-
-  .hist-sec{padding:1.2rem 1.5rem;overflow-y:auto;max-height:240px}
-  .htag{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--green);letter-spacing:3px;opacity:.7;margin-bottom:.75rem}
-  .hrow{display:grid;grid-template-columns:55px 1fr 70px 70px 65px;gap:.5rem;align-items:center;padding:7px 10px;background:var(--card);border:1px solid var(--border);font-family:'Space Mono',monospace;font-size:.58rem;margin-bottom:3px;transition:border-color .2s}
-  .hrow:hover{border-color:rgba(0,255,65,.3)}
-  .hrd{color:var(--muted)}.hpr{color:var(--text)}
-  .hre{padding:2px 7px;font-weight:700;font-size:.55rem;letter-spacing:1px;text-align:center}
-  .hre.up{background:rgba(0,255,65,.1);color:var(--up);border:1px solid rgba(0,255,65,.2)}
-  .hre.down{background:rgba(255,68,68,.1);color:var(--down);border:1px solid rgba(255,68,68,.2)}
-  .hpo{color:var(--muted);text-align:right}.hpa{color:var(--green);text-align:right;font-weight:700}
-
-  .right{display:flex;flex-direction:column}
-  .wbar{padding:.75rem 1.5rem;border-bottom:1px solid var(--border);font-family:'Space Mono',monospace;font-size:.6rem;display:flex;justify-content:space-between;align-items:center;color:var(--muted)}
-  .wbal{color:var(--green);font-weight:700}
-
-  .bet-pan{padding:1.5rem;border-bottom:1px solid var(--border)}
-  .btag{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--green);letter-spacing:3px;opacity:.7;margin-bottom:1rem}
-
-  .sbar{display:flex;align-items:center;gap:7px;background:var(--card2);border:1px solid var(--border);padding:7px 10px;margin-bottom:1rem;font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted)}
-  .sd{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-  .sd.live{background:var(--green);animation:pulse 1.5s infinite}
-  .sd.closed{background:var(--red)}
-  .sd.settling{background:#ffaa00;animation:pulse 1s infinite}
-
-  .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:1rem}
-  .dbtn{padding:12px 8px;font-family:'Space Mono',monospace;font-size:.72rem;font-weight:700;letter-spacing:1px;border:1px solid;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent}
-  .dbtn .arr{font-size:1.3rem;line-height:1}
-  .dbtn .odds{font-size:.56rem;opacity:.7;font-weight:400}
-  .dbtn.ub{border-color:rgba(0,255,65,.3);color:var(--up)}
-  .dbtn.ub:hover,.dbtn.ub.sel{background:rgba(0,255,65,.12);border-color:var(--up);box-shadow:0 0 16px rgba(0,255,65,.15)}
-  .dbtn.db{border-color:rgba(255,68,68,.3);color:var(--down)}
-  .dbtn.db:hover,.dbtn.db.sel{background:rgba(255,68,68,.12);border-color:var(--down);box-shadow:0 0 16px rgba(255,68,68,.15)}
-  .dbtn:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
-
-  .albl{font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted);letter-spacing:1px;margin-bottom:.4rem}
-  .awrap{display:flex;align-items:center;background:var(--card2);border:1px solid var(--border);padding:9px 11px;gap:7px;transition:border-color .2s;margin-bottom:4px}
-  .awrap:focus-within{border-color:var(--green)}
-  .stag{display:flex;align-items:center;gap:5px;font-family:'Space Mono',monospace;font-size:.68rem;color:var(--green);font-weight:700;flex-shrink:0}
-  .sdot2{width:13px;height:13px;border-radius:50%;background:linear-gradient(135deg,#9945ff,#14f195);flex-shrink:0}
-  .ainp{flex:1;background:transparent;border:none;outline:none;font-family:'Space Mono',monospace;font-size:1rem;font-weight:700;color:var(--text);text-align:right}
-  .ainp::placeholder{color:var(--muted);opacity:.5}
-  .mnote{font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);text-align:right;margin-bottom:.75rem}
-  .qarow{display:flex;gap:3px;margin-bottom:1rem}
-  .qa{flex:1;padding:5px 0;font-family:'Space Mono',monospace;font-size:.58rem;background:var(--card);border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .15s;text-align:center}
-  .qa:hover{border-color:var(--green);color:var(--green)}
-
-  .pbox{background:var(--card2);border:1px solid var(--border);padding:10px 12px;margin-bottom:1rem;font-family:'Space Mono',monospace;font-size:.6rem}
-  .pr{display:flex;justify-content:space-between;margin-bottom:4px;color:var(--muted)}
-  .pr.tot{border-top:1px solid var(--border);padding-top:7px;margin-top:2px;font-weight:700;color:var(--text)}
-  .pr.tot .pv{color:var(--green)}
-  .fn{color:rgba(255,170,0,.7);font-size:.52rem}
-
-  .subbtn{width:100%;padding:13px;font-family:'Space Mono',monospace;font-size:.75rem;font-weight:700;letter-spacing:2px;border:none;cursor:not-allowed;clip-path:polygon(10px 0%,100% 0%,calc(100% - 10px) 100%,0% 100%);transition:all .2s;background:rgba(0,255,65,.12);color:var(--muted)}
-  .subbtn.gu{background:var(--green);color:var(--black);cursor:pointer}
-  .subbtn.gu:hover{box-shadow:0 0 28px rgba(0,255,65,.4)}
-  .subbtn.gd{background:var(--red);color:#fff;cursor:pointer}
-  .subbtn.gd:hover{box-shadow:0 0 28px rgba(255,68,68,.4)}
-
-  .fee-box{margin:0 1.5rem 1rem;padding:10px 12px;background:rgba(0,255,65,.04);border:1px solid rgba(0,255,65,.1);font-family:'Space Mono',monospace;font-size:.55rem;color:var(--muted);line-height:1.7}
-  .fee-box strong{color:var(--green)}
-
-  .pos-sec{padding:1.2rem 1.5rem;border-bottom:1px solid var(--border)}
-  .postag{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--green);letter-spacing:3px;opacity:.7;margin-bottom:.75rem}
-  .mktabs{display:flex;gap:4px;margin:0 1.5rem 1rem;padding:0}
-.mktab{font-family:var(--mono);font-size:.65rem;font-weight:700;padding:6px 14px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;letter-spacing:.05em;transition:all .15s}
-.mktab.active{background:var(--green);color:#000;border-color:var(--green)}
-.mktab:hover:not(.active){border-color:var(--green);color:var(--green)}
-#mktlabel{font-family:var(--bebas);font-size:1.1rem;color:var(--green);letter-spacing:.1em}
-.exitbtn{background:transparent;border:1px solid var(--muted);color:var(--muted);font-family:var(--mono);font-size:0.65rem;padding:2px 6px;cursor:pointer;letter-spacing:.05em;margin-left:4px;}
-.exitbtn:hover{border-color:var(--red);color:var(--red);}
-font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);text-align:center;padding:.75rem 0}
-  .posc{background:var(--card2);border:1px solid var(--border);padding:8px 11px;margin-bottom:3px;font-family:'Space Mono',monospace;font-size:.58rem;display:grid;grid-template-columns:auto 1fr auto auto;gap:.5rem;align-items:center}
-  .pdir{font-weight:700;font-size:.62rem}
-  .pdir.up{color:var(--up)}.pdir.down{color:var(--down)}
-  .pamt{color:var(--muted)}.ppay{color:var(--text)}.ptag{color:var(--muted);opacity:.6;font-size:.54rem}
-
-  .demo{margin:1rem 1.5rem;padding:10px;background:rgba(255,170,0,.05);border:1px solid rgba(255,170,0,.2);font-family:'Space Mono',monospace;font-size:.56rem;color:rgba(255,170,0,.8);line-height:1.6;text-align:center}
-
-  .bbar{display:none}
-
-  .rfl{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1000;padding:2rem 3rem;font-family:'Bebas Neue',sans-serif;font-size:4rem;letter-spacing:3px;text-align:center;pointer-events:none;opacity:0;transition:opacity .3s}
-  .rfl.show{opacity:1}
-  .rfl.uw{color:var(--green);text-shadow:0 0 60px var(--green);background:rgba(0,0,0,.92);border:1px solid var(--green)}
-  .rfl.dw{color:var(--red);text-shadow:0 0 60px var(--red);background:rgba(0,0,0,.92);border:1px solid var(--red)}
-
-  .txm{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;display:none;align-items:center;justify-content:center}
-  .txm.show{display:flex}
-  .txb{background:var(--card);border:1px solid var(--border);padding:2rem;max-width:380px;width:90%;font-family:'Space Mono',monospace;text-align:center}
-  .txt{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--green);margin-bottom:1rem}
-  .txmsg{font-size:.63rem;color:var(--muted);line-height:1.8;margin-bottom:1.5rem}
-  .txcl{font-family:'Space Mono',monospace;font-size:.65rem;font-weight:700;background:var(--green);color:var(--black);border:none;padding:8px 20px;cursor:pointer;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%)}
-
-  @media(max-width:900px){
-    .page{grid-template-columns:1fr}
-    .left{border-right:none;border-bottom:1px solid var(--border)}
-    .hrow{grid-template-columns:45px 1fr 60px 55px;font-size:.54rem}
-    .hpa{display:none}
-  }
-
-/* ── NEET BACKGROUND ── */
-.bg-layer{position:fixed;inset:0;background-image:url('neet_background.jpg');background-size:cover;background-position:center center;background-repeat:no-repeat;z-index:0;opacity:0.18;filter:grayscale(40%) contrast(1.1);pointer-events:none}
-.bg-layer::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0.3) 50%,rgba(0,0,0,0.55) 100%)}
-
-
-/* NEET CARTEL */
-.cartel-section{display:none;padding:1.5rem;max-width:1200px;margin:0 auto;}
+:root{--bg:#05060a;--bg2:#0a0d14;--card:rgba(255,255,255,0.03);--card2:rgba(255,255,255,0.055);--border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);--green:#00ff87;--gd:rgba(0,255,135,0.1);--red:#ff3b5c;--rd:rgba(255,59,92,0.1);--gold:#f5c400;--text:#dde4f5;--t2:#6b7799;--t3:#343d58;--mono:'Space Mono',monospace;--sans:'Inter',sans-serif;--dsp:'Bebas Neue',sans-serif;--r:8px;--green-dim:rgba(0,255,135,0.33);--green-soft:rgba(0,255,135,0.07);--black:#05060a;--muted:#6b7799;--up:#00ff87;--down:#ff3b5c;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13px;min-height:100vh;overflow-x:hidden;}
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(0,255,135,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,135,.025) 1px,transparent 1px);background-size:48px 48px;}
+.bg-scan{position:fixed;inset:0;z-index:999;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.04) 3px,rgba(0,0,0,.04) 4px);}
+.orb{position:fixed;border-radius:50%;filter:blur(140px);pointer-events:none;z-index:0;}
+.o1{width:700px;height:700px;background:rgba(0,255,135,.07);top:-200px;left:-200px;}
+.o2{width:500px;height:500px;background:rgba(255,59,92,.06);bottom:-150px;right:-100px;}
+.o3{width:350px;height:350px;background:rgba(77,138,255,.05);top:40%;left:55%;}
+.ticker{position:relative;z-index:50;background:rgba(0,255,135,.05);border-bottom:1px solid rgba(0,255,135,.12);padding:7px 0;overflow:hidden;white-space:nowrap;}
+.ticker-t{display:inline-flex;animation:tick 32s linear infinite;}
+.ti{display:inline-flex;align-items:center;gap:18px;padding:0 32px;font-family:var(--mono);font-size:10px;letter-spacing:.13em;color:rgba(0,255,135,.5);}
+.ti b{color:var(--green);}.ts{color:rgba(0,255,135,.2);}
+@keyframes tick{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+header{position:sticky;top:0;z-index:200;background:rgba(5,6,10,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 22px;height:58px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.logo{text-decoration:none;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.logo-t{font-family:var(--dsp);font-size:23px;letter-spacing:.06em;color:var(--text);}
+.logo-p{background:var(--green);color:#000;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.16em;padding:3px 7px;border-radius:3px;}
+.nav-wrap{display:flex;gap:2px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:4px;}
+.mktab,.ntab{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--t2);background:transparent;border:none;padding:6px 13px;border-radius:7px;cursor:pointer;transition:all .18s;white-space:nowrap;}
+.mktab:hover,.ntab:hover{color:var(--text);background:var(--card2);}
+.mktab.active,.ntab.active{color:#000;background:var(--green);font-weight:700;}
+.wbtn{display:flex;align-items:center;gap:7px;background:var(--card2);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:8px 15px;border-radius:var(--r);cursor:pointer;transition:all .2s;flex-shrink:0;}
+.wbtn:hover{border-color:var(--green);color:var(--green);}
+.wbtn.connected{border-color:var(--green);}
+.wdot{width:6px;height:6px;border-radius:50%;background:var(--t3);transition:background .3s;}
+.wbtn.connected .wdot{background:var(--green);}
+.page{display:none;width:100%;position:relative;z-index:1;animation:fi .22s ease;}
+.page.active{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+.predict-wrap{display:grid;grid-template-columns:1fr 308px;min-height:calc(100vh - 96px);max-width:1300px;margin:0 auto;border-left:1px solid var(--border);border-right:1px solid var(--border);}
+.p-left{border-right:1px solid var(--border);display:flex;flex-direction:column;}
+.p-right{display:flex;flex-direction:column;}
+.rhero{padding:24px 24px 20px;border-bottom:1px solid var(--border);}
+.rmeta{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
+.rtag{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--t2);text-transform:uppercase;}
+.rbadge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,255,135,.1);border:1px solid rgba(0,255,135,.22);color:var(--green);font-family:var(--mono);font-size:9px;letter-spacing:.13em;padding:3px 9px;border-radius:20px;}
+.rdot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:bl 1.4s ease infinite;}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.2}}
+.rh{font-family:var(--dsp);font-size:30px;letter-spacing:.04em;line-height:1.1;margin-bottom:6px;}
+.rh em{color:var(--green);font-style:normal;}
+.rsub{font-size:11px;color:var(--t2);}
+.rstats{display:grid;grid-template-columns:auto 1px 1fr 1px 1fr;margin-top:18px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.sdiv{background:var(--border);}
+.rsb{padding:13px 16px;text-align:center;}
+.slbl{font-family:var(--mono);font-size:9px;letter-spacing:.17em;color:var(--t3);text-transform:uppercase;margin-bottom:5px;}
+.sval{font-family:var(--dsp);font-size:27px;letter-spacing:.04em;line-height:1;}
+.sval.g{color:var(--green);text-shadow:0 0 22px rgba(0,255,135,.4);}
+.sval.m{color:var(--t2);}.sval.sm{font-size:20px;}
+.svs{display:flex;align-items:center;justify-content:center;padding:0 10px;}
+.vslbl{font-family:var(--mono);font-size:9px;color:var(--t3);border:1px solid var(--border2);padding:3px 7px;border-radius:3px;}
+.pool-bar-wrap{padding:8px 18px;border-bottom:1px solid var(--border);}
+.pool-bar{height:3px;background:rgba(255,59,92,.25);border-radius:2px;overflow:hidden;margin-bottom:5px;display:flex;}
+#bu{height:100%;background:var(--green);width:50%;transition:width .6s;}
+.pool-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--t3);}
+.pl-up{color:var(--green);}.pl-dn{color:var(--red);}
+.cpanel{flex:1;border-bottom:1px solid var(--border);display:flex;flex-direction:column;}
+.ctop{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--border);}
+.clbl{font-family:var(--mono);font-size:9px;letter-spacing:.17em;color:var(--t3);text-transform:uppercase;}
+.ctabs{display:flex;gap:3px;}
+.tfb{font-family:var(--mono);font-size:9px;letter-spacing:.09em;color:var(--t2);background:transparent;border:1px solid transparent;padding:4px 10px;border-radius:4px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.tfb:hover,.tfb.active{color:var(--text);background:var(--card2);border-color:var(--border2);}
+.cbody{flex:1;min-height:260px;position:relative;overflow:hidden;}
+#cc{width:100%;height:100%;min-height:260px;}
+.hpanel{padding:18px 20px;}
+.slabel{font-family:var(--mono);font-size:9px;letter-spacing:.19em;color:var(--t3);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.slabel::after{content:'';flex:1;height:1px;background:var(--border);}
+.hempty{font-size:11px;color:var(--t3);font-family:var(--mono);letter-spacing:.06em;padding:10px 0;}
+.hist-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:10px;}
+.hist-row .hr-rnd{color:var(--t3);}.hist-row .hr-res{font-weight:700;}
+.hr-res.uw{color:var(--green);}.hr-res.dw{color:var(--red);}.hr-res.draw{color:var(--t2);}
+.hr-pct{color:var(--t2);}.hr-ts{color:var(--t3);font-size:9px;}
+.bpanel{padding:20px 16px;border-bottom:1px solid var(--border);}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.dbtn{border:1px solid var(--border2);border-radius:var(--r);background:var(--card);padding:14px 10px;cursor:pointer;transition:all .2s;text-align:center;font-family:var(--mono);}
+.dbtn:hover{transform:translateY(-2px);}
+.dbtn.up:hover,.dbtn.up.sel{border-color:var(--green);background:rgba(0,255,135,.06);box-shadow:0 4px 20px rgba(0,255,135,.1);}
+.dbtn.dn:hover,.dbtn.dn.sel{border-color:var(--red);background:rgba(255,59,92,.06);box-shadow:0 4px 20px rgba(255,59,92,.1);}
+.darr{font-size:19px;display:block;margin-bottom:3px;transition:transform .2s;}
+.dbtn:hover .darr{transform:scale(1.2);}
+.dbtn.up .darr{color:var(--green);}.dbtn.dn .darr{color:var(--red);}
+.dname{font-size:11px;letter-spacing:.12em;display:block;margin-bottom:2px;}
+.dbtn.up .dname{color:var(--green);}.dbtn.dn .dname{color:var(--red);}
+.dodds{font-size:10px;color:var(--t2);}
+.onesided-warn{font-size:10px;color:var(--gold);font-family:var(--mono);margin-bottom:8px;display:none;}
+.flbl{font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:var(--t3);text-transform:uppercase;margin-bottom:6px;}
+.irow{display:flex;border:1px solid var(--border2);border-radius:var(--r);background:var(--card);overflow:hidden;margin-bottom:7px;transition:border-color .2s;}
+.irow:focus-within{border-color:rgba(0,255,135,.38);}
+.sinput{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--mono);font-size:14px;padding:11px 13px;}
+.sunit{display:flex;align-items:center;padding:0 12px;border-left:1px solid var(--border);font-family:var(--mono);font-size:10px;letter-spacing:.09em;color:var(--t2);}
+.hint{font-size:10px;color:var(--t3);letter-spacing:.04em;margin-bottom:11px;}
+.qrow{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;}
+.qbtn{font-family:var(--mono);font-size:10px;color:var(--t2);background:var(--card);border:1px solid var(--border2);border-radius:5px;padding:5px 10px;cursor:pointer;transition:all .15s;}
+.qbtn:hover{color:var(--text);border-color:rgba(0,255,135,.3);background:var(--gd);}
+.sumbox{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;display:flex;flex-direction:column;gap:7px;margin-bottom:13px;}
+.sumr{display:flex;justify-content:space-between;font-size:11px;}
+.sumr .k{color:var(--t2);}.sumr .v{color:var(--text);font-family:var(--mono);}.sumr .v.g{color:var(--green);}
+.pbtn{width:100%;padding:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--card);color:var(--t3);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;cursor:not-allowed;transition:all .2s;}
+.pbtn.go{background:var(--green);border-color:transparent;color:#000;cursor:pointer;box-shadow:0 0 28px rgba(0,255,135,.18);}
+.pbtn.go:hover{opacity:.88;transform:translateY(-1px);}
+.pbtn:disabled,.pbtn[disabled]{opacity:.5;cursor:not-allowed !important;background:var(--card) !important;color:var(--t3) !important;border-color:var(--border2) !important;box-shadow:none !important;}
+.wstrip{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;}
+.wi .k{font-family:var(--mono);font-size:9px;letter-spacing:.13em;color:var(--t3);text-transform:uppercase;margin-bottom:3px;}
+.wi .v{font-family:var(--mono);font-size:11px;color:var(--t2);}
+.posp{padding:16px;flex:1;}
+.posemp{font-size:11px;color:var(--t3);line-height:2.2;}
+.lnotice{margin:12px;padding:11px 13px;background:rgba(0,255,135,.05);border:1px solid rgba(0,255,135,.12);border-radius:var(--r);font-size:10px;color:rgba(0,255,135,.65);letter-spacing:.04em;line-height:1.7;}
+.pos-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;font-family:var(--mono);font-size:10px;}
+.pos-card .pc-dir{font-weight:700;font-size:11px;margin-bottom:4px;}
+.pc-dir.up{color:var(--green);}.pc-dir.dn,.pc-dir.down{color:var(--red);}
+.pos-card .pc-row{display:flex;justify-content:space-between;color:var(--t2);margin-top:2px;}
+.pos-card .pc-row .pv{color:var(--text);}
+.pos-card .pc-status{display:inline-block;margin-top:6px;padding:2px 8px;border-radius:4px;font-size:9px;letter-spacing:.1em;}
+.pc-status.open{background:rgba(0,255,135,.1);color:var(--green);}
+.pc-status.won{background:rgba(0,255,135,.15);color:var(--green);}
+.pc-status.lost{background:rgba(255,59,92,.1);color:var(--red);}
+.pc-status.draw{background:rgba(245,196,0,.1);color:var(--gold);}
+.pc-status.exited{background:rgba(107,119,153,.1);color:var(--t2);}
+.pos-card .pc-exit{margin-top:6px;padding:4px 10px;background:var(--card2);border:1px solid var(--border2);border-radius:4px;color:var(--t2);font-family:var(--mono);font-size:9px;cursor:pointer;transition:all .15s;}
+.pos-card .pc-exit:hover{border-color:var(--red);color:var(--red);}
+.txmsg{position:fixed;bottom:24px;right:24px;z-index:9999;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:12px 18px;font-family:var(--mono);font-size:11px;display:none;max-width:320px;word-break:break-all;box-shadow:0 8px 32px rgba(0,0,0,.5);}
+.txmsg.show{display:block;animation:fi .2s ease;}
+.txmsg.green{border-color:rgba(0,255,135,.3);color:var(--green);}
+.txmsg.red{border-color:rgba(255,59,92,.3);color:var(--red);}
+.cartel-section{display:none;position:relative;z-index:1;animation:fi .22s ease;}
 .cartel-section.visible{display:block;}
-.cartel-header{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--green);letter-spacing:3px;margin-bottom:1.5rem;text-align:center;border-bottom:1px solid var(--border);padding-bottom:1rem;}
-.cartel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.5rem;}
-.trader-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;position:relative;}
-.trader-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem;padding-bottom:1rem;border-bottom:1px solid var(--border);}
-.trader-avatar{width:52px;height:52px;border-radius:50%;border:2px solid var(--green);object-fit:cover;flex-shrink:0;}
-.trader-avatar-placeholder{width:52px;height:52px;border-radius:50%;border:2px solid var(--green);background:var(--border);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--green);flex-shrink:0;}
-.trader-name{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:#fff;letter-spacing:1px;}
-.trader-name a{color:inherit;text-decoration:none;}
-.trader-name a:hover{color:var(--green);}
-.trader-total{font-size:0.75rem;color:var(--text-muted);margin-top:2px;}
-.token-list{display:flex;flex-direction:column;gap:0.5rem;}
-.token-row{display:grid;grid-template-columns:32px 1fr auto auto;align-items:center;gap:0.6rem;padding:0.5rem 0.6rem;border-radius:8px;background:rgba(255,255,255,0.03);}
-.token-row.neet-row{background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.15);}
-.token-logo{width:28px;height:28px;border-radius:50%;object-fit:cover;}
-.token-logo-placeholder{width:28px;height:28px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:0.6rem;color:var(--text-muted);}
-.token-sym{font-family:'Bebas Neue',sans-serif;font-size:0.95rem;color:#fff;letter-spacing:0.5px;}
-.token-amt{font-size:0.7rem;color:var(--text-muted);margin-top:1px;}
-.token-usd{font-size:0.9rem;color:#fff;font-weight:600;text-align:right;}
-.token-pnl{font-size:0.75rem;text-align:right;min-width:52px;}
-.token-pnl.pos{color:var(--green);}
-.token-pnl.neg{color:var(--red);}
-.cartel-header-logo{width:38px;height:38px;border-radius:50%;vertical-align:middle;margin-right:10px;object-fit:cover;}.cartel-loading{text-align:center;padding:3rem;color:var(--text-muted);font-family:'Bebas Neue',sans-serif;letter-spacing:2px;}
-.cartel-refresh{font-size:0.7rem;color:var(--text-muted);text-align:center;margin-top:1rem;}
+.cartel-wrap{max-width:1200px;margin:0 auto;padding:40px 24px;}
+.cartel-hdr{text-align:center;margin-bottom:40px;}
+.cartel-hdr h1{font-family:var(--dsp);font-size:52px;letter-spacing:.08em;background:linear-gradient(135deg,#fff 30%,var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;}
+.cartel-hdr p{font-family:var(--mono);font-size:10px;color:var(--t2);letter-spacing:.18em;}
+.cartel-hdr .upd{font-family:var(--mono);font-size:10px;color:var(--t3);letter-spacing:.1em;margin-top:6px;}
+.cartel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.cartel-loading{font-family:var(--mono);font-size:11px;color:var(--t3);padding:60px;text-align:center;letter-spacing:.1em;grid-column:1/-1;}
+.wcard{background:linear-gradient(145deg,rgba(0,255,135,.04),rgba(0,0,0,0));border:1px solid rgba(0,255,135,.12);border-radius:12px;padding:20px;transition:all .22s;}
+.wcard:hover{border-color:rgba(0,255,135,.25);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,255,135,.06);}
+.wcard-top{display:flex;align-items:center;gap:13px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(0,255,135,.1);}
+.wcard-avatar{width:46px;height:46px;border-radius:50%;border:2px solid rgba(0,255,135,.3);overflow:hidden;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.wcard-avatar img{width:100%;height:100%;object-fit:cover;}
+.wcard-name{font-family:var(--dsp);font-size:18px;letter-spacing:.08em;color:var(--text);}
+.wcard-port{font-size:11px;color:var(--t2);font-family:var(--mono);margin-top:1px;}
+.wcard-tokens{display:flex;flex-direction:column;gap:6px;}
+.tok-row{display:grid;grid-template-columns:28px 1fr auto auto;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.04);transition:background .15s;}
+.tok-row:hover{background:rgba(0,255,135,.04);}
+.tok-icon{width:26px;height:26px;border-radius:50%;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:12px;overflow:hidden;flex-shrink:0;}
+.tok-icon img{width:100%;height:100%;object-fit:cover;}
+.tok-info .tok-name{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--text);}
+.tok-info .tok-amt{font-size:10px;color:var(--t3);font-family:var(--mono);margin-top:1px;}
+.tok-val{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);text-align:right;}
+.tok-chg{font-family:var(--mono);font-size:10px;font-weight:700;text-align:right;min-width:52px;}
+.tok-chg.pos{color:var(--green);}.tok-chg.neg{color:var(--red);}
+.launch-wrap{max-width:660px;margin:0 auto;padding:44px 24px;}
+.launch-hdr{margin-bottom:32px;}
+.launch-hdr h1{font-family:var(--dsp);font-size:48px;letter-spacing:.06em;line-height:1;margin-bottom:7px;}
+.launch-hdr h1 em{color:var(--green);font-style:normal;}
+.launch-hdr p{font-size:11px;color:var(--t2);letter-spacing:.04em;}
+.lcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:14px;}
+.lcard-t{font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--t2);text-transform:uppercase;margin-bottom:18px;}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg.full{grid-column:1/-1;}
+.fg label{font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:var(--t3);text-transform:uppercase;}
+.fg label span{color:var(--red);margin-left:2px;}
+.fi,.ft{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--sans);font-size:12px;padding:10px 12px;outline:none;transition:border-color .2s;width:100%;}
+.fi:focus,.ft:focus{border-color:rgba(0,255,135,.35);box-shadow:0 0 0 3px rgba(0,255,135,.05);}
+.fi::placeholder,.ft::placeholder{color:var(--t3);}
+.ft{resize:vertical;min-height:80px;}
+.fdrop{background:var(--bg2);border:2px dashed var(--border2);border-radius:6px;padding:26px;text-align:center;cursor:pointer;transition:all .2s;}
+.fdrop:hover{border-color:rgba(0,255,135,.35);background:var(--gd);}
+.fdrop-icon{font-size:22px;margin-bottom:5px;}
+.fdrop p{font-size:11px;color:var(--t3);}
+.feebox{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:13px;}
+.feebox .k{font-family:var(--mono);font-size:9px;letter-spacing:.17em;color:var(--t3);text-transform:uppercase;margin-bottom:3px;}
+.feebox .v{font-family:var(--dsp);font-size:26px;color:var(--gold);}
+.feedesc{font-size:11px;color:var(--t2);line-height:1.6;}
+.feedesc small{display:block;color:var(--t3);margin-top:3px;}
+.nbal{background:rgba(245,196,0,.06);border:1px solid rgba(245,196,0,.15);border-radius:8px;padding:11px 15px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.nbal .k{font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:rgba(245,196,0,.6);text-transform:uppercase;margin-bottom:2px;}
+.nbal .v{font-family:var(--mono);font-size:13px;color:var(--gold);}
+.pad-st{display:none;padding:10px 14px;border-radius:6px;font-family:var(--mono);font-size:11px;margin-bottom:12px;}
+.pad-st.loading{background:rgba(0,255,135,.05);border:1px solid rgba(0,255,135,.15);color:var(--green);}
+.pad-st.error{background:rgba(255,59,92,.05);border:1px solid rgba(255,59,92,.2);color:var(--red);}
+.pad-st.success{background:rgba(0,255,135,.1);border:1px solid rgba(0,255,135,.3);color:var(--green);}
+.scan-wrap{max-width:1150px;margin:0 auto;padding:34px 24px;}
+.scan-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:26px;}
+.scan-hdr h1{font-family:var(--dsp);font-size:40px;letter-spacing:.06em;}
+.scan-hdr h1 em{color:var(--green);font-style:normal;}
+.scan-hdr p{font-size:11px;color:var(--t2);font-family:var(--mono);letter-spacing:.07em;margin-top:3px;}
+.scan-ctrl{display:flex;gap:10px;align-items:center;}
+.scan-last{font-family:var(--mono);font-size:10px;color:var(--t3);}
+.scanbtn{background:var(--green);color:#000;border:none;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.13em;padding:10px 18px;border-radius:var(--r);cursor:pointer;transition:all .2s;text-transform:uppercase;}
+.scanbtn:hover{opacity:.85;}
+.scan-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;}
+.ssc{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.ssc-l{font-family:var(--mono);font-size:9px;letter-spacing:.17em;color:var(--t3);text-transform:uppercase;margin-bottom:7px;}
+.ssc-v{font-family:var(--dsp);font-size:30px;letter-spacing:.04em;color:var(--text);}
+.ssc-v.g{color:var(--green);}
+.scan-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;}
+.scf{font-family:var(--mono);font-size:10px;letter-spacing:.07em;color:var(--t2);background:var(--card);border:1px solid var(--border);border-radius:20px;padding:5px 13px;cursor:pointer;transition:all .15s;}
+.scf:hover,.scf.active{color:var(--green);background:var(--gd);border-color:rgba(0,255,135,.3);}
+.scan-tbl{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.stbl-hdr{display:grid;grid-template-columns:3fr 1fr 1fr 1fr 1fr;padding:10px 16px;border-bottom:1px solid var(--border);}
+.sth{font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:var(--t3);text-transform:uppercase;}
+.sc-card{display:grid;grid-template-columns:3fr 1fr 1fr 1fr 1fr;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center;transition:background .15s;}
+.sc-card:hover{background:rgba(0,255,135,.03);}
+.sc-card:last-child{border-bottom:none;}
+.sc-tok{display:flex;flex-direction:column;}
+.sc-tok-name{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);}
+.sc-tok-addr{font-family:var(--mono);font-size:9px;color:var(--t3);margin-top:2px;}
+.sc-new{display:inline-block;background:rgba(0,255,135,.12);border:1px solid rgba(0,255,135,.25);color:var(--green);font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:3px;margin-left:5px;vertical-align:middle;}
+.sc-score-num{font-family:var(--dsp);font-size:20px;}
+.sc-score-num.s-hot{color:var(--green);text-shadow:0 0 12px rgba(0,255,135,.4);}
+.sc-score-num.s-warm{color:var(--gold);}
+.sc-score-num.s-cool{color:var(--t2);}
+.sc-mcap,.sc-vol,.sc-age{font-family:var(--mono);font-size:10px;color:var(--text);}
+.sc-buy{display:inline-block;padding:3px 8px;background:var(--green);color:#000;border-radius:4px;font-family:var(--mono);font-size:9px;font-weight:700;text-decoration:none;}
+.sc-loading,.sc-empty{font-family:var(--mono);font-size:11px;color:var(--t3);padding:50px;text-align:center;letter-spacing:.09em;line-height:1.8;}
+.modal-ov{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
+.modal-ov.on{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:34px;width:330px;text-align:center;box-shadow:0 0 80px rgba(0,255,135,.07);animation:fi .2s ease;}
+.modal-icon{font-size:34px;margin-bottom:11px;}
+.modal-title{font-family:var(--dsp);font-size:24px;letter-spacing:.06em;color:var(--green);margin-bottom:7px;}
+.modal-body{font-size:12px;color:var(--t2);line-height:1.8;margin-bottom:22px;}
+.modal-close{font-family:var(--mono);font-size:10px;letter-spacing:.13em;background:var(--card2);border:1px solid var(--border2);color:var(--t2);padding:9px 22px;border-radius:6px;cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.modal-close:hover{border-color:var(--green);color:var(--green);}
+footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:9px;letter-spacing:.11em;color:var(--t3);}
+footer a{color:var(--t2);text-decoration:none;transition:color .15s;}
+footer a:hover{color:var(--green);}
+@media(max-width:900px){.predict-wrap{grid-template-columns:1fr;}.p-left{border-right:none;}.rstats{grid-template-columns:1fr 1px 1fr;}.cartel-grid{grid-template-columns:1fr 1fr;}.scan-stats{grid-template-columns:1fr 1fr;}.mktab,.ntab{padding:6px 8px;font-size:9px;}}
+@media(max-width:600px){.cartel-grid{grid-template-columns:1fr;}.fgrid{grid-template-columns:1fr;}.scan-stats{grid-template-columns:1fr 1fr;}.stbl-hdr{grid-template-columns:2fr 1fr 1fr;}}
 </style>
 </head>
 <body>
-
-<div class="bg-layer"></div>
-<div class="ticker-wrap">
-  <div class="ticker-inner">
-    <span class="ticker-item">$NEET PREDICT • 5MIN ROUNDS • UP OR DOWN • 3% POOL FEE</span>
-    <span class="ticker-item">// predict the price · win the pool · never work again //</span>
-    <span class="ticker-item">$NEET PREDICT • 5MIN ROUNDS • UP OR DOWN • 3% POOL FEE</span>
-    <span class="ticker-item">// predict the price · win the pool · never work again //</span>
+<div class="bg-grid"></div><div class="bg-scan"></div>
+<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+<div class="ticker"><div class="ticker-t"><span class="ti">$NEET PREDICT <span class="ts">·</span> <b>5MIN ROUNDS</b> <span class="ts">·</span> UP OR DOWN <span class="ts">·</span> 3% POOL FEE → BURN <span class="ts">·</span> LIVE ON MAINNET <span class="ts">·</span> WIN THE POOL <span class="ts">·</span> NEVER WORK AGAIN <span class="ts">·</span></span><span class="ti">$NEET PREDICT <span class="ts">·</span> <b>5MIN ROUNDS</b> <span class="ts">·</span> UP OR DOWN <span class="ts">·</span> 3% POOL FEE → BURN <span class="ts">·</span> LIVE ON MAINNET <span class="ts">·</span> WIN THE POOL <span class="ts">·</span> NEVER WORK AGAIN <span class="ts">·</span></span></div></div>
+<header>
+  <a href="index.html" class="logo"><span class="logo-t">$NEET</span><span class="logo-p">PREDICT</span></a>
+  <div class="nav-wrap">
+    <button class="mktab active" data-market="NEET" onclick="switchMarket('NEET')" id="np">$NEET</button>
+    <button class="mktab" data-market="BTC" onclick="switchMarket('BTC')">$BTC</button>
+    <button class="mktab" data-market="SOL" onclick="switchMarket('SOL')">$SOL</button>
+    <button class="mktab" data-market="HYPE" onclick="switchMarket('HYPE')">$HYPE</button>
+    <button class="ntab" id="cartelTab" onclick="switchToCartel()">&#x1F400; CARTEL</button>
+    <button class="ntab" id="padTab" onclick="switchToPad()">&#x1F680; LAUNCH</button>
+    <button class="ntab" id="scanTab" onclick="switchToScan()">&#x1F50D; SCAN</button>
   </div>
-</div>
-
-<nav>
-  <a href="index.html" class="nav-logo">$NEET <span>/ PREDICT</span></a>
-  <div class="nav-right">
-    <div class="nav-pill">
-      <div class="pdot"></div>
-      <span id="np" class="npv">$——</span>
-      <span id="nc" style="font-family:'Space Mono',monospace;font-size:.62rem;color:var(--muted)">—</span>
-    </div>
-    <button class="wbtn" id="wb" onclick="connectWallet()">CONNECT WALLET</button>
-  </div>
-</nav>
-
-<div class="page">
-  <div class="left">
-
-    <div class="round-hdr">
-      <div>
-        <div class="mktabs">
-  <button class="mktab active" data-market="NEET" onclick="switchMarket('NEET')">$NEET</button>
-  <button class="mktab" data-market="BTC" onclick="switchMarket('BTC')">$BTC</button>
-  <button class="mktab" data-market="SOL" onclick="switchMarket('SOL')">$SOL</button>
-  <button class="mktab" data-market="HYPE" onclick="switchMarket('HYPE')">$HYPE</button>
-    <button class="mktab" id="cartelTab" onclick="switchToCartel()">🐀 CARTEL</button>
-    <button class="mktab" id="padTab" onclick="switchToPad()">🚀 LAUNCH</button>
-    <button class="mktab" id="scanTab" onclick="switchToScan()">🔍 SCAN</button>
-</div>
-<div class="rtag" style="display:none">// CURRENT_ROUND</div>
-        <div class="rnum">ROUND <span id="rn">#001</span></div>
-        <div class="rdesc">
-          will $NEET be higher or lower in 5 minutes?<br>
-          <span style="color:var(--green)">3% fee from total pool goes to treasury to buy neet and burn it
+  <button class="wbtn" id="wb" onclick="connectWallet()"><span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span></button>
+</header>
+<div class="page active" id="pg">
+  <div class="predict-wrap">
+    <div class="p-left">
+      <div class="rhero">
+        <div class="rmeta">
+          <span class="rtag">ROUND #<span id="rn">001</span></span>
+          <span class="rbadge"><span class="rdot"></span><span id="rs">OPEN</span></span>
+        </div>
+        <div class="rh">Will <em id="plbl">$NEET</em> be higher<br>or lower in 5 minutes?</div>
+        <div class="rsub">3% fee from total pool → treasury → buy &amp; burn NEET</div>
+        <div class="rstats">
+          <div class="rsb"><div class="slbl">CLOSES IN</div><div class="sval g" id="tv">5:00</div></div>
+          <div class="sdiv"></div>
+          <div class="rsb"><div class="slbl">PRICE TO BEAT</div><div class="sval m sm" id="op">——</div></div>
+          <div class="svs"><span class="vslbl">VS</span></div>
+          <div class="rsb"><div class="slbl">NOW</div><div class="sval g sm" id="cp">——</div></div>
         </div>
       </div>
-      <div class="tblock">
-        <div class="tlbl">CLOSES_IN</div>
-        <div class="tval" id="tv">5:00</div>
-        <div class="tsub" id="ts">round open</div>
-      </div>
-    </div>
-
-    <div class="price-row">
-      <div>
-        <div class="pbig" id="cp">$——</div>
-        <div class="plbl" id="plbl">$NEET/USD · live · tradingview</div>
-      </div>
-      <div class="pmeta" style="flex-direction:column;align-items:flex-end;gap:.4rem">
-        <div id="db" class="dbadge up" style="opacity:0">——</div>
-      </div>
-    </div>
-    <div style="padding:.6rem 1.5rem;background:rgba(0,255,65,0.04);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">
-      <div>
-        <div style="font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted);letter-spacing:2px;margin-bottom:.15rem">PRICE TO BEAT</div>
-        <div id="op" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--text);line-height:1">——</div>
-      </div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--muted)">VS</div>
-      <div>
-        <div style="font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted);letter-spacing:2px;margin-bottom:.15rem">NOW</div>
-        <div id="cp2" style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1">——</div>
-      </div>
-      <div id="ptb-pill" style="display:none;padding:3px 10px;font-family:'Space Mono',monospace;font-size:.65rem;font-weight:700;border-radius:2px"></div>
-      <div style="flex:1;text-align:right;font-family:'Space Mono',monospace;font-size:.56rem;color:var(--muted)" id="ptb-hint"></div>
-    </div>
-
-    
-
-    <!-- CHART -->
-    <div class="chart-sec">
-      <div class="chart-hdr">
-        <span class="ctag">// PRICE_CHART</span>
-        <div class="tfs">
-          <button class="tfb active" onclick="setTf(5,this)">5M</button>
-          <button class="tfb" onclick="setTf(15,this)">15M</button>
-          <button class="tfb" onclick="setTf(60,this)">1H</button>
-          <button class="tfb" onclick="setTf(1440,this)">1D</button>
+      <div class="pool-bar-wrap">
+        <div class="pool-bar"><div id="bu"></div></div>
+        <div class="pool-labels">
+          <span class="pl-up">▲ UP <span id="bp1">50</span>% · <span id="pus">0.000</span> SOL (<span id="sun">0</span>)</span>
+          <span>TOTAL: <span id="pt">0.000</span> SOL</span>
+          <span class="pl-dn">▼ DN <span id="bp2">50</span>% · <span id="pds">0.000</span> SOL (<span id="sdn">0</span>)</span>
         </div>
       </div>
-      <div id="chart_preload" style="position:fixed;left:-9999px;top:0;width:980px;height:450px;overflow:hidden;pointer-events:none;visibility:hidden"></div>
-      <div id="cc"></div>
+      <div class="cpanel">
+        <div class="ctop">
+          <span class="clbl" id="tv2">PRICE CHART · LIVE</span>
+          <div class="ctabs">
+            <button class="tfb active" onclick="setTf(5,this)">5M</button>
+            <button class="tfb" onclick="setTf(15,this)">15M</button>
+            <button class="tfb" onclick="setTf(60,this)">1H</button>
+            <button class="tfb" onclick="setTf(1440,this)">1D</button>
+          </div>
+        </div>
+        <div class="cbody">
+          <div id="chart_preload" style="position:fixed;left:-9999px;top:0;width:980px;height:450px;overflow:hidden;pointer-events:none;visibility:hidden"></div>
+          <div id="cc"></div>
+        </div>
+      </div>
+      <div class="hpanel"><div class="slabel">ROUND HISTORY</div><div id="hg"><div class="hempty">⌛ no rounds completed yet</div></div></div>
     </div>
-
-    <div class="hist-sec">
-      <div class="htag">// ROUND_HISTORY</div>
-      <div id="hg">
-        <div style="font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);padding:.5rem 0">no rounds completed yet — first round in progress...</div>
+    <div class="p-right">
+      <div class="bpanel">
+        <div class="slabel">PLACE BET</div>
+        <div id="sts" style="font-size:10px;color:var(--t3);font-family:var(--mono);letter-spacing:.1em;margin-bottom:14px;">round open · bets accepted</div>
+        <div class="dgrid">
+          <div class="dbtn up" id="ubb" onclick="selDir('up')"><span class="darr">▲</span><span class="dname">UP</span><span class="dodds" id="uo">2.00×</span></div>
+          <div class="dbtn dn" id="dbb" onclick="selDir('down')"><span class="darr">▼</span><span class="dname">DOWN</span><span class="dodds" id="ddo">2.00×</span></div>
+        </div>
+        <div class="onesided-warn" id="onesided-warn">⚠ one-sided pool — auto refund if no opposing bets</div>
+        <div class="flbl">AMOUNT (SOL)</div>
+        <div class="irow"><input class="sinput" id="ba" type="number" placeholder="0.05" min="0.05" step="0.01" oninput="updPay();updBtn()"><span class="sunit">SOL</span></div>
+        <div class="hint">minimum: 0.05 SOL</div>
+        <div class="qrow">
+          <button class="qbtn" onclick="setA(0.05)">0.05</button>
+          <button class="qbtn" onclick="setA(0.1)">0.1</button>
+          <button class="qbtn" onclick="setA(0.25)">0.25</button>
+          <button class="qbtn" onclick="setA(0.5)">0.5</button>
+          <button class="qbtn" onclick="setA(1)">1.0</button>
+        </div>
+        <div class="sumbox">
+          <div class="sumr"><span class="k">Your bet</span><span class="v" id="ppb">—</span></div>
+          <div class="sumr"><span class="k">3% pool fee</span><span class="v" id="ppf">—</span></div>
+          <div class="sumr"><span class="k">Est. multiplier</span><span class="v" id="ppm">—</span></div>
+          <div class="sumr"><span class="k">Est. payout</span><span class="v g" id="ppo">—</span></div>
+        </div>
+        <div class="hint" style="margin-bottom:12px;">⚠ odds grow as opposing bets come in</div>
+        <button class="pbtn" id="pbtn" onclick="placeBet()" disabled>CONNECT WALLET FIRST</button>
       </div>
-    </div>
-
-  </div>
-
-  <div class="right">
-    <div class="wbar">
-      <span id="wa" style="color:var(--muted)">not connected</span>
-      <span>balance: <span class="wbal" id="wb2">—</span> SOL</span>
-    </div>
-
-    <div class="bet-pan">
-      <div class="btag">// PLACE_BET</div>
-      <div class="sbar">
-        <div class="sd live" id="sd"></div>
-        <span id="st">round open · bets accepted</span>
+      <div class="wstrip">
+        <div class="wi"><div class="k">STATUS</div><div class="v" id="st">not connected</div></div>
+        <div class="wi" style="text-align:right"><div class="k">BALANCE</div><div class="v"><span id="sd">—</span> SOL</div></div>
       </div>
-
-      <div class="dgrid">
-        <button class="dbtn ub" id="ubb" onclick="selDir('up')">
-          <span class="arr">▲</span><span>UP</span><span class="odds" id="uo">2.00x</span>
-        </button>
-        <button class="dbtn db" id="dbb" onclick="selDir('down')">
-          <span class="arr">▼</span><span>DOWN</span><span class="odds" id="ddo">2.00x</span>
-        </button>
-      </div>
-
-      <div class="albl">AMOUNT (SOL)</div>
-      <div class="awrap">
-        <div class="stag"><div class="sdot2"></div>SOL</div>
-        <input type="number" class="ainp" id="ba" placeholder="0.00" min="0.05" step="0.01" oninput="updPay()">
-      </div>
-      <div class="mnote">minimum: 0.05 SOL</div>
-<div id="onesided-warn" style="display:none;font-family:'Space Mono',monospace;font-size:.56rem;color:#ffaa00;background:rgba(255,170,0,.08);border:1px solid rgba(255,170,0,.25);padding:6px 10px;margin-bottom:.6rem;line-height:1.5">⚠ be first — odds grow as opposing bets come in<br>payout = your share of the losing side pool</div>
-      <div class="qarow">
-        <button class="qa" onclick="setA(0.05)">0.05</button>
-        <button class="qa" onclick="setA(0.1)">0.1</button>
-        <button class="qa" onclick="setA(0.25)">0.25</button>
-        <button class="qa" onclick="setA(0.5)">0.5</button>
-        <button class="qa" onclick="setA(1)">1.0</button>
-      </div>
-
-      <div class="pbox">
-        <div class="pr"><span>your bet</span><span class="pv" id="ppb">—</span></div>
-        <div class="pr"><span>3% pool fee <span class="fn">(at settlement)</span></span><span class="pv" id="ppf">—</span></div>
-        <div class="pr"><span>est. multiplier</span><span class="pv" id="ppm">—x</span></div>
-        <div class="pr tot"><span>est. payout if correct</span><span class="pv" id="ppo">—</span></div>
-      </div>
-
-      <button class="subbtn" id="sb" onclick="placeBet()">CONNECT WALLET FIRST</button>
-    </div>
-
-    <div class="pos-sec">
-      <div class="postag">// MY_POSITIONS</div>
-      <div id="pl"><div class="posmt">connect wallet to see positions</div></div>
-    </div>
-
-    <div class="demo" style="border-color:rgba(0,255,65,.2);background:rgba(0,255,65,.03);color:rgba(0,255,65,.7);">
-      ✅ LIVE ON MAINNET — bets are real SOL on Solana.<br>
-      place a bet → approve in Phantom → win or exit early.
+      <div class="posp"><div class="slabel">MY POSITIONS</div><div id="pl"><div class="posemp">connect wallet<br>to see positions</div></div></div>
+      <div class="lnotice">✅ LIVE ON MAINNET — bets are real SOL on Solana.<br>place a bet → approve in Phantom → win or exit early.</div>
     </div>
   </div>
 </div>
-
-<div class="bbar">
-  <span>$NEET predict · solana · 5min rounds · 1% treasury fee</span>
-  <span><a href="index.html" style="color:var(--green);text-decoration:none">← back to $NEET</a></span>
-</div>
-
-<div class="rfl" id="rf"></div>
-
-<div class="txm" id="txm">
-  <div class="txb">
-    <div class="txt" id="txtt">BET PLACED</div>
-    <div class="txmsg" id="txmg"></div>
-    <button class="txcl" onclick="document.getElementById('txm').classList.remove('show')">CLOSE</button>
-  </div>
-</div>
-
+<div class="txmsg" id="txm"><span id="txtt"></span></div>
+<footer><span>$NEET PREDICT · SOLANA · 5MIN ROUNDS · 3% TREASURY FEE</span><a href="index.html">← BACK TO $NEET</a></footer>
+<div class="modal-ov" id="modal"><div class="modal"><div class="modal-icon">&#x1F47B;</div><div class="modal-title">CONNECT WALLET</div><div class="modal-body">Connect your Phantom wallet to place bets, view positions, and access the full NEET ecosystem.</div><button class="modal-close" onclick="connectWallet()">CONNECT PHANTOM</button></div></div>
 <script>
 const NEET_CA='Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
 const RSEC=300,FEE=.03,MINB=.05;
@@ -1237,133 +1189,106 @@ function switchToCartel(){
 
 <!-- NEET CARTEL SECTION -->
 <div class="cartel-section" id="cartelSection">
-  <div class="cartel-header"><img id="cartelLogoImg" class="cartel-header-logo" style="display:none;"> NEET CARTEL — IN THE TRENCHES</div>
-  <div id="cartelGrid" class="cartel-grid"><div class="cartel-loading">LOADING WALLETS...</div></div>
-  <div class="cartel-refresh" id="cartelRefreshTime"></div>
-</div>
-<style>
-#padSection,#scanSection{display:none;padding:2rem;max-width:1200px;margin:0 auto}
-#padSection.visible,#scanSection.visible{display:block}
-.pad-hdr{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--green);text-shadow:0 0 20px var(--green);border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1.5rem;display:flex;align-items:baseline;gap:.8rem}
-.pad-hdr small{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--muted);font-weight:normal;letter-spacing:0}
-.pad-wallet-bar{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.8rem 1.2rem;margin-bottom:1.5rem;max-width:800px;margin-left:auto;margin-right:auto}
-.pad-wallet-info{font-family:'Space Mono',monospace;font-size:.65rem;color:var(--muted)}
-.pad-wallet-info span{color:var(--green)}
-.pad-conn-btn{background:transparent;border:1px solid var(--green);color:var(--green);border-radius:4px;padding:.4rem .8rem;font-family:'Space Mono',monospace;font-size:.65rem;cursor:pointer;transition:all .2s}
-.pad-conn-btn:hover{background:rgba(0,255,65,.1)}
-.pad-form{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:2rem;max-width:800px;margin:0 auto}
-.pad-full{grid-column:1/-1}
-.pad-lbl{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);letter-spacing:2px;margin-bottom:.4rem;display:block}
-.pad-inp{width:100%;background:#0a0a0a;border:1px solid var(--border);border-radius:4px;padding:.7rem 1rem;color:var(--text);font-family:'Space Mono',monospace;font-size:.75rem;outline:none;transition:border .2s;box-sizing:border-box}
-.pad-inp:focus{border-color:var(--green);box-shadow:0 0 10px rgba(0,255,65,.1)}
-.pad-textarea{resize:vertical;min-height:80px}
-.pad-fee-box{grid-column:1/-1;background:rgba(0,255,65,.05);border:1px solid rgba(0,255,65,.2);border-radius:6px;padding:1.2rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
-.pad-fee-amt{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--green)}
-.pad-fee-sub{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);margin-top:.2rem}
-.pad-st{grid-column:1/-1;padding:1rem;border-radius:6px;font-family:'Space Mono',monospace;font-size:.7rem;text-align:center;display:none;word-break:break-all;line-height:1.6}
-.pad-st.loading{display:block;background:rgba(0,255,65,.05);border:1px solid rgba(0,255,65,.2);color:var(--green)}
-.pad-st.success{display:block;background:rgba(0,255,65,.1);border:1px solid var(--green);color:var(--green)}
-.pad-st.error{display:block;background:rgba(255,68,68,.1);border:1px solid var(--red);color:var(--red)}
-.pad-launch-btn{grid-column:1/-1;background:var(--green);color:var(--black);border:none;border-radius:6px;padding:1rem 2rem;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:2px;cursor:pointer;transition:all .2s}
-.pad-launch-btn:hover{box-shadow:0 0 20px var(--green)}
-.pad-launch-btn:disabled{opacity:.5;cursor:not-allowed}
-.sc-hdr{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--green);text-shadow:0 0 20px var(--green);border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1.5rem;display:flex;align-items:baseline;gap:.8rem}
-.sc-hdr small{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--muted);font-weight:normal;letter-spacing:0}
-.sc-rfbar{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.8rem 1.2rem;margin-bottom:1.5rem;flex-wrap:wrap;gap:.5rem}
-.sc-rfinfo{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted)}
-.sc-rfinfo span{color:var(--green)}
-.sc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
-.sc-stat{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:1rem;text-align:center}
-.sc-stat-lbl{font-family:'Space Mono',monospace;font-size:.55rem;color:var(--muted);letter-spacing:2px;margin-bottom:.4rem}
-.sc-stat-val{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;color:var(--green)}
-.sc-frow{display:flex;align-items:center;gap:.8rem;margin-bottom:1.5rem;flex-wrap:wrap}
-.sc-flbl{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted)}
-.sc-fb{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:.3rem .7rem;font-family:'Space Mono',monospace;font-size:.55rem;cursor:pointer;transition:all .2s}
-.sc-fb.active{border-color:var(--green);color:var(--green);background:rgba(0,255,65,.05)}
-.sc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.2rem}
-.sc-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.2rem;transition:all .2s;position:relative;overflow:hidden}
-.sc-card:hover{border-color:rgba(0,255,65,.4);box-shadow:0 0 15px rgba(0,255,65,.1)}
-.sc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);opacity:0;transition:opacity .2s}
-.sc-card:hover::before{opacity:1}
-.sc-top{display:flex;align-items:center;gap:.8rem;margin-bottom:1rem}
-.sc-logo{width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border)}
-.sc-ph{width:42px;height:42px;border-radius:50%;background:rgba(0,255,65,.1);border:1px solid rgba(0,255,65,.3);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--green)}
-.sc-name{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--text);line-height:1}
-.sc-sym{font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);margin-top:.2rem}
-.sc-score-wrap{margin-left:auto;text-align:center}
-.sc-score-num{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;line-height:1}
-.sc-score-lbl{font-family:'Space Mono',monospace;font-size:.45rem;color:var(--muted);letter-spacing:1px}
-.sc-score-num.s-hot{color:#ff6b35}.sc-score-num.s-warm{color:#ffd700}.sc-score-num.s-cool{color:var(--green)}
-.sc-mets{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.8rem}
-.sc-met{background:rgba(0,0,0,.3);border-radius:4px;padding:.5rem .6rem}
-.sc-ml{font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted);letter-spacing:1px;margin-bottom:.2rem}
-.sc-mv{font-family:'Space Mono',monospace;font-size:.7rem;color:var(--text);font-weight:700}
-.sc-mv.cg{color:var(--green)}.sc-mv.cr{color:var(--red)}
-.sc-bars{margin-bottom:.8rem}
-.sc-brow{display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem}
-.sc-blbl{font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted);width:65px;flex-shrink:0}
-.sc-btrack{flex:1;height:4px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden}
-.sc-bfill{height:100%;border-radius:2px;transition:width .5s}
-.sc-bnum{font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted);width:22px;text-align:right}
-.sc-acts{display:flex;gap:.5rem}
-.sc-buy{flex:1;background:var(--green);color:var(--black);border:none;border-radius:4px;padding:.5rem;font-family:'Space Mono',monospace;font-size:.65rem;font-weight:700;cursor:pointer;transition:all .2s}
-.sc-buy:hover{box-shadow:0 0 10px var(--green)}
-.sc-dex{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:.5rem .8rem;font-family:'Space Mono',monospace;font-size:.6rem;cursor:pointer;transition:all .2s;text-decoration:none;display:flex;align-items:center}
-.sc-dex:hover{border-color:var(--green);color:var(--green)}
-.sc-new{position:absolute;top:.5rem;right:.5rem;background:var(--green);color:var(--black);font-family:'Space Mono',monospace;font-size:.5rem;font-weight:700;padding:.2rem .4rem;border-radius:3px}
-.sc-empty,.sc-loading{text-align:center;padding:4rem;font-family:'Space Mono',monospace;font-size:.7rem;color:var(--muted)}
-@media(max-width:600px){.pad-form,.sc-stats{grid-template-columns:1fr}.pad-full{grid-column:1}}
-</style>
-<!-- NEET PAD -->
-<div id="padSection">
-  <div class="pad-hdr">🚀 NEET PAD <small>— LAUNCH YOUR MEME ON PUMP.FUN</small></div>
-  <div class="pad-wallet-bar">
-    <div class="pad-wallet-info">wallet: <span id="padWalAddr">NOT CONNECTED</span></div>
-    <button class="pad-conn-btn" id="padConnBtn" onclick="padConnect()">CONNECT PHANTOM</button>
+  <div class="cartel-wrap">
+    <div class="cartel-hdr">
+      <h1>&#x1F400; NEET CARTEL</h1>
+      <p>// IN THE TRENCHES //</p>
+      <div class="upd" id="cartelRefreshTime">Updated: —</div>
+    </div>
+    <div class="cartel-grid" id="cartelGrid"><div class="cartel-loading">LOADING WALLETS...</div></div>
   </div>
-  <div class="pad-form">
-    <div><label class="pad-lbl">TOKEN NAME *</label><input class="pad-inp" id="padName" type="text" placeholder="e.g. Super Neet" maxlength="32"></div>
-    <div><label class="pad-lbl">TICKER *</label><input class="pad-inp" id="padSym" type="text" placeholder="e.g. SNEET" maxlength="10"></div>
-    <div class="pad-full"><label class="pad-lbl">DESCRIPTION *</label><textarea class="pad-inp pad-textarea" id="padDesc" placeholder="Tell the world about your token..."></textarea></div>
-    <div><label class="pad-lbl">TOKEN IMAGE * (jpg/png/gif)</label><input class="pad-inp" id="padImg" type="file" accept="image/*" style="padding:.5rem 1rem"></div>
-    <div><label class="pad-lbl">TWITTER (optional)</label><input class="pad-inp" id="padTw" type="text" placeholder="https://x.com/yourtoken"></div>
-    <div><label class="pad-lbl">TELEGRAM (optional)</label><input class="pad-inp" id="padTg" type="text" placeholder="https://t.me/yourtoken"></div>
-    <div><label class="pad-lbl">WEBSITE (optional)</label><input class="pad-inp" id="padWeb" type="text" placeholder="https://yourtoken.xyz"></div>
-    <div style="display:flex;align-items:flex-end;padding:.5rem 0"><div style="font-family:'Space Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.8">💡 token launches on pump.fun<br>bonding curve (~$69K to<br>graduate to Raydium).</div></div>
-    <div class="pad-fee-box">
-      <div><div class="pad-lbl">LAUNCH FEE</div><div class="pad-fee-amt">1,000 NEET</div><div class="pad-fee-sub">paid in NEET token — supports the ecosystem</div></div>
-      <div style="text-align:right"><div class="pad-lbl">YOUR NEET BALANCE</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--text)" id="padNeetBal">—</div><div class="pad-fee-sub" id="padBalSt" style="margin-top:.3rem">connect wallet to check</div></div>
+</div>
+
+<style>
+#padSection,#scanSection{display:none;position:relative;z-index:1;}
+#padSection.visible,#scanSection.visible{display:block;animation:fi .22s ease;}
+</style>
+
+<div id="padSection">
+  <div class="launch-wrap">
+    <div class="launch-hdr">
+      <h1>&#x1F680; NEET <em>PAD</em></h1>
+      <p>launch your meme on pump.fun · powered by the NEET ecosystem</p>
+    </div>
+    <div class="nbal">
+      <div><div class="k">WALLET</div><div class="v" id="padWalAddr">NOT CONNECTED</div></div>
+      <button class="scanbtn" id="padConnBtn" onclick="padConnect()">CONNECT PHANTOM</button>
     </div>
     <div class="pad-st" id="padSt"></div>
-    <button class="pad-launch-btn" id="padLaunchBtn" onclick="padLaunch()">🚀 LAUNCH TOKEN — PAY 1,000 NEET</button>
+    <div class="lcard">
+      <div class="lcard-t">TOKEN DETAILS</div>
+      <div class="fgrid">
+        <div class="fg"><label>TOKEN NAME <span>*</span></label><input class="fi" id="padName" type="text" placeholder="My Meme Token"></div>
+        <div class="fg"><label>TICKER <span>*</span></label><input class="fi" id="padSym" type="text" placeholder="$MEME"></div>
+        <div class="fg full"><label>DESCRIPTION <span>*</span></label><textarea class="ft" id="padDesc" placeholder="Tell the world about your token..."></textarea></div>
+        <div class="fg full">
+          <label>TOKEN IMAGE <span>*</span> (jpg / png / gif)</label>
+          <div class="fdrop" onclick="document.getElementById('padImg').click()">
+            <div class="fdrop-icon">&#x1F5BC;</div>
+            <p>drag &amp; drop or click to upload</p>
+            <input type="file" id="padImg" accept="image/*" style="display:none">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="lcard">
+      <div class="lcard-t">SOCIALS (OPTIONAL)</div>
+      <div class="fgrid">
+        <div class="fg"><label>TWITTER</label><input class="fi" id="padTw" type="text" placeholder="https://x.com/..."></div>
+        <div class="fg"><label>TELEGRAM</label><input class="fi" id="padTg" type="text" placeholder="https://t.me/..."></div>
+        <div class="fg full"><label>WEBSITE</label><input class="fi" id="padWeb" type="text" placeholder="https://..."></div>
+      </div>
+    </div>
+    <div class="feebox">
+      <div><div class="k">LAUNCH FEE</div><div class="v">1,000 NEET</div></div>
+      <div class="feedesc">paid in NEET token — supports the ecosystem<small>&#x1F4A1; launches on pump.fun · bonding curve ~$69K to graduate to Raydium</small></div>
+    </div>
+    <div class="nbal">
+      <div><div class="k">YOUR NEET BALANCE</div><div class="v" id="padNeetBal">—</div></div>
+      <div style="font-size:10px;color:var(--t3);font-family:var(--mono);" id="padBalSt">connect wallet to check</div>
+    </div>
+    <button class="pbtn go" id="padLaunchBtn" onclick="padLaunch()" style="margin-top:4px;">&#x1F680; LAUNCH TOKEN — PAY 1,000 NEET</button>
   </div>
 </div>
-<!-- NEET SCAN -->
+
 <div id="scanSection">
-  <div class="sc-hdr">🔍 NEET SCAN <small>— EARLY RUNNER DETECTOR</small></div>
-  <div class="sc-rfbar">
-    <div class="sc-rfinfo">monitoring pump.fun • auto-refresh <span>60s</span> • targets $15K→$300K+ runners</div>
-    <div style="display:flex;align-items:center;gap:1rem">
-      <div class="sc-rfinfo">last scan: <span id="scLastUp">—</span></div>
-      <button class="pad-conn-btn" onclick="runNeetScan()">↻ SCAN NOW</button>
+  <div class="scan-wrap">
+    <div class="scan-hdr">
+      <div>
+        <h1>&#x1F50D; NEET <em>SCAN</em></h1>
+        <p>monitoring pump.fun · auto-refresh 60s · targets $15K→$300K+ runners</p>
+      </div>
+      <div class="scan-ctrl">
+        <span class="scan-last" id="scLastUp">last scan: —</span>
+        <button class="scanbtn" onclick="runNeetScan()">↻ SCAN NOW</button>
+      </div>
+    </div>
+    <div class="scan-stats">
+      <div class="ssc"><div class="ssc-l">TOKENS ANALYZED</div><div class="ssc-v" id="scTotal">—</div></div>
+      <div class="ssc"><div class="ssc-l">SCORE ≥70 &#x1F525;</div><div class="ssc-v g" id="scHot">—</div></div>
+      <div class="ssc"><div class="ssc-l">AVG NEET SCORE</div><div class="ssc-v" id="scAvg">—</div></div>
+      <div class="ssc"><div class="ssc-l">POTENTIAL RUNNERS</div><div class="ssc-v g" id="scRun">—</div></div>
+    </div>
+    <div class="scan-filters">
+      <button class="scf active" onclick="setScFil('all',this)">ALL</button>
+      <button class="scf" onclick="setScFil('hot',this)">&#x1F525; SCORE ≥70</button>
+      <button class="scf" onclick="setScFil('vol',this)">&#x1F4C8; HIGH VOL</button>
+      <button class="scf" onclick="setScFil('comm',this)">✅ COMMUNITY</button>
+      <button class="scf" onclick="setScFil('fresh',this)">&#x1F195; FRESH &lt;2H</button>
+    </div>
+    <div class="scan-tbl">
+      <div class="stbl-hdr">
+        <span class="sth">TOKEN</span>
+        <span class="sth">SCORE</span>
+        <span class="sth">MCAP</span>
+        <span class="sth">VOL</span>
+        <span class="sth">AGE</span>
+      </div>
+      <div id="scGrid"><div class="sc-empty">&#x231B; initializing NEET SCAN...<br>hit scan now to detect early runners</div></div>
     </div>
   </div>
-  <div class="sc-stats">
-    <div class="sc-stat"><div class="sc-stat-lbl">TOKENS ANALYZED</div><div class="sc-stat-val" id="scTotal">—</div></div>
-    <div class="sc-stat"><div class="sc-stat-lbl">SCORE ≥70 HOT</div><div class="sc-stat-val" id="scHot">—</div></div>
-    <div class="sc-stat"><div class="sc-stat-lbl">AVG NEET SCORE</div><div class="sc-stat-val" id="scAvg">—</div></div>
-    <div class="sc-stat"><div class="sc-stat-lbl">POTENTIAL RUNNERS</div><div class="sc-stat-val" id="scRun">—</div></div>
-  </div>
-  <div class="sc-frow">
-    <span class="sc-flbl">FILTER:</span>
-    <button class="sc-fb active" onclick="setScFil('all',this)">ALL</button>
-    <button class="sc-fb" onclick="setScFil('hot',this)">🔥 SCORE ≥70</button>
-    <button class="sc-fb" onclick="setScFil('vol',this)">📈 HIGH VOL</button>
-    <button class="sc-fb" onclick="setScFil('com',this)">✅ COMMUNITY</button>
-    <button class="sc-fb" onclick="setScFil('new',this)">🆕 FRESH &lt;2H</button>
-  </div>
-  <div class="sc-grid" id="scGrid"><div class="sc-loading">⌛ initializing NEET SCAN...</div></div>
 </div>
+
 <script>
 // ==== NEET PAD + NEET SCAN ====
 // *** SET YOUR SOLANA WALLET ADDRESS BELOW TO COLLECT FEES ***
