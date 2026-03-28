@@ -1505,5 +1505,35 @@ function scBar(l,v,m){var p=Math.round((v/m)*100),col=p>70?'#00ff41':p>40?'#ffd7
 function scE(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function setScFil(f,btn){_scFil=f;document.querySelectorAll('.sc-fb').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderNeetScan();}
 </script>
+
+<!-- fix: missing element IDs + init predict page -->
+<span id="sb" style="display:none"></span>
+<span id="wb2" style="display:none"></span>
+<span id="ts" style="display:none"></span>
+<span id="db" style="display:none"></span>
+<span id="cp2" style="display:none"></span>
+<span id="ptb-pill" style="display:none"></span>
+<span id="ptb-hint" style="display:none"></span>
+<span id="rf" style="display:none"></span>
+<span id="txmg" style="display:none"></span>
+<script>
+window.addEventListener('load', function() {
+  // Show predict page (JS hides it on init, switchMarket reveals it)
+  if (typeof switchMarket === 'function') {
+    switchMarket('NEET');
+  } else {
+    var pg = document.getElementById('pg');
+    if (pg) pg.style.display = '';
+  }
+  // Re-init chart now that container has proper dimensions
+  setTimeout(function() {
+    if (typeof initChart === 'function') initChart();
+    else if (typeof chart !== 'undefined' && chart && chart.resize) {
+      var cc = document.getElementById('cc');
+      if (cc) chart.resize(cc.offsetWidth, cc.offsetHeight);
+    }
+  }, 100);
+});
+</script>
 </body>
 </html>
