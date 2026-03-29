@@ -1628,6 +1628,22 @@ function renderNeetScan(){
 function scBar(l,v,m){var p=Math.round((v/m)*100),col=p>70?'#00ff41':p>40?'#ffd700':'rgba(0,255,65,.35)';return '<div class="sc-brow"><div class="sc-blbl">'+l+'</div><div class="sc-btrack"><div class="sc-bfill" style="width:'+p+'%;background:'+col+'"></div></div><div class="sc-bnum">'+v+'/'+m+'</div></div>';}
 function scE(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function setScFil(f,btn){_scFil=f;document.querySelectorAll('.sc-fb').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderNeetScan();}
+
+// Section switchers for pad + scan
+function switchToPad(){
+  var pg=document.querySelector('.page');if(pg)pg.style.display='none';
+  ['cartelSection','scanSection'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('visible');});
+  document.querySelectorAll('.ntab').forEach(function(b){b.classList.remove('active');});
+  var t=document.getElementById('padTab');if(t)t.classList.add('active');
+  var s=document.getElementById('padSection');if(s)s.classList.add('visible');
+}
+function switchToScan(){
+  var pg=document.querySelector('.page');if(pg)pg.style.display='none';
+  ['cartelSection','padSection'].forEach(function(id){var el=document.getElementById(id);if(el)el.classList.remove('visible');});
+  document.querySelectorAll('.ntab').forEach(function(b){b.classList.remove('active');});
+  var t=document.getElementById('scanTab');if(t)t.classList.add('active');
+  var s=document.getElementById('scanSection');if(s)s.classList.add('visible');
+}
 </script>
 
 <!-- fix: cartel redesign + multi-market chart -->
