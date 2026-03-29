@@ -1201,57 +1201,179 @@ function switchToCartel(){
 
 <style>
 #padSection,#scanSection{display:none;position:relative;z-index:1;}
-#padSection.visible,#scanSection.visible{display:block;animation:fi .22s ease;}
-</style>
+#padSection.visible,#scanSection.visible{display:block;animation:fi .22s <div class="sec" id="padSection">
+<div class="pad-v2">
 
-<div id="padSection">
-  <div class="launch-wrap">
-    <div class="launch-hdr">
-      <h1>&#x1F680; NEET <em>PAD</em></h1>
-      <p>launch your meme on pump.fun · powered by the NEET ecosystem</p>
+  <!-- HEADER -->
+  <div class="pad-v2-hdr">
+    <h1>🚀 NEET <em>PAD</em></h1>
+    <p>launch your token on solana · first come, first served</p>
+    <div class="pad-badges">
+      <span class="pad-badge g">✦ 0.5% trading fee — half of pump.fun</span>
+      <span class="pad-badge b">🔒 unique tickers enforced forever</span>
+      <span class="pad-badge y">◈ every CA ends in ...neet</span>
     </div>
-    <div class="nbal">
-      <div><div class="k">WALLET</div><div class="v" id="padWalAddr">NOT CONNECTED</div></div>
-      <button class="scanbtn" id="padConnBtn" onclick="padConnect()">CONNECT PHANTOM</button>
+  </div>
+
+  <!-- WALLET BAR -->
+  <div class="pad-wallet-bar">
+    <div>
+      <div class="pad-wal-lbl">WALLET</div>
+      <div class="v" id="padWalAddr">NOT CONNECTED</div>
     </div>
-    <div class="pad-st" id="padSt"></div>
-    <div class="lcard">
-      <div class="lcard-t">TOKEN DETAILS</div>
-      <div class="fgrid">
-        <div class="fg"><label>TOKEN NAME <span>*</span></label><input class="fi" id="padName" type="text" placeholder="My Meme Token"></div>
-        <div class="fg"><label>TICKER <span>*</span></label><input class="fi" id="padSym" type="text" placeholder="$MEME"></div>
-        <div class="fg full"><label>DESCRIPTION <span>*</span></label><textarea class="ft" id="padDesc" placeholder="Tell the world about your token..."></textarea></div>
-        <div class="fg full">
-          <label>TOKEN IMAGE <span>*</span> (jpg / png / gif)</label>
-          <div class="fdrop" onclick="document.getElementById('padImg').click()">
-            <div class="fdrop-icon">&#x1F5BC;</div>
-            <p>drag &amp; drop or click to upload</p>
-            <input type="file" id="padImg" accept="image/*" style="display:none">
+    <button class="scanbtn" id="padConnBtn" onclick="padConnect()">CONNECT PHANTOM</button>
+  </div>
+  <div class="pad-st-bar" id="padSt"></div>
+
+  <!-- 2-COL LAYOUT -->
+  <div class="pad-v2-layout">
+
+    <!-- ── LEFT: FORM ── -->
+    <div class="pad-v2-left">
+
+      <!-- Token Details -->
+      <div class="pad-card2">
+        <div class="pad-ct">TOKEN DETAILS</div>
+
+        <div class="pad-name-row">
+          <div class="fg">
+            <label>TOKEN NAME <span style="color:#ff4d4d">*</span></label>
+            <input class="fi" id="padName" type="text" placeholder="My Meme Token" oninput="padPreview()">
+          </div>
+          <div class="fg">
+            <label>TICKER <span style="color:#ff4d4d">*</span></label>
+            <div class="ticker-wrap">
+              <input class="fi" id="padSym" type="text" placeholder="MEME" maxlength="10"
+                oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');padTickerCheck(this.value);padPreview()"
+                style="padding-right:34px;text-transform:uppercase">
+              <div class="ticker-badge" id="tickerBadge"></div>
+            </div>
+            <div class="ticker-msg" id="tickerMsg"></div>
+          </div>
+        </div>
+
+        <div class="fg" style="margin-top:12px">
+          <label>DESCRIPTION <span style="color:#ff4d4d">*</span></label>
+          <textarea class="ft" id="padDesc" placeholder="Tell the world about your token..." rows="3" oninput="padPreview()"></textarea>
+        </div>
+
+        <div class="fg" style="margin-top:12px">
+          <label>TOKEN IMAGE <span style="color:#ff4d4d">*</span> <span style="color:rgba(255,255,255,.25);font-size:9px">jpg / png / gif · max 5MB</span></label>
+          <div class="img-drop2" id="imgDropZone" onclick="document.getElementById('padImg').click()"
+            ondragover="event.preventDefault();this.style.borderColor='rgba(0,255,135,.6)'"
+            ondragleave="this.style.borderColor=''"
+            ondrop="event.preventDefault();this.style.borderColor='';var f=event.dataTransfer.files[0];if(f){var dt=new DataTransfer();dt.items.add(f);document.getElementById('padImg').files=dt.files;padImagePreview(document.getElementById('padImg'))}">
+            <input type="file" id="padImg" accept="image/*,image/gif" style="display:none" onchange="padImagePreview(this)">
+            <div id="imgDropInner">
+              <div class="di">🖼</div>
+              <div class="dt">drag & drop or click to upload</div>
+              <div class="ds">recommended: square image, 1:1 ratio</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-    <div class="lcard">
-      <div class="lcard-t">SOCIALS (OPTIONAL)</div>
-      <div class="fgrid">
-        <div class="fg"><label>TWITTER</label><input class="fi" id="padTw" type="text" placeholder="https://x.com/..."></div>
-        <div class="fg"><label>TELEGRAM</label><input class="fi" id="padTg" type="text" placeholder="https://t.me/..."></div>
-        <div class="fg full"><label>WEBSITE</label><input class="fi" id="padWeb" type="text" placeholder="https://..."></div>
-      </div>
-    </div>
-    <div class="feebox">
-      <div><div class="k">LAUNCH FEE</div><div class="v">1,000 NEET</div></div>
-      <div class="feedesc">paid in NEET token — supports the ecosystem<small>&#x1F4A1; launches on pump.fun · bonding curve ~$69K to graduate to Raydium</small></div>
-    </div>
-    <div class="nbal">
-      <div><div class="k">YOUR NEET BALANCE</div><div class="v" id="padNeetBal">—</div></div>
-      <div style="font-size:10px;color:var(--t3);font-family:var(--mono);" id="padBalSt">connect wallet to check</div>
-    </div>
-    <button class="pbtn go" id="padLaunchBtn" onclick="padLaunch()" style="margin-top:4px;">&#x1F680; LAUNCH TOKEN — PAY 1,000 NEET</button>
-  </div>
-</div>
 
-<div id="scanSection">
+      <!-- Socials -->
+      <div class="pad-card2">
+        <div class="pad-ct">SOCIALS <span style="color:rgba(255,255,255,.25);font-weight:400;letter-spacing:0">— optional</span></div>
+        <div class="fgrid2">
+          <div class="fg">
+            <label>TWITTER / X</label>
+            <input class="fi" id="padTw" type="text" placeholder="https://x.com/...">
+          </div>
+          <div class="fg">
+            <label>TELEGRAM</label>
+            <input class="fi" id="padTg" type="text" placeholder="https://t.me/...">
+          </div>
+          <div class="fg" style="grid-column:1/-1">
+            <label>WEBSITE</label>
+            <input class="fi" id="padWeb" type="text" placeholder="https://...">
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- ── RIGHT: PREVIEW + INFO ── -->
+    <div class="pad-v2-right">
+
+      <!-- Live preview -->
+      <div class="pad-card2">
+        <div class="pad-ct">LIVE PREVIEW</div>
+        <div class="tok-preview">
+          <div class="tok-prev-img" id="prevImg">🪙</div>
+          <div>
+            <div class="tok-prev-name" id="prevName">TOKEN NAME</div>
+            <div class="tok-prev-sym" id="prevSym">$TICKER</div>
+            <div class="tok-prev-desc" id="prevDesc">Your token description will appear here...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CA preview -->
+      <div class="pad-card2">
+        <div class="pad-ct">CONTRACT ADDRESS</div>
+        <div class="ca-box">
+          <span class="ca-x">xxxxxxxxxxxxxxxxxxxxxxxxxx</span><span class="ca-neet">neet</span>
+        </div>
+        <div class="ca-note">every token on NEET PAD gets a vanity address ending in <strong style="color:rgba(255,255,255,.6)">...neet</strong> — our address grinder runs on launch. first-of-its-kind in crypto.</div>
+      </div>
+
+      <!-- Bonding curve -->
+      <div class="pad-card2">
+        <div class="pad-ct">BONDING CURVE</div>
+        <div class="bonding-stats">
+          <div class="bst"><div class="bst-l">VIRTUAL SOL</div><div class="bst-v">30</div></div>
+          <div class="bst"><div class="bst-l">TOTAL SUPPLY</div><div class="bst-v">1B</div></div>
+          <div class="bst"><div class="bst-l">GRADUATION</div><div class="bst-v">~$69K</div></div>
+        </div>
+        <div class="bbar-wrap"><div class="bbar-fill" style="width:0%"></div></div>
+        <div class="bonding-note">token graduates to Raydium when market cap reaches ~$69K. 1 SOL graduation fee — vs 6 SOL on pump.fun.</div>
+      </div>
+
+      <!-- Fee comparison -->
+      <div class="pad-card2">
+        <div class="pad-ct">FEE COMPARISON</div>
+        <div class="fee-table">
+          <div class="fee-th"><span></span><span>NEET PAD</span><span>pump.fun</span></div>
+          <div class="fee-tr hl"><span>Trading fee</span><span class="fee-g">0.5%</span><span class="fee-d">1%</span></div>
+          <div class="fee-tr hl"><span>Graduation</span><span class="fee-g">1 SOL</span><span class="fee-d">6 SOL</span></div>
+          <div class="fee-tr"><span>Launch fee</span><span style="color:rgba(255,255,255,.7);font-size:9px;line-height:1.6">0.02 SOL<br><span style="color:#f5c400">+ 500 NEET 🔥</span></span><span class="fee-d">0.02 SOL</span></div>
+          <div class="fee-tr hl"><span>Unique tickers</span><span class="fee-g">✓ on-chain</span><span class="fee-d">✗ none</span></div>
+          <div class="fee-tr"><span>Vanity CA</span><span class="fee-g">✓ ...neet</span><span class="fee-d">✗ random</span></div>
+        </div>
+      </div>
+
+      <!-- Initial buy -->
+      <div class="pad-card2">
+        <div class="pad-ct">INITIAL BUY <span style="color:rgba(255,255,255,.25);font-weight:400;letter-spacing:0">— optional</span></div>
+        <div style="font-size:10px;color:rgba(255,255,255,.4);margin-bottom:10px;line-height:1.65">be the first buyer at launch price. front-run the market.</div>
+        <div class="init-buy-row">
+          <input class="fi" id="padInitBuy" type="number" placeholder="0.0" min="0" step="0.1" style="flex:1" oninput="padInitBuyCalc(this.value)">
+          <span class="init-buy-unit">SOL</span>
+        </div>
+        <div class="init-buy-note" id="initBuyNote"></div>
+      </div>
+
+      <!-- NEET balance -->
+      <div class="nbal" style="margin-top:12px">
+        <div>
+          <div class="k">YOUR NEET BALANCE</div>
+          <div class="v" id="padNeetBal">—</div>
+        </div>
+        <div id="padBalSt" style="font-size:10px;color:rgba(255,255,255,.35);font-family:monospace">connect wallet to check</div>
+      </div>
+
+      <!-- Launch button -->
+      <button class="pad-launch-btn" id="padLaunchBtn" onclick="padLaunchV2()">
+        🚀 LAUNCH TOKEN — 0.02 SOL + 500 NEET
+      </button>
+
+    </div><!-- /right -->
+  </div><!-- /layout -->
+</div><!-- /pad-v2 -->
+</div><!-- /padSection -->
+id="scanSection">
   <div class="scan-wrap">
     <div class="scan-hdr">
       <div>
@@ -1542,6 +1664,72 @@ function setScFil(f,btn){_scFil=f;document.querySelectorAll('.sc-fb').forEach(fu
 .cartel-loading{text-align:center;padding:40px;color:rgba(0,255,135,.4);font-family:var(--mono,monospace);font-size:11px;letter-spacing:.18em;}
 @media(max-width:900px){.cartel-grid{grid-template-columns:1fr 1fr;}}
 @media(max-width:600px){.cartel-grid{grid-template-columns:1fr;}}
+
+/* PAD v2 */
+.pad-v2{max-width:1160px;margin:0 auto;padding:40px 24px;}
+.pad-v2-hdr{text-align:center;margin-bottom:28px;}
+.pad-v2-hdr h1{font-family:var(--dsp,'Orbitron',sans-serif);font-size:46px;letter-spacing:.06em;line-height:1;margin-bottom:8px;color:#fff;}
+.pad-v2-hdr h1 em{color:#00ff87;font-style:normal;}
+.pad-v2-hdr p{font-size:11px;color:rgba(255,255,255,.4);letter-spacing:.07em;margin-bottom:14px;}
+.pad-badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:6px;}
+.pad-badge{font-family:monospace;font-size:9px;letter-spacing:.1em;padding:5px 12px;border-radius:20px;border:1px solid;}
+.pad-badge.g{color:#00ff87;border-color:rgba(0,255,135,.3);background:rgba(0,255,135,.06);}
+.pad-badge.b{color:#60a5fa;border-color:rgba(96,165,250,.25);background:rgba(96,165,250,.05);}
+.pad-badge.y{color:#f5c400;border-color:rgba(245,196,0,.25);background:rgba(245,196,0,.05);}
+.pad-wallet-bar{background:rgba(0,255,135,.04);border:1px solid rgba(0,255,135,.12);border-radius:10px;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.pad-wal-lbl{font-family:monospace;font-size:9px;letter-spacing:.18em;color:rgba(255,255,255,.3);margin-bottom:3px;}
+.pad-st-bar{min-height:24px;font-family:monospace;font-size:10px;letter-spacing:.06em;padding:4px 2px;margin-bottom:10px;}
+.pad-v2-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+.pad-card2{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:20px;}
+.pad-card2+.pad-card2{margin-top:12px;}
+.pad-ct{font-family:monospace;font-size:9px;letter-spacing:.18em;color:rgba(255,255,255,.35);text-transform:uppercase;margin-bottom:14px;}
+.pad-name-row{display:grid;grid-template-columns:3fr 2fr;gap:12px;}
+.fgrid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.ticker-wrap{position:relative;}
+.ticker-badge{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;font-family:monospace;pointer-events:none;}
+.ticker-badge.ok{color:#00ff87;}
+.ticker-badge.no{color:#ff4d4d;}
+.ticker-msg{font-family:monospace;font-size:9px;letter-spacing:.05em;margin-top:4px;height:13px;}
+.ticker-msg.ok{color:#00ff87;}
+.ticker-msg.no{color:#ff4d4d;}
+.ticker-msg.ch{color:rgba(255,255,255,.3);}
+.img-drop2{border:2px dashed rgba(255,255,255,.1);border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:all .2s;overflow:hidden;}
+.img-drop2:hover{border-color:rgba(0,255,135,.4);background:rgba(0,255,135,.03);}
+.img-drop2.has{border-style:solid;border-color:rgba(0,255,135,.25);padding:0;}
+.img-drop2 .di{font-size:22px;margin-bottom:5px;}
+.img-drop2 .dt{font-size:10px;color:rgba(255,255,255,.4);}
+.img-drop2 .ds{font-size:9px;color:rgba(255,255,255,.2);margin-top:3px;}
+.img-drop-prev{width:100%;height:150px;object-fit:cover;border-radius:6px;display:block;}
+.tok-preview{display:flex;gap:13px;align-items:flex-start;}
+.tok-prev-img{width:62px;height:62px;border-radius:10px;background:rgba(0,255,135,.07);border:1px solid rgba(0,255,135,.15);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;overflow:hidden;}
+.tok-prev-name{font-family:var(--dsp,'Orbitron',sans-serif);font-size:15px;letter-spacing:.06em;color:#fff;margin-bottom:2px;}
+.tok-prev-sym{font-family:monospace;font-size:11px;color:#00ff87;letter-spacing:.1em;margin-bottom:5px;}
+.tok-prev-desc{font-size:10px;color:rgba(255,255,255,.4);line-height:1.6;max-height:46px;overflow:hidden;}
+.ca-box{font-family:monospace;font-size:11px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:11px 14px;margin-bottom:9px;word-break:break-all;line-height:1.8;}
+.ca-x{color:rgba(255,255,255,.2);}
+.ca-neet{color:#00ff87;font-weight:700;font-size:13px;}
+.ca-note{font-size:10px;color:rgba(255,255,255,.3);line-height:1.7;}
+.bonding-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.bst{text-align:center;background:rgba(0,0,0,.2);border-radius:7px;padding:9px 6px;}
+.bst-l{font-family:monospace;font-size:8px;letter-spacing:.14em;color:rgba(255,255,255,.3);margin-bottom:4px;}
+.bst-v{font-family:var(--dsp,'Orbitron',sans-serif);font-size:15px;color:#fff;}
+.bbar-wrap{height:5px;background:rgba(255,255,255,.06);border-radius:3px;margin-bottom:8px;overflow:hidden;}
+.bbar-fill{height:100%;background:linear-gradient(90deg,rgba(0,255,135,.5),#00ff87);border-radius:3px;}
+.bonding-note{font-size:9px;color:rgba(255,255,255,.25);line-height:1.65;}
+.fee-table{border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,.06);}
+.fee-th{display:grid;grid-template-columns:1.2fr 1fr 1fr;padding:8px 12px;background:rgba(0,0,0,.3);font-family:monospace;font-size:8px;letter-spacing:.15em;color:rgba(255,255,255,.3);text-transform:uppercase;}
+.fee-tr{display:grid;grid-template-columns:1.2fr 1fr 1fr;padding:9px 12px;border-top:1px solid rgba(255,255,255,.04);font-family:monospace;font-size:10px;align-items:center;}
+.fee-tr span:first-child{color:rgba(255,255,255,.45);}
+.fee-g{color:#00ff87;font-weight:700;}
+.fee-d{color:rgba(255,255,255,.25);}
+.fee-tr.hl{background:rgba(0,255,135,.025);}
+.init-buy-row{display:flex;align-items:center;gap:8px;}
+.init-buy-unit{font-family:monospace;font-size:11px;color:rgba(255,255,255,.4);white-space:nowrap;}
+.init-buy-note{font-size:9px;color:rgba(255,255,255,.3);margin-top:5px;letter-spacing:.04em;}
+.pad-launch-btn{width:100%;margin-top:14px;background:#00ff87;color:#000;border:none;font-family:monospace;font-size:12px;font-weight:700;letter-spacing:.14em;padding:17px 24px;border-radius:10px;cursor:pointer;transition:all .22s;text-transform:uppercase;display:block;}
+.pad-launch-btn:hover{opacity:.88;transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,255,135,.3);}
+.pad-launch-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none;}
+@media(max-width:900px){.pad-v2-layout{grid-template-columns:1fr;}.pad-name-row{grid-template-columns:1fr;}.fgrid2{grid-template-columns:1fr;}}
 </style>
 
 <script>
@@ -1645,6 +1833,88 @@ window.addEventListener('load', function() {
     });
   }, 300);
 });
+
+
+// ════ PAD v2 ════
+var _PAD_TAKEN = ['BTC','ETH','SOL','USDC','USDT','BNB','XRP','ADA','AVAX','DOT','MATIC',
+  'DOGE','SHIB','PEPE','WIF','BONK','MEW','POPCAT','BOME','NEET','PUMP','MICH',
+  'MEME','WOJAK','ANDY','BRETT','TREMP','MOTHER','GOAT','PNUT','ACT','FWOG'];
+var _padTkTimer = null;
+
+function padTickerCheck(val) {
+  var badge = document.getElementById('tickerBadge');
+  var msg   = document.getElementById('tickerMsg');
+  if (!badge) return;
+  if (!val) { badge.className='ticker-badge'; badge.textContent=''; if(msg){msg.className='ticker-msg';msg.textContent='';} return; }
+  badge.className='ticker-badge'; badge.textContent='·'; if(msg){msg.className='ticker-msg ch';msg.textContent='checking availability...';}
+  clearTimeout(_padTkTimer);
+  _padTkTimer = setTimeout(function() {
+    var taken = _PAD_TAKEN.indexOf(val.toUpperCase()) >= 0;
+    if (!taken) { try { var r=JSON.parse(localStorage.getItem('_np_tickers')||'{}'); taken=!!r[val.toUpperCase()]; } catch(e){} }
+    if (taken) {
+      badge.className='ticker-badge no'; badge.textContent='✗';
+      if(msg){msg.className='ticker-msg no';msg.textContent='ticker taken — try another';}
+    } else {
+      badge.className='ticker-badge ok'; badge.textContent='✓';
+      if(msg){msg.className='ticker-msg ok';msg.textContent='available ✓';}
+    }
+  }, 550);
+}
+
+function padImagePreview(input) {
+  if (!input || !input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var inner = document.getElementById('imgDropInner');
+    var zone  = document.getElementById('imgDropZone');
+    if (inner) inner.innerHTML = '<img class="img-drop-prev" src="'+e.target.result+'">';
+    if (zone)  zone.classList.add('has');
+    var pi = document.getElementById('prevImg');
+    if (pi) pi.innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:9px">';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function padPreview() {
+  var name = (document.getElementById('padName')?.value||'').trim()||'TOKEN NAME';
+  var sym  = (document.getElementById('padSym')?.value||'').toUpperCase().trim()||'TICKER';
+  var desc = (document.getElementById('padDesc')?.value||'').trim()||'Your token description will appear here...';
+  var el;
+  el=document.getElementById('prevName'); if(el) el.textContent=name;
+  el=document.getElementById('prevSym');  if(el) el.textContent='$'+sym;
+  el=document.getElementById('prevDesc'); if(el) el.textContent=desc;
+}
+
+function padInitBuyCalc(v) {
+  var sol = parseFloat(v)||0;
+  var note = document.getElementById('initBuyNote');
+  if (!note) return;
+  if (sol>0) {
+    var est = Math.floor(sol * 28000000); // rough bonding curve estimate
+    note.textContent = '≈ '+est.toLocaleString()+' tokens at launch price';
+  } else { note.textContent=''; }
+}
+
+function padLaunchV2() {
+  var sym = (document.getElementById('padSym')?.value||'').toUpperCase().trim();
+  // Block taken tickers
+  var badge = document.getElementById('tickerBadge');
+  if (badge && badge.classList.contains('no')) {
+    var st=document.getElementById('padSt'); if(st){st.textContent='✗ Ticker "'+sym+'" is already taken. Choose another.';st.style.color='#ff4d4d';}
+    return;
+  }
+  if (badge && !badge.classList.contains('ok') && sym) {
+    var st=document.getElementById('padSt'); if(st){st.textContent='⏳ Please wait for ticker check...';st.style.color='rgba(255,255,255,.5)';}
+    return;
+  }
+  // Call original padLaunch
+  if (typeof padLaunch === 'function') {
+    padLaunch().then(function(){
+      // Register ticker on success
+      if (sym) { try { var r=JSON.parse(localStorage.getItem('_np_tickers')||'{}'); r[sym]=Date.now(); localStorage.setItem('_np_tickers',JSON.stringify(r)); } catch(e){} }
+    }).catch(function(){});
+  }
+}
 </script>
 </body>
 </html>
