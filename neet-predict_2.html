@@ -1506,7 +1506,7 @@ function scE(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function setScFil(f,btn){_scFil=f;document.querySelectorAll('.sc-fb').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderNeetScan();}
 </script>
 
-<!-- fix: missing element IDs + init predict page -->
+<!-- fix: cartel redesign + multi-market chart -->
 <span id="sb" style="display:none"></span>
 <span id="wb2" style="display:none"></span>
 <span id="ts" style="display:none"></span>
@@ -1516,17 +1516,57 @@ function setScFil(f,btn){_scFil=f;document.querySelectorAll('.sc-fb').forEach(fu
 <span id="ptb-hint" style="display:none"></span>
 <span id="rf" style="display:none"></span>
 <span id="txmg" style="display:none"></span>
+
+<style>
+/* CARTEL CARD REDESIGN */
+.cartel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.trader-card{background:linear-gradient(145deg,rgba(0,255,135,.04),rgba(0,0,0,0));border:1px solid rgba(0,255,135,.12);border-radius:12px;padding:20px;transition:all .22s;}
+.trader-card:hover{border-color:rgba(0,255,135,.25);background:linear-gradient(145deg,rgba(0,255,135,.07),rgba(0,0,0,0));transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,255,135,.06);}
+.trader-header{display:flex;align-items:center;gap:13px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(0,255,135,.1);}
+.trader-avatar{width:48px;height:48px;border-radius:50%;border:2px solid rgba(0,255,135,.3);overflow:hidden;background:#0d1117;flex-shrink:0;object-fit:cover;}
+.trader-name{font-family:var(--dsp,'Orbitron',sans-serif);font-size:17px;letter-spacing:.08em;color:#fff;text-transform:uppercase;}
+.trader-name a{color:inherit;text-decoration:none;}
+.trader-name a:hover{color:#00ff87;}
+.trader-total{font-size:11px;color:rgba(255,255,255,.45);font-family:var(--mono,monospace);margin-top:3px;}
+.token-list{display:flex;flex-direction:column;gap:6px;margin-top:2px;}
+.token-row{display:grid;grid-template-columns:26px 1fr auto auto;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.04);transition:background .15s;}
+.token-row:hover{background:rgba(0,255,135,.04);}
+.neet-row{background:rgba(0,255,135,.03);border-color:rgba(0,255,135,.08);}
+.token-logo{width:24px;height:24px;border-radius:50%;background:#0d1117;object-fit:cover;flex-shrink:0;}
+.token-sym{font-family:var(--mono,monospace);font-size:10px;font-weight:700;letter-spacing:.06em;color:#fff;}
+.token-amt{font-size:10px;color:rgba(255,255,255,.3);font-family:var(--mono,monospace);margin-top:1px;}
+.token-usd{font-family:var(--mono,monospace);font-size:12px;font-weight:700;color:#fff;text-align:right;}
+.token-pnl{font-family:var(--mono,monospace);font-size:10px;font-weight:700;text-align:right;min-width:54px;}
+.token-pnl.pos,.token-pnl.up{color:#00ff87;}
+.token-pnl.neg,.token-pnl.down{color:#ff4d4d;}
+.cartel-loading{text-align:center;padding:40px;color:rgba(0,255,135,.4);font-family:var(--mono,monospace);font-size:11px;letter-spacing:.18em;}
+@media(max-width:900px){.cartel-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:600px){.cartel-grid{grid-template-columns:1fr;}}
+</style>
+
 <script>
 window.addEventListener('load', function() {
   if (typeof switchMarket === 'function') switchMarket('NEET');
   else { var pg = document.getElementById('pg'); if (pg) pg.style.display = ''; }
 
-  setTimeout(function() {
+  var currentMkt = 'NEET';
+  var lc = null, areaSeries = null, pollInterval = null;
+  var chartData = {}, lastPrice = null;
+
+  var MKT = {
+    NEET: { src:'gecko', precision:7, minMove:0.0000001 },
+    BTC:  { src:'cg', cgId:'bitcoin', precision:0, minMove:1 },
+    SOL:  { src:'cg', cgId:'solana', precision:2, minMove:0.01 },
+    HYPE: { src:'cg', cgId:'hyperliquid', precision:2, minMove:0.01 }
+  };
+
+  function createChart(mkt) {
     var cc = document.getElementById('cc');
     if (!cc || typeof LightweightCharts === 'undefined') return;
     cc.innerHTML = '';
-
-    var lc = LightweightCharts.createChart(cc, {
+    if (lc) { try { lc.remove(); } catch(e){} lc = null; }
+    var cfg = MKT[mkt] || MKT.NEET;
+    lc = LightweightCharts.createChart(cc, {
       width: cc.offsetWidth, height: cc.offsetHeight || 420,
       layout: { background: { color: 'transparent' }, textColor: '#6b7799' },
       grid: { vertLines: { color: 'rgba(255,255,255,0.04)' }, horzLines: { color: 'rgba(255,255,255,0.04)' } },
@@ -1535,56 +1575,66 @@ window.addEventListener('load', function() {
       timeScale: { borderColor: 'rgba(255,255,255,0.07)', timeVisible: true, secondsVisible: false },
       handleScroll: true, handleScale: true
     });
-
-    var areaSeries = lc.addAreaSeries({
-      lineColor: '#00ff87',
-      topColor: 'rgba(0,255,135,0.35)',
-      bottomColor: 'rgba(0,255,135,0.02)',
-      lineWidth: 2,
-      priceFormat: { type: 'price', precision: 7, minMove: 0.0000001 }
+    areaSeries = lc.addAreaSeries({
+      lineColor: '#00ff87', topColor: 'rgba(0,255,135,0.35)', bottomColor: 'rgba(0,255,135,0.02)',
+      lineWidth: 2, priceFormat: { type: 'price', precision: cfg.precision, minMove: cfg.minMove }
     });
+    chartData = {}; lastPrice = null;
+    loadHistory(mkt);
+  }
 
-    var chartData = {};
-    var lastPrice = null;
+  function flushChart() {
+    if (!areaSeries) return;
+    var arr = Object.keys(chartData).sort(function(a,b){return +a-+b;}).map(function(t){return{time:+t,value:chartData[t]};});
+    if (arr.length > 0) { try { areaSeries.setData(arr); lc.timeScale().scrollToRealTime(); } catch(e){} }
+  }
 
-    function flushChart() {
-      var arr = Object.keys(chartData).sort(function(a,b){return +a-+b;}).map(function(t){return{time:+t,value:chartData[t]};});
-      if (arr.length > 0) { try { areaSeries.setData(arr); lc.timeScale().scrollToRealTime(); } catch(e){} }
+  function pollPrice() {
+    var cp = document.getElementById('cp');
+    if (!cp || !areaSeries) return;
+    var price = parseFloat(cp.textContent.replace(/[$,\s]/g,''));
+    if (isNaN(price) || price <= 0 || price === lastPrice) return;
+    lastPrice = price; chartData[Math.floor(Date.now()/1000)] = price; flushChart();
+  }
+
+  function loadHistory(mkt) {
+    var cfg = MKT[mkt] || MKT.NEET;
+    if (cfg.src === 'gecko') {
+      var POOL = '5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy';
+      fetch('https://api.geckoterminal.com/api/v2/networks/solana/pools/'+POOL+'/ohlcv/minute?aggregate=1&limit=300&currency=usd',{headers:{Accept:'application/json'}})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          var ohlcv=(d.data&&d.data.attributes&&d.data.attributes.ohlcv_list)||[];
+          ohlcv.forEach(function(c){var t=+c[0],cl=parseFloat(c[4]);if(t>1000000000&&!isNaN(cl)&&cl>0)chartData[t]=cl;});
+          pollPrice(); flushChart();
+        }).catch(function(){pollPrice();});
+    } else {
+      fetch('https://api.coingecko.com/api/v3/coins/'+cfg.cgId+'/market_chart?vs_currency=usd&days=1',{headers:{Accept:'application/json'}})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          var prices=(d&&d.prices)||[];
+          prices.forEach(function(p){var t=Math.floor(+p[0]/1000),pr=parseFloat(p[1]);if(t>1000000000&&!isNaN(pr)&&pr>0)chartData[t]=pr;});
+          pollPrice(); flushChart();
+        }).catch(function(){pollPrice();});
     }
+  }
 
-    function pollPrice() {
-      var cp = document.getElementById('cp');
-      if (!cp) return;
-      var price = parseFloat(cp.textContent.replace(/[$,\s]/g,''));
-      if (isNaN(price) || price <= 0 || price === lastPrice) return;
-      lastPrice = price;
-      chartData[Math.floor(Date.now()/1000)] = price;
-      flushChart();
-    }
+  setTimeout(function() {
+    createChart('NEET');
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(pollPrice, 3000);
 
-    // Load historical 1-min candles from GeckoTerminal (NEET/SOL pool on Solana)
-    var POOL = '5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy';
-    fetch('https://api.geckoterminal.com/api/v2/networks/solana/pools/'+POOL+'/ohlcv/minute?aggregate=1&limit=300&currency=usd', {headers:{Accept:'application/json'}})
-      .then(function(r){return r.json();})
-      .then(function(d){
-        var ohlcv = (d.data && d.data.attributes && d.data.attributes.ohlcv_list) || [];
-        ohlcv.forEach(function(c){
-          var t = +c[0]; // GeckoTerminal timestamps are already in seconds
-          var close = parseFloat(c[4]);
-          if (t > 1000000000 && !isNaN(close) && close > 0) chartData[t] = close;
-        });
-        pollPrice();
-        flushChart();
-      })
-      .catch(function(){ pollPrice(); });
-
-    setInterval(pollPrice, 3000);
+    var _origSM = window.switchMarket;
+    window.switchMarket = function(mkt) {
+      _origSM && _origSM.call(this, mkt);
+      if (mkt !== currentMkt) { currentMkt = mkt; setTimeout(function(){ createChart(mkt); }, 250); }
+    };
 
     window.addEventListener('resize', function(){
-      if (cc.offsetWidth > 0) lc.resize(cc.offsetWidth, cc.offsetHeight);
+      var cc = document.getElementById('cc');
+      if (cc && cc.offsetWidth > 0 && lc) lc.resize(cc.offsetWidth, cc.offsetHeight || 420);
     });
 
-    // Timeframe buttons control visible range
     document.querySelectorAll('[onclick*="setTf"]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var tf = btn.textContent.trim();
@@ -1593,8 +1643,7 @@ window.addEventListener('load', function() {
         try{lc.timeScale().setVisibleRange({from:now-s,to:now+30});}catch(e){}
       });
     });
-
-  }, 250);
+  }, 300);
 });
 </script>
 </body>
