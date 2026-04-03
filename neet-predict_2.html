@@ -1948,8 +1948,32 @@ function switchToScan(){
 /* ── NEET PAD v2: on-chain token launch ── */
 (function(){
   'use strict';
-  // Remove legacy fee display
+  // Remove legacy NEET fee display
   document.querySelectorAll('span[style*="f5c400"]').forEach(function(s){if(s.textContent.includes('NEET'))s.remove();});
+
+  // ── Inject TOTAL SUPPLY field before the Initial Buy section ──
+  var initBuyCard = document.getElementById('padInitBuy')?.closest('.pad-card2') || document.getElementById('padInitBuy')?.parentElement?.parentElement?.parentElement;
+  if(initBuyCard && !document.getElementById('padSupply')){
+    var supCard=document.createElement('div');
+    supCard.className='pad-card2';
+    supCard.innerHTML='<div class="pad-ct">TOTAL SUPPLY</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-top:8px">'
+      +'<input id="padSupply" class="pad-input" type="text" value="1000000000" style="flex:1;font-size:15px;font-family:monospace">'
+      +'<span id="padSupplyLbl" style="color:#8aff88;font-size:12px;white-space:nowrap">1B tokens</span>'
+      +'</div>'
+      +'<div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:6px">min 1M · max 999T · default 1B</div>';
+    initBuyCard.parentElement.insertBefore(supCard, initBuyCard);
+    document.getElementById('padSupply').addEventListener('input', function(){
+      document.getElementById('padSupplyLbl').textContent=fmtSup(parseInt(this.value.replace(/[^0-9]/g,''))||1e9);
+    });
+  }
+
+  function fmtSup(n){
+    if(n>=1e12)return(n/1e12).toFixed(n%1e12===0?0:1)+'T tokens';
+    if(n>=1e9)return(n/1e9).toFixed(n%1e9===0?0:2)+'B tokens';
+    if(n>=1e6)return(n/1e6).toFixed(n%1e6===0?0:1)+'M tokens';
+    return n.toLocaleString()+' tokens';
+  }
 
   var TREAS='H8tw1MkTKiqotp1hvR4Xna7Q4jt2t5yAvCru3UbrsJcb';
   var FEE=20000000;
@@ -1959,29 +1983,14 @@ function switchToScan(){
   var RPC='https://solana-rpc.publicnode.com';
   var enc=new TextEncoder();
 
-  // Supply label updater
-  var supplyEl=document.getElementById('padSupply');
-  var supplyLbl=document.getElementById('padSupplyLabel');
-  function fmtSupply(n){
-    if(n>=1e12)return(n/1e12).toFixed(n%1e12===0?0:2)+'T tokens';
-    if(n>=1e9)return(n/1e9).toFixed(n%1e9===0?0:2)+'B tokens';
-    if(n>=1e6)return(n/1e6).toFixed(n%1e6===0?0:2)+'M tokens';
-    return n.toLocaleString()+' tokens';
-  }
-  if(supplyEl&&supplyLbl){supplyEl.addEventListener('input',function(){var v=parseInt(this.value)||1e9;supplyLbl.textContent=fmtSupply(v);});}
-
   function st(type,msg){
-    var el=document.getElementById('padSt');
-    if(!el)return;
-    el.style.display='block';
-    if(type==='loading'){el.style.color='#ffdd00';el.style.background='rgba(255,221,0,0.08)';el.style.border='1px solid rgba(255,221,0,0.3)';el.innerHTML='<span>⏳ '+msg+'</span>';}
+    var el=document.getElementById('padSt');if(!el)return;el.style.display='block';
+    if(type==='loading'){el.style.color='#ffdd00';el.style.background='rgba(255,221,0,0.08)';el.style.border='1px solid rgba(255,221,0,0.3)';el.innerHTML='⏳ '+msg;}
     else if(type==='error'){el.style.color='#ff4444';el.style.background='rgba(255,68,68,0.08)';el.style.border='1px solid rgba(255,68,68,0.3)';el.innerHTML='✗ '+msg;}
   }
-
   function w32(a,v,o){a[o]=v&255;a[o+1]=(v>>8)&255;a[o+2]=(v>>16)&255;a[o+3]=(v>>24)&255;}
   function w16(a,v,o){a[o]=v&255;a[o+1]=(v>>8)&255;}
   function w64(a,big,o){var lo=Number(big&0xFFFFFFFFn),hi=Number(big>>32n);a[o]=lo&255;a[o+1]=(lo>>8)&255;a[o+2]=(lo>>16)&255;a[o+3]=(lo>>24)&255;a[o+4]=hi&255;a[o+5]=(hi>>8)&255;a[o+6]=(hi>>16)&255;a[o+7]=(hi>>24)&255;}
-
   function metaIx(nm,sy,ur){
     var nb=enc.encode(nm.slice(0,32)),sb=enc.encode(sy.slice(0,10)),ub=enc.encode(ur.slice(0,200));
     var d=new Uint8Array(1+(4+nb.length)+(4+sb.length)+(4+ub.length)+2+5),o=0;
@@ -2005,11 +2014,11 @@ function switchToScan(){
     var bdg=document.getElementById('tickerBadge');
     if(bdg&&bdg.classList.contains('no')){st('error','Ticker already taken');return;}
 
-    // Read supply (default 1B, clamp 1M–999T)
-    var supplyRaw=parseInt(document.getElementById('padSupply')?.value)||1000000000;
+    // Read supply
+    var supplyRaw=parseInt((document.getElementById('padSupply')?.value||'').replace(/[^0-9]/g,''))||1000000000;
     if(supplyRaw<1000000)supplyRaw=1000000;
     if(supplyRaw>999000000000000)supplyRaw=999000000000000;
-    var supplyAmt=BigInt(supplyRaw)*1000000n; // 6 decimals
+    var supplyAmt=BigInt(supplyRaw)*1000000n;
 
     var btn=document.getElementById('padLaunchBtn');
     if(btn)btn.disabled=true;
@@ -2018,54 +2027,41 @@ function switchToScan(){
       var conn=new w3.Connection(RPC,'confirmed');
       var wPk=new w3.PublicKey(wal.publicKey.toString());
       var mkp=w3.Keypair.generate(),mpk=mkp.publicKey;
-      var mp=new w3.PublicKey(MPROG);
-      var tp=new w3.PublicKey(TPROG);
-      var ap=new w3.PublicKey(APROG);
+      var mp=new w3.PublicKey(MPROG),tp=new w3.PublicKey(TPROG),ap=new w3.PublicKey(APROG);
       var SYS=new w3.PublicKey('11111111111111111111111111111111');
       var RENT=new w3.PublicKey('SysvarRent111111111111111111111111111111111');
-
-      // Derive metadata PDA
       var pda=(await w3.PublicKey.findProgramAddress([enc.encode('metadata'),mp.toBytes(),mpk.toBytes()],mp))[0];
-      // Derive ATA
       var ata=(await w3.PublicKey.findProgramAddress([wPk.toBytes(),tp.toBytes(),mpk.toBytes()],ap))[0];
-
       st('loading','Fetching rent...');
       var rent=await conn.getMinimumBalanceForRentExemption(82);
       var bh=await conn.getLatestBlockhash('confirmed');
       var tx=new w3.Transaction({recentBlockhash:bh.blockhash,feePayer:wPk});
-
-      // 1. Pay 0.02 SOL launch fee
+      // 1. 0.02 SOL fee
       tx.add(w3.SystemProgram.transfer({fromPubkey:wPk,toPubkey:new w3.PublicKey(TREAS),lamports:FEE}));
-      // 2. Create mint account (82 bytes)
+      // 2. Create mint account
       tx.add(w3.SystemProgram.createAccount({fromPubkey:wPk,newAccountPubkey:mpk,space:82,lamports:rent,programId:tp}));
-      // 3. InitializeMint2 (no freeze authority)
+      // 3. InitializeMint2 (6 decimals, no freeze auth)
       var im=new Uint8Array(67);im[0]=20;im[1]=6;im.set(wPk.toBytes(),2);
       tx.add(new w3.TransactionInstruction({programId:tp,keys:[{pubkey:mpk,isSigner:false,isWritable:true}],data:im}));
-      // 4. Create Associated Token Account (idempotent)
+      // 4. Create ATA (idempotent)
       tx.add(new w3.TransactionInstruction({programId:ap,keys:[
-        {pubkey:wPk,isSigner:true,isWritable:true},
-        {pubkey:ata,isSigner:false,isWritable:true},
-        {pubkey:wPk,isSigner:false,isWritable:false},
-        {pubkey:mpk,isSigner:false,isWritable:false},
-        {pubkey:SYS,isSigner:false,isWritable:false},
-        {pubkey:tp,isSigner:false,isWritable:false}
+        {pubkey:wPk,isSigner:true,isWritable:true},{pubkey:ata,isSigner:false,isWritable:true},
+        {pubkey:wPk,isSigner:false,isWritable:false},{pubkey:mpk,isSigner:false,isWritable:false},
+        {pubkey:SYS,isSigner:false,isWritable:false},{pubkey:tp,isSigner:false,isWritable:false}
       ],data:new Uint8Array([1])}));
-      // 5. MintTo: mint supply to creator ATA
+      // 5. MintTo: mint supply to creator wallet
       var mtd=new Uint8Array(9);mtd[0]=7;w64(mtd,supplyAmt,1);
       tx.add(new w3.TransactionInstruction({programId:tp,keys:[
-        {pubkey:mpk,isSigner:false,isWritable:true},
-        {pubkey:ata,isSigner:false,isWritable:true},
+        {pubkey:mpk,isSigner:false,isWritable:true},{pubkey:ata,isSigner:false,isWritable:true},
         {pubkey:wPk,isSigner:true,isWritable:false}
       ],data:mtd}));
       // 6. Metaplex metadata
-      var uri='https://neet.fi/t/'+mpk.toBase58();
       tx.add(new w3.TransactionInstruction({programId:mp,keys:[
         {pubkey:pda,isSigner:false,isWritable:true},{pubkey:mpk,isSigner:false,isWritable:false},
         {pubkey:wPk,isSigner:true,isWritable:false},{pubkey:wPk,isSigner:true,isWritable:true},
         {pubkey:wPk,isSigner:false,isWritable:false},{pubkey:SYS,isSigner:false,isWritable:false},
         {pubkey:RENT,isSigner:false,isWritable:false}
-      ],data:metaIx(nm,sy,uri)}));
-
+      ],data:metaIx(nm,sy,'https://neet.fi/t/'+mpk.toBase58())}));
       tx.partialSign(mkp);
       st('loading','Approve in Phantom...');
       var signed=await wal.signTransaction(tx);
@@ -2077,9 +2073,8 @@ function switchToScan(){
       try{var rr=JSON.parse(localStorage.getItem('_np_tickers')||'{}');rr[sy]=Date.now();localStorage.setItem('_np_tickers',JSON.stringify(rr));}catch(_){}
       var el=document.getElementById('padSt');
       if(el){
-        el.style.display='block';el.style.color='#00ff88';el.style.background='rgba(0,255,136,0.08)';
-        el.style.border='1px solid rgba(0,255,136,0.4)';el.style.padding='16px';
-        el.innerHTML='<b style="font-size:15px">✓ '+sy+' LAUNCHED! '+fmtSupply(supplyRaw)+'</b><br>'
+        el.style.cssText='display:block;color:#00ff88;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.4);padding:16px;border-radius:8px';
+        el.innerHTML='<b style="font-size:15px">✓ '+sy+' LAUNCHED! '+fmtSup(supplyRaw)+'</b><br>'
           +'<span style="color:#8aff88;font-size:11px;word-break:break-all">CA: '+ca+'</span><br>'
           +'<a href="https://solscan.io/token/'+ca+'" target="_blank" style="color:#00ff88;font-size:12px">View on Solscan ↗</a>'
           +'&nbsp;&nbsp;<a href="https://explorer.solana.com/address/'+ca+'" target="_blank" style="color:#00ff88;font-size:12px">Explorer ↗</a>';
