@@ -1948,6 +1948,8 @@ function switchToScan(){
 /* ── NEET PAD v2: on-chain token launch ── */
 (function(){
   'use strict';
+  // Remove legacy fee display from DOM
+  document.querySelectorAll('span[style*="f5c400"]').forEach(function(s){if(s.textContent.includes('NEET'))s.remove();});
   var TREAS='H8tw1MkTKiqotp1hvR4Xna7Q4jt2t5yAvCru3UbrsJcb';
   var FEE=20000000;
   var TPROG='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
