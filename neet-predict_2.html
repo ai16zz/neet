@@ -1952,7 +1952,7 @@ function switchToScan(){
   var FEE=20000000;
   var TPROG='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
   var MPROG='metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
-  var RPC='https://api.devnet.solana.com';
+  var RPC='https://api.mainnet-beta.solana.com';
   var enc=new TextEncoder();
 
   function st(type,msg){
@@ -2046,8 +2046,8 @@ function switchToScan(){
         el.style.border='1px solid rgba(0,255,136,0.4)';el.style.padding='16px';
         el.innerHTML='<b style="font-size:15px">✓ '+sy+' LAUNCHED!</b><br>'
           +'<span style="color:#8aff88;font-size:11px;word-break:break-all">CA: '+ca+'</span><br>'
-          +'<a href="https://solscan.io/token/'+ca+'?cluster=devnet" target="_blank" style="color:#00ff88;font-size:12px">View on Solscan ↗</a>'
-          +'&nbsp;&nbsp;<a href="https://explorer.solana.com/address/'+ca+'?cluster=devnet" target="_blank" style="color:#00ff88;font-size:12px">Explorer ↗</a>';
+          +'<a href="https://solscan.io/token/'+ca+'" target="_blank" style="color:#00ff88;font-size:12px">View on Solscan ↗</a>'
+          +'&nbsp;&nbsp;<a href="https://explorer.solana.com/address/'+ca+'" target="_blank" style="color:#00ff88;font-size:12px">Explorer ↗</a>';
       }
     }catch(err){
       console.error('[NEET PAD]',err);
