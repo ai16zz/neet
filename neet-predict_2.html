@@ -1945,118 +1945,170 @@ function switchToScan(){
 </script>
 
 <script>
-/* NEET PAD v2 */
-(function(){
-'use strict';
+/* NEET PAD v3 - pump.fun bonding curve + neet vanity address */
+(function(){'use strict';
 
 document.querySelectorAll('span[style*="f5c400"]').forEach(function(s){if(s.textContent.includes('NEET'))s.remove();});
 
-function fmtSup(n){if(!n||n<=0)n=1e9;if(n>=1e12)return(n/1e12).toFixed(n%1e12===0?0:1)+'T';if(n>=1e9)return(n/1e9).toFixed(n%1e9===0?0:2)+'B';if(n>=1e6)return(n/1e6).toFixed(n%1e6===0?0:1)+'M';return n.toLocaleString();}
+function fmtSup(n){if(!n&&n!==0)return '';var num=parseFloat(n);if(isNaN(num))return n;if(num>=1e9)return (num/1e9).toFixed(2)+'B';if(num>=1e6)return (num/1e6).toFixed(2)+'M';if(num>=1e3)return (num/1e3).toFixed(2)+'K';return num.toString();}
 window._fmtSup=fmtSup;
 
 function injectSupply(){
   if(document.getElementById('padSupply'))return;
   var ib=document.getElementById('padInitBuy');if(!ib)return;
   var card=ib.closest('.pad-card2');if(!card)return;
-  var sup=document.createElement('div');sup.className='pad-card2';sup.style.cssText='margin-bottom:12px';
-  sup.innerHTML='<div class="pad-ct">TOTAL SUPPLY</div><div style="display:flex;align-items:center;gap:8px;margin-top:8px"><input id="padSupply" class="pad-input" type="text" value="1000000000" style="flex:1;font-size:15px;font-family:monospace" oninput="document.getElementById(\'padSupplyLbl\').textContent=window._fmtSup(parseInt(this.value.replace(/[^0-9]/g,\'\'))||1e9)+\' tokens\'"><span id="padSupplyLbl" style="color:#8aff88;font-size:12px;white-space:nowrap">1B tokens</span></div><div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:6px">1M min · 999T max · default 1B</div>';
+  var sup=document.createElement('div');sup.className='pad-card2';
+  sup.innerHTML='<div class="pad-ct">BONDING CURVE</div><div style="color:#ffcc00;font-size:12px;padding:6px 0">1,000,000,000 tokens · pump.fun curve<br><span style="color:#aaa;font-size:11px">CA will end in \'neet\'</span></div><input id="padSupply" style="display:none" value="1000000000">';
   card.parentElement.insertBefore(sup,card);
 }
 injectSupply();
 var _pt=document.getElementById('padTab');if(_pt)_pt.addEventListener('click',function(){setTimeout(injectSupply,80);});
 var _ps=document.getElementById('padSection');if(_ps)new MutationObserver(function(){setTimeout(injectSupply,30);}).observe(_ps,{childList:true,subtree:true});
 
-function st(t,m){var el=document.getElementById('padSt');if(!el)return;el.style.display='block';if(t==='loading'){el.style.color='#ffdd00';el.style.background='rgba(255,221,0,0.08)';el.style.border='1px solid rgba(255,221,0,0.3)';el.innerHTML='⏳ '+m;}else if(t==='error'){el.style.color='#ff4444';el.style.background='rgba(255,68,68,0.08)';el.style.border='1px solid rgba(255,68,68,0.3)';el.innerHTML='✗ '+m;}else{el.style.color='#8aff88';el.style.background='rgba(138,255,136,0.08)';el.style.border='1px solid rgba(138,255,136,0.3)';el.innerHTML='✓ '+m;}}
+function st(t,m){var el=document.getElementById('padSt');if(!el)return;el.style.display='block';el.style.color=t==='error'?'#ff4444':t==='success'?'#44ff44':'#ffcc00';el.textContent=m;}
 
-function w64(a,big,o){var lo=Number(big&0xFFFFFFFFn),hi=Number(big>>32n);a[o]=lo&255;a[o+1]=(lo>>8)&255;a[o+2]=(lo>>16)&255;a[o+3]=(lo>>24)&255;a[o+4]=hi&255;a[o+5]=(hi>>8)&255;a[o+6]=(hi>>16)&255;a[o+7]=(hi>>24)&255;}
-
-var enc=new TextEncoder(),TREAS='H8tw1MkTKiqotp1hvR4Xna7Q4jt2t5yAvCru3UbrsJcb',FEE=20000000;
+var enc=new TextEncoder();
+var TREAS='H8tw1MkTKiqotp1hvR4Xna7Q4jt2t5yAvCru3UbrsJcb',FEE=20000000;
+var RPC='https://solana-rpc.publicnode.com';
+var PUMP_PROG='6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
+var FEE_RECIP='62qc2CNXwrYqQScmEdiZFFAnJR262PxWEuNQtxfafNgV';
+var FEE_PROG='pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ';
+var MPROG='metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
 var TPROG='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 var APROG='ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
-var MPROG='metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
-var RPC='https://solana-rpc.publicnode.com';
+var RENT='SysvarRent111111111111111111111111111111111';
+var SYS='11111111111111111111111111111111';
+var MINT_AUTH='TSLvdd1pWpHVjahSpsvCXUbgwsL3JAcvokwaKt1eokM';
+var EVENT_AUTH='Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1';
+var GLOBAL_PDA='4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf';
+var GLOBAL_VA='Hq2wp8uJ9jCPsYgNHex8RtqdvMPfVGoYwjvF1ATiwn2Y';
+var FEE_CONFIG='8Wf5TiAheLUqBrKXeYg2JtAFFMWtKdG2BSFgqUcPVwTt';
+var INIT_VIRT_SOL=30000000000n,INIT_VIRT_TOK=1073000000000000n;
 
-async function rpcCall(m,p){var r=await fetch(RPC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:m,params:p})});if(!r.ok)throw new Error('RPC '+r.status);var j=await r.json();if(j.error)throw new Error(j.error.message);return j.result;}
+async function rpcCall(m,p){
+  var r=await fetch(RPC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:m,params:p})});
+  var d=await r.json();if(d.error)throw new Error(d.error.message);return d.result;
+}
+function borshStr(s){var b=enc.encode(s);var d=new Uint8Array(4+b.length);d[0]=b.length&255;d[1]=(b.length>>8)&255;d[2]=(b.length>>16)&255;d[3]=(b.length>>24)&255;d.set(b,4);return d;}
 
-async function findATA(own,mint){var sw=solanaWeb3;var[a]=await sw.PublicKey.findProgramAddress([new sw.PublicKey(own).toBytes(),new sw.PublicKey(TPROG).toBytes(),new sw.PublicKey(mint).toBytes()],new sw.PublicKey(APROG));return a;}
-
-async function findMeta(mint){var sw=solanaWeb3;var[p]=await sw.PublicKey.findProgramAddress([enc.encode('metadata'),new sw.PublicKey(MPROG).toBytes(),new sw.PublicKey(mint).toBytes()],new sw.PublicKey(MPROG));return p;}
+function grindVanity(suffix){
+  return new Promise(function(resolve,reject){
+    var wc='var AL="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";'+
+    'function bs58(b){var d=[],c,i,j,r;for(i=0;i<b.length;i++){c=b[i];for(j=0;j<d.length;j++){r=d[j]*256+c;d[j]=r%58;c=Math.floor(r/58);}while(c>0){d.push(c%58);c=Math.floor(c/58);}}var s="";for(i=0;i<b.length&&b[i]===0;i++)s+=AL[0];for(i=d.length-1;i>=0;i--)s+=AL[d[i]];return s;}'+
+    'importScripts("https://unpkg.com/tweetnacl@1.0.3/nacl.min.js");'+
+    'var sfx="'+suffix+'",att=0;'+
+    'function grind(){for(var i=0;i<2000;i++){att++;var seed=new Uint8Array(32);crypto.getRandomValues(seed);var kp=nacl.sign.keyPair.fromSeed(seed);var addr=bs58(kp.publicKey);if(addr.endsWith(sfx)){postMessage({f:1,sk:Array.from(kp.secretKey),pk:addr,att:att});return;}}postMessage({f:0,att:att});setTimeout(grind,0);}grind();';
+    var blob=new Blob([wc],{type:'application/javascript'});
+    var url=URL.createObjectURL(blob);
+    var w=new Worker(url);
+    w.onmessage=function(e){
+      if(e.data.f){w.terminate();URL.revokeObjectURL(url);
+        var kp=window.solanaWeb3.Keypair.fromSecretKey(new Uint8Array(e.data.sk));
+        resolve({kp:kp,att:e.data.att});}
+      else st('info','Grinding for \'neet\' CA... '+e.data.att.toLocaleString()+' attempts');
+    };
+    w.onerror=function(e){reject(new Error(e.message));};
+  });
+}
 
 window.padLaunchV2=async function(){
   var wal=window.solana;
   if(!wal||!wal.isConnected||!wal.publicKey){st('error','Connect wallet first');return;}
-  var name=(document.getElementById('padName')||{}).value||'';
-  var sym=(document.getElementById('padSym')||{}).value||'';
-  var imgUrl=(document.getElementById('padImg')||{}).value||'';
-  if(!name){st('error','Token name required');return;}
-  if(!sym){st('error','Token symbol required');return;}
-  var supRaw=parseInt(((document.getElementById('padSupply')||{value:'1000000000'}).value||'').replace(/[^0-9]/g,'')||'1000000000');
-  if(!supRaw||supRaw<1000000)supRaw=1000000;
-  if(supRaw>999000000000000)supRaw=999000000000000;
-  var supplyAmt=BigInt(supRaw)*1000000n;
-  st('loading','Preparing...');
-  try{
-    var sw=solanaWeb3,payer=wal.publicKey;
-    var mintKp=sw.Keypair.generate(),mintPk=mintKp.publicKey;
-    var[bh,rentMint]=await Promise.all([rpcCall('getLatestBlockhash',[{commitment:'confirmed'}]),rpcCall('getMinimumBalanceForRentExemption',[82])]);
-    var blockhash=bh.value.blockhash;
-    var ataAddr=await findATA(payer.toBase58(),mintPk.toBase58());
-    var metaAddr=await findMeta(mintPk.toBase58());
-    var tx=new sw.Transaction();
-    tx.recentBlockhash=blockhash;tx.feePayer=payer;
-    tx.add(sw.SystemProgram.transfer({fromPubkey:payer,toPubkey:new sw.PublicKey(TREAS),lamports:FEE}));
-    tx.add(sw.SystemProgram.createAccount({fromPubkey:payer,newAccountPubkey:mintPk,lamports:rentMint,space:82,programId:new sw.PublicKey(TPROG)}));
-    var imd=new Uint8Array(67);imd[0]=20;imd[1]=6;imd.set(payer.toBytes(),2);
-    tx.add(new sw.TransactionInstruction({keys:[{pubkey:mintPk,isSigner:false,isWritable:true}],programId:new sw.PublicKey(TPROG),data:imd}));
-    tx.add(new sw.TransactionInstruction({keys:[
-      {pubkey:payer,isSigner:true,isWritable:true},
-      {pubkey:ataAddr,isSigner:false,isWritable:true},
-      {pubkey:payer,isSigner:false,isWritable:false},
+  var payer=wal.publicKey,sw=window.solanaWeb3;
+  var name=((document.getElementById('padName')||{}).value||'').trim();
+  var sym=((document.getElementById('padTicker')||{}).value||'').trim();
+  var imgUrl=((document.getElementById('padImg')||{}).value||'https://neetpredict.xyz/').trim();
+  var initBuySOL=parseFloat(((document.getElementById('padInitBuy')||{}).value)||'0')||0;
+  if(!name||!sym){st('error','Name and ticker required');return;}
+  st('info','Grinding for \'neet\' CA... (1-5 min avg)');
+  var gr;try{gr=await grindVanity('neet');}catch(e){st('error','Grinder: '+e.message);return;}
+  var mintKp=gr.kp,mintPk=mintKp.publicKey;
+  st('info','Found in '+gr.att.toLocaleString()+' tries! Building tx...');
+  var PUMP=new sw.PublicKey(PUMP_PROG);
+  var [bondCurve]=await sw.PublicKey.findProgramAddress([enc.encode('bonding-curve'),mintPk.toBytes()],PUMP);
+  var [metaPDA]=await sw.PublicKey.findProgramAddress([enc.encode('metadata'),new sw.PublicKey(MPROG).toBytes(),mintPk.toBytes()],new sw.PublicKey(MPROG));
+  var [assocBC]=await sw.PublicKey.findProgramAddress([bondCurve.toBytes(),new sw.PublicKey(TPROG).toBytes(),mintPk.toBytes()],new sw.PublicKey(APROG));
+  var [assocUser]=await sw.PublicKey.findProgramAddress([payer.toBytes(),new sw.PublicKey(TPROG).toBytes(),mintPk.toBytes()],new sw.PublicKey(APROG));
+  var [creatVault]=await sw.PublicKey.findProgramAddress([enc.encode('creator-vault'),payer.toBytes()],PUMP);
+  var [userVA]=await sw.PublicKey.findProgramAddress([enc.encode('user_volume_accumulator'),payer.toBytes()],PUMP);
+  var nmB=borshStr(name.substring(0,32)),syB=borshStr(sym.substring(0,10)),urB=borshStr(imgUrl.substring(0,200));
+  var cDisc=new Uint8Array([24,30,200,40,5,28,7,119]);
+  var cData=new Uint8Array(8+nmB.length+syB.length+urB.length+32);
+  var off=0;cData.set(cDisc,off);off+=8;cData.set(nmB,off);off+=nmB.length;cData.set(syB,off);off+=syB.length;cData.set(urB,off);off+=urB.length;cData.set(payer.toBytes(),off);
+  var createIx=new sw.TransactionInstruction({programId:PUMP,keys:[
+    {pubkey:mintPk,isSigner:true,isWritable:true},
+    {pubkey:new sw.PublicKey(MINT_AUTH),isSigner:false,isWritable:false},
+    {pubkey:bondCurve,isSigner:false,isWritable:true},
+    {pubkey:assocBC,isSigner:false,isWritable:true},
+    {pubkey:new sw.PublicKey(GLOBAL_PDA),isSigner:false,isWritable:false},
+    {pubkey:new sw.PublicKey(MPROG),isSigner:false,isWritable:false},
+    {pubkey:metaPDA,isSigner:false,isWritable:true},
+    {pubkey:payer,isSigner:true,isWritable:true},
+    {pubkey:new sw.PublicKey(SYS),isSigner:false,isWritable:false},
+    {pubkey:new sw.PublicKey(TPROG),isSigner:false,isWritable:false},
+    {pubkey:new sw.PublicKey(APROG),isSigner:false,isWritable:false},
+    {pubkey:new sw.PublicKey(RENT),isSigner:false,isWritable:false},
+    {pubkey:new sw.PublicKey(EVENT_AUTH),isSigner:false,isWritable:false},
+    {pubkey:PUMP,isSigner:false,isWritable:false}
+  ],data:cData});
+  var tx=new sw.Transaction();
+  tx.add(sw.SystemProgram.transfer({fromPubkey:payer,toPubkey:new sw.PublicKey(TREAS),lamports:FEE}));
+  tx.add(createIx);
+  if(initBuySOL>0){
+    var lam=BigInt(Math.round(initBuySOL*1e9));
+    var tokBuy=(lam*INIT_VIRT_TOK)/(INIT_VIRT_SOL+lam);
+    var maxSol=lam+lam/10n;
+    var bDisc=new Uint8Array([102,6,61,18,1,218,235,234]);
+    var bData=new Uint8Array(24);bData.set(bDisc,0);
+    var tv=tokBuy;for(var bi=0;bi<8;bi++){bData[8+bi]=Number(tv&255n);tv>>=8n;}
+    var sv=maxSol;for(var bi=0;bi<8;bi++){bData[16+bi]=Number(sv&255n);sv>>=8n;}
+    tx.add(new sw.TransactionInstruction({programId:new sw.PublicKey(APROG),keys:[
+      {pubkey:payer,isSigner:true,isWritable:true},{pubkey:assocUser,isSigner:false,isWritable:true},
+      {pubkey:payer,isSigner:true,isWritable:false},{pubkey:mintPk,isSigner:false,isWritable:false},
+      {pubkey:new sw.PublicKey(SYS),isSigner:false,isWritable:false},{pubkey:new sw.PublicKey(TPROG),isSigner:false,isWritable:false}
+    ],data:new Uint8Array([1])}));
+    tx.add(new sw.TransactionInstruction({programId:PUMP,keys:[
+      {pubkey:new sw.PublicKey(GLOBAL_PDA),isSigner:false,isWritable:false},
+      {pubkey:new sw.PublicKey(FEE_RECIP),isSigner:false,isWritable:true},
       {pubkey:mintPk,isSigner:false,isWritable:false},
-      {pubkey:new sw.PublicKey('11111111111111111111111111111111'),isSigner:false,isWritable:false},
-      {pubkey:new sw.PublicKey(TPROG),isSigner:false,isWritable:false}
-    ],programId:new sw.PublicKey(APROG),data:new Uint8Array([1])}));
-    var mtd=new Uint8Array(9);mtd[0]=7;w64(mtd,supplyAmt,1);
-    tx.add(new sw.TransactionInstruction({keys:[
-      {pubkey:mintPk,isSigner:false,isWritable:true},
-      {pubkey:ataAddr,isSigner:false,isWritable:true},
-      {pubkey:payer,isSigner:true,isWritable:false}
-    ],programId:new sw.PublicKey(TPROG),data:mtd}));
-    function encStr(s){var b=enc.encode(s);var d=new Uint8Array(4+b.length);d[0]=b.length&255;d[1]=(b.length>>8)&255;d.set(b,4);return d;}
-    var nm=encStr(name.substring(0,32)),sy=encStr(sym.substring(0,10)),ur=encStr((imgUrl||'https://neetpredict.xyz/').substring(0,200));
-    var mLen=1+nm.length+sy.length+ur.length+2+1+1+1+1+1,mData=new Uint8Array(mLen),off=0;
-    mData[off++]=33;mData.set(nm,off);off+=nm.length;mData.set(sy,off);off+=sy.length;mData.set(ur,off);off+=ur.length;
-    mData[off++]=0;mData[off++]=0;mData[off++]=0;mData[off++]=0;mData[off++]=0;mData[off++]=1;mData[off++]=0;
-    tx.add(new sw.TransactionInstruction({keys:[
-      {pubkey:metaAddr,isSigner:false,isWritable:true},
-      {pubkey:mintPk,isSigner:false,isWritable:false},
-      {pubkey:payer,isSigner:true,isWritable:false},
+      {pubkey:bondCurve,isSigner:false,isWritable:true},
+      {pubkey:assocBC,isSigner:false,isWritable:true},
+      {pubkey:assocUser,isSigner:false,isWritable:true},
       {pubkey:payer,isSigner:true,isWritable:true},
-      {pubkey:payer,isSigner:true,isWritable:false},
-      {pubkey:new sw.PublicKey('11111111111111111111111111111111'),isSigner:false,isWritable:false},
-      {pubkey:new sw.PublicKey('SysvarRent111111111111111111111111111111111'),isSigner:false,isWritable:false}
-    ],programId:new sw.PublicKey(MPROG),data:mData}));
-    st('loading','Sign in wallet...');
-    tx.partialSign(mintKp);
-    var signed=await wal.signTransaction(tx);
-    st('loading','Sending...');
-    var raw=signed.serialize();
-    var b64=btoa(String.fromCharCode.apply(null,new Uint8Array(raw)));
-    var sig=await rpcCall('sendTransaction',[b64,{encoding:'base64',skipPreflight:false,preflightCommitment:'confirmed'}]);
-    st('loading','Confirming...');
-    for(var i=0;i<30;i++){
-      await new Promise(function(r){setTimeout(r,2000);});
-      try{var cf=await rpcCall('getSignatureStatuses',[[sig],{searchTransactionHistory:true}]);
-        if(cf.value[0]&&(cf.value[0].confirmationStatus==='confirmed'||cf.value[0].confirmationStatus==='finalized'))break;}catch(e){}
+      {pubkey:new sw.PublicKey(SYS),isSigner:false,isWritable:false},
+      {pubkey:new sw.PublicKey(TPROG),isSigner:false,isWritable:false},
+      {pubkey:creatVault,isSigner:false,isWritable:true},
+      {pubkey:new sw.PublicKey(GLOBAL_VA),isSigner:false,isWritable:false},
+      {pubkey:userVA,isSigner:false,isWritable:true},
+      {pubkey:new sw.PublicKey(FEE_CONFIG),isSigner:false,isWritable:false},
+      {pubkey:new sw.PublicKey(FEE_PROG),isSigner:false,isWritable:false},
+      {pubkey:new sw.PublicKey(EVENT_AUTH),isSigner:false,isWritable:false},
+      {pubkey:PUMP,isSigner:false,isWritable:false}
+    ],data:bData}));
+  }
+  var bh=await rpcCall('getLatestBlockhash',[{commitment:'finalized'}]);
+  tx.recentBlockhash=bh.blockhash;tx.feePayer=payer;
+  tx.partialSign(mintKp);
+  var signed=await wal.signTransaction(tx);
+  var raw=signed.serialize();
+  var b64=btoa(String.fromCharCode.apply(null,Array.from(raw)));
+  st('info','Sending...');
+  var sig=await rpcCall('sendTransaction',[b64,{encoding:'base64',skipPreflight:false,preflightCommitment:'finalized'}]);
+  st('info','Confirming '+sig.substring(0,16)+'...');
+  for(var ci=0;ci<30;ci++){
+    await new Promise(function(r){setTimeout(r,2000);});
+    var stat=await rpcCall('getSignatureStatuses',[[sig]]);
+    var s=stat.value[0];
+    if(s&&(s.confirmationStatus==='confirmed'||s.confirmationStatus==='finalized')){
+      if(s.err){st('error','Failed: '+JSON.stringify(s.err));return;}
+      var el=document.getElementById('padSt');
+      if(el)el.innerHTML='<span style="color:#44ff44">\u{1F680} Launched on <a href="https://pump.fun/coin/'+mintPk.toString()+'" target="_blank" style="color:#44ff44;text-decoration:underline">pump.fun</a> | CA: ...'+mintPk.toString().slice(-8)+'</span>';
+      return;
     }
-    var ca=mintPk.toBase58();
-    var el=document.getElementById('padSt');
-    if(el){el.style.display='block';el.style.color='#8aff88';el.style.background='rgba(138,255,136,0.08)';el.style.border='1px solid rgba(138,255,136,0.3)';
-      el.innerHTML='✓ Launched! <a href="https://solscan.io/token/'+ca+'" target="_blank" style="color:#8aff88">View on Solscan</a><br><span style="font-size:11px;word-break:break-all">CA: '+ca+'</span>';}
-  }catch(e){st('error',e.message||String(e));console.error('launch err:',e);}
+  }
+  st('error','Timeout. TX: '+sig);
 };
 
 })();
 </script>
-</body>
 </html>
