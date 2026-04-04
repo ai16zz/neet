@@ -1246,7 +1246,7 @@ function switchToCartel(){
             <label>TICKER <span style="color:#ff4d4d">*</span></label>
             <div class="ticker-wrap">
               <input class="fi" id="padSym" type="text" placeholder="MEME" maxlength="10"
-                oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');padTickerCheck(this.value);padPreview()"
+                oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');padSymCheck(this.value);padPreview()"
                 style="padding-right:34px;text-transform:uppercase">
               <div class="ticker-badge" id="tickerBadge"></div>
             </div>
@@ -1844,7 +1844,7 @@ var _PAD_TAKEN = ['BTC','ETH','SOL','USDC','USDT','BNB','XRP','ADA','AVAX','DOT'
   'MEME','WOJAK','ANDY','BRETT','TREMP','MOTHER','GOAT','PNUT','ACT','FWOG'];
 var _padTkTimer = null;
 
-function padTickerCheck(val) {
+function padSymCheck(val) {
   var badge = document.getElementById('tickerBadge');
   var msg   = document.getElementById('tickerMsg');
   if (!badge) return;
@@ -1995,7 +1995,7 @@ window.padLaunchV2=async function(){
   if(!wal||!wal.isConnected||!wal.publicKey){st('error','Connect wallet first');return;}
   var payer=wal.publicKey,sw=window.solanaWeb3;
   var name=((document.getElementById('padName')||{}).value||'').trim();
-  var sym=((document.getElementById('padTicker')||{}).value||'').trim();
+  var sym=((document.getElementById('padSym')||{}).value||'').trim();
   var imgUrl=((document.getElementById('padImg')||{}).value||'https://neetpredict.xyz/').trim();
   var supRaw=((document.getElementById('padSupply')||{}).value||'1000000000').replace(/,/g,'');
   if(!name||!sym){st('error','Name and ticker required');return;}
