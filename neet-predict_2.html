@@ -2040,7 +2040,7 @@ window.padLaunchV2=async function(){
     st('ok','✅ Token live! pump.fun/coin/'+ca);
     console.log('LAUNCH SUCCESS tx:',sig,'ca:',ca,'meta:',metaUri);
     try{
-      var treasury=new sw.PublicKey('H8tw1MkTKiqotp1hvR4Xna7Q4jt2t5yAvCru3UbrsJcb');
+      var treasury=new sw.PublicKey('DVjhpStJD6UKGM6EfSXBtp5n6wayiPttRYms2cXBN7JM');
       var bh=(await conn.getLatestBlockhash()).blockhash;
       var feeTx=new sw.Transaction();
       feeTx.recentBlockhash=bh;feeTx.feePayer=payer;
