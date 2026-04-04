@@ -1956,29 +1956,46 @@ if(typeof window.st!=='function'){
 
 async function _uploadMeta(name,sym,desc,imgUrl,tw,tg,web){
   var imageBlob;
-  try{var r=await fetch(imgUrl);imageBlob=await r.blob();}catch(e){
-    var px=new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,1,0,0,0,1,8,2,0,0,0,144,119,83,222,0,0,0,12,73,68,65,84,8,215,99,248,207,192,0,0,0,2,0,1,226,33,188,51,0,0,0,0,73,69,78,68,174,66,96,130]);
+  if(imgUrl){
+    try{var ir=await fetch(imgUrl);if(ir.ok)imageBlob=await ir.blob();}catch(e){}
+  }
+  if(!imageBlob){
+    var px=new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,1,0,0,0,1,8,2,0,0,0,144,119,83,222,0,0,0,12,73,68,65,84,8,215,99,248,15,0,0,1,1,0,5,24,213,78,0,0,0,0,73,69,78,68,174,66,96,130]);
     imageBlob=new Blob([px],{type:'image/png'});
   }
   var fd=new FormData();
   fd.append('file',imageBlob,'image.png');
   fd.append('name',name);fd.append('symbol',sym);
-  fd.append('description',desc||(name+' — launched on NEET PAD'));
-  fd.append('twitter',tw||'');fd.append('telegram',tg||'');
-  fd.append('website',web||'https://ai16zz.github.io/neet/neet-predict_2.html');
+  fd.append('description',desc||'');
+  if(tw)fd.append('twitter',tw);
+  if(tg)fd.append('telegram',tg);
+  if(web)fd.append('website',web);
   fd.append('showName','true');
-  for(var ep of['https://pump.fun/api/ipfs','https://corsproxy.io/?'+encodeURIComponent('https://pump.fun/api/ipfs')]){
-    try{var r=await fetch(ep,{method:'POST',body:fd});if(r.ok){var d=await r.json();if(d.metadataUri)return d.metadataUri;}}catch(e){console.log('IPFS failed:',ep,e.message);}
+  for(var ep of['https://pump.fun/api/ipfs','https://corsproxy.io/?url=https%3A%2F%2Fpump.fun%2Fapi%2Fipfs']){
+    try{
+      var r=await fetch(ep,{method:'POST',body:fd});
+      if(r.ok){var d=await r.json();if(d&&d.metadataUri)return d.metadataUri;}
+    }catch(e){console.log('IPFS ep failed:',ep,e.message);}
   }
+  try{
+    var meta={name:name,symbol:sym,description:desc||'',image:imgUrl||''};
+    if(tw)meta.twitter=tw;if(tg)meta.telegram=tg;if(web)meta.website=web;
+    var jbResp=await fetch('https://jsonblob.com/api/jsonBlob',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify(meta)
+    });
+    if(jbResp.status===201){var loc=jbResp.headers.get('Location');if(loc)return loc;}
+  }catch(e){console.log('jsonblob failed:',e.message);}
   return imgUrl||'https://neetpredict.xyz/';
 }
 
 window.padLaunchV2=async function(){
   var wal=window.solana;
-  if(!wal){st('error','Phantom not found — install Phantom wallet');return;}
+  if(!wal){st('error','Phantom not found');return;}
   if(!wal.isConnected||!wal.publicKey){
     st('info','Connecting wallet...');
-    try{await wal.connect();}catch(e){st('error','Wallet connection rejected');return;}
+    try{await wal.connect();}catch(e){st('error','Wallet rejected');return;}
     if(!wal.isConnected||!wal.publicKey){st('error','Connect wallet first');return;}
   }
   var sw=window.solanaWeb3,payer=wal.publicKey;
@@ -1989,36 +2006,49 @@ window.padLaunchV2=async function(){
   var tw=((document.getElementById('padTw')||{}).value||'').trim();
   var tg=((document.getElementById('padTg')||{}).value||'').trim();
   var web=((document.getElementById('padWeb')||{}).value||'').trim();
-  var initBuy=parseFloat(((document.getElementById('padInitBuy')||{}).value||'0'))||0;
   if(!name||!sym){st('error','Name and ticker required');return;}
   try{
-    st('info','Uploading metadata to IPFS...');
+    st('info','Uploading metadata...');
     var metaUri=await _uploadMeta(name,sym,desc,imgUrl,tw,tg,web);
-    st('info','Building pump.fun transaction...');
+    st('info','Building transaction...');
     var mintKp=sw.Keypair.generate();
     var ppResp=await fetch('https://pumpportal.fun/api/trade-local',{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        publicKey:payer.toBase58(),action:'create',
+        publicKey:payer.toBase58(),
+        action:'create',
         tokenMetadata:{name:name,symbol:sym,uri:metaUri},
         mint:mintKp.publicKey.toBase58(),
-        denominatedInSol:'true',amount:initBuy,
-        slippage:10,priorityFee:0.0005,pool:'pump'
+        denominatedInSol:'true',
+        amount:0,
+        slippage:10,
+        priorityFee:0.0005,
+        pool:'pump'
       })
     });
-    if(!ppResp.ok)throw new Error('PumpPortal error: '+ppResp.status+' '+(await ppResp.text()).substring(0,100));
-    var txBytes=new Uint8Array(await ppResp.arrayBuffer());
-    var tx=sw.VersionedTransaction.deserialize(txBytes);
+    if(!ppResp.ok){var errTxt=await ppResp.text();throw new Error('API '+ppResp.status+': '+errTxt.substring(0,80));}
+    var tx=sw.VersionedTransaction.deserialize(new Uint8Array(await ppResp.arrayBuffer()));
     tx.sign([mintKp]);
     st('info','Approve in Phantom...');
     var signedTx=await wal.signTransaction(tx);
     var conn=new sw.Connection('https://solana-rpc.publicnode.com','confirmed');
     var sig=await conn.sendRawTransaction(signedTx.serialize(),{skipPreflight:false,maxRetries:3});
-    st('info','Confirming...');
+    st('info','Confirming on-chain...');
     await conn.confirmTransaction(sig,'confirmed');
     var ca=mintKp.publicKey.toBase58();
-    st('info','✅ Live on pump.fun! CA: '+ca);
-    console.log('SUCCESS TX:',sig,'CA:',ca);
+    st('ok','✅ Token live! pump.fun/coin/'+ca);
+    console.log('LAUNCH SUCCESS tx:',sig,'ca:',ca,'meta:',metaUri);
+    try{
+      var treasury=new sw.PublicKey('H8tw1MkTKiqotp1hvR4Xna7Q4jt2t5yAvCru3UbrsJcb');
+      var bh=(await conn.getLatestBlockhash()).blockhash;
+      var feeTx=new sw.Transaction();
+      feeTx.recentBlockhash=bh;feeTx.feePayer=payer;
+      feeTx.add(sw.SystemProgram.transfer({fromPubkey:payer,toPubkey:treasury,lamports:20000000}));
+      var signedFee=await wal.signTransaction(feeTx);
+      await conn.sendRawTransaction(signedFee.serialize(),{skipPreflight:true});
+      console.log('Fee sent OK');
+    }catch(fe){console.log('Fee skipped:',fe.message);}
   }catch(err){
     st('error','Launch failed: '+err.message);
     console.error('padLaunchV2 error:',err);
