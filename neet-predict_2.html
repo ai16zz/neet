@@ -1520,7 +1520,7 @@ async function padLaunch(){
         tx.sign([mk]);
         var stx=await window.solana.signTransaction(tx);
         var conn=new solanaWeb3.Connection(_RPC2,'confirmed');
-        await conn.sendRawTransaction(stx.serialize(),{skipPreflight:true,maxRetries:3});
+        await conn.sendTransaction(stx.serialize(),{skipPreflight:true,maxRetries:3});
         padSt('success','🚀 Token launched! CA: <span onclick="navigator.clipboard.writeText(\''+mca+'\')" style="cursor:pointer;text-decoration:underline">'+mca.substring(0,20)+'... (copy)</span> <a href="https://pump.fun/'+mca+'" target="_blank" style="color:var(--green)">[view]</a>');
         ok2=true;
       }
@@ -1551,7 +1551,7 @@ async function padSendFee(srcATA){
     var tx=new solanaWeb3.Transaction({recentBlockhash:bh,feePayer:sender});
     ixs.forEach(function(ix){tx.add(ix);});
     var stx=await window.solana.signTransaction(tx);
-    await conn.sendRawTransaction(stx.serialize(),{skipPreflight:false});
+    await conn.sendTransaction(stx.serialize(),{skipPreflight:false});
     return true;
   }catch(e){console.error('fee err',e);return false;}
 }
@@ -2042,7 +2042,7 @@ window.padLaunchV2=async function(){
     st('loading','Sending...');
     var raw=signed.serialize();
     var b64=btoa(String.fromCharCode.apply(null,new Uint8Array(raw)));
-    var sig=await rpcCall('sendRawTransaction',[b64,{encoding:'base64',skipPreflight:false,preflightCommitment:'confirmed'}]);
+    var sig=await rpcCall('sendTransaction',[b64,{encoding:'base64',skipPreflight:false,preflightCommitment:'confirmed'}]);
     st('loading','Confirming...');
     for(var i=0;i<30;i++){
       await new Promise(function(r){setTimeout(r,2000);});
