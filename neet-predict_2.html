@@ -1945,7 +1945,7 @@ function switchToScan(){
 </script>
 
 <script>
-// NEET PAD - pump.fun Token Launcher
+// NEET PAD — pump.fun Token Launcher via PumpPortal API
 if(typeof window.st!=='function'){
   window.st=function(type,msg){
     var el=document.getElementById('padSt');
@@ -1953,12 +1953,6 @@ if(typeof window.st!=='function'){
     console.log('[padSt]['+type+']',msg);
   };
 }
-
-var _PUMP='6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
-var _META='metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
-var _TOK='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
-var _ATA='ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
-var _CDISC=new Uint8Array([24,30,200,40,5,28,7,119]);
 
 async function _uploadMeta(name,sym,desc,imgUrl,tw,tg,web){
   var imageBlob;
@@ -1969,26 +1963,25 @@ async function _uploadMeta(name,sym,desc,imgUrl,tw,tg,web){
   var fd=new FormData();
   fd.append('file',imageBlob,'image.png');
   fd.append('name',name);fd.append('symbol',sym);
-  fd.append('description',desc||(name+' on NEET PAD'));
+  fd.append('description',desc||(name+' — launched on NEET PAD'));
   fd.append('twitter',tw||'');fd.append('telegram',tg||'');
   fd.append('website',web||'https://ai16zz.github.io/neet/neet-predict_2.html');
   fd.append('showName','true');
-  var eps=['https://pump.fun/api/ipfs','https://corsproxy.io/?'+encodeURIComponent('https://pump.fun/api/ipfs')];
-  for(var ep of eps){
-    try{var r=await fetch(ep,{method:'POST',body:fd});if(r.ok){var d=await r.json();if(d.metadataUri)return d.metadataUri;}}catch(e){console.log('meta upload failed:',ep,e.message);}
+  for(var ep of['https://pump.fun/api/ipfs','https://corsproxy.io/?'+encodeURIComponent('https://pump.fun/api/ipfs')]){
+    try{var r=await fetch(ep,{method:'POST',body:fd});if(r.ok){var d=await r.json();if(d.metadataUri)return d.metadataUri;}}catch(e){console.log('IPFS failed:',ep,e.message);}
   }
   return imgUrl||'https://neetpredict.xyz/';
 }
 
 window.padLaunchV2=async function(){
   var wal=window.solana;
-  if(!wal){st('error','Phantom not found');return;}
+  if(!wal){st('error','Phantom not found — install Phantom wallet');return;}
   if(!wal.isConnected||!wal.publicKey){
     st('info','Connecting wallet...');
     try{await wal.connect();}catch(e){st('error','Wallet connection rejected');return;}
     if(!wal.isConnected||!wal.publicKey){st('error','Connect wallet first');return;}
   }
-  var payer=wal.publicKey,sw=window.solanaWeb3;
+  var sw=window.solanaWeb3,payer=wal.publicKey;
   var name=((document.getElementById('padName')||{}).value||'').trim();
   var sym=((document.getElementById('padSym')||{}).value||'').trim();
   var imgUrl=((document.getElementById('padImg')||{}).value||'').trim();
@@ -1996,54 +1989,36 @@ window.padLaunchV2=async function(){
   var tw=((document.getElementById('padTw')||{}).value||'').trim();
   var tg=((document.getElementById('padTg')||{}).value||'').trim();
   var web=((document.getElementById('padWeb')||{}).value||'').trim();
+  var initBuy=parseFloat(((document.getElementById('padInitBuy')||{}).value||'0'))||0;
   if(!name||!sym){st('error','Name and ticker required');return;}
   try{
-    st('info','Uploading metadata...');
+    st('info','Uploading metadata to IPFS...');
     var metaUri=await _uploadMeta(name,sym,desc,imgUrl,tw,tg,web);
-    st('info','Building transaction...');
+    st('info','Building pump.fun transaction...');
     var mintKp=sw.Keypair.generate();
-    var PUMP=new sw.PublicKey(_PUMP),META=new sw.PublicKey(_META);
-    var TOKPROG=new sw.PublicKey(_TOK),ATAPROG=new sw.PublicKey(_ATA);
-    var SYS=sw.SystemProgram.programId,RENT=sw.SYSVAR_RENT_PUBKEY;
-    var TREAS=new sw.PublicKey('H8tw1MkTKiqotp1hvR4Xna7Q4jt2t5yAvCru3UbrsJcb');
-    var [globalPda]=await sw.PublicKey.findProgramAddress([Buffer.from('global')],PUMP);
-    var [mintAuth]=await sw.PublicKey.findProgramAddress([Buffer.from('mint-authority')],PUMP);
-    var [bondingCurve]=await sw.PublicKey.findProgramAddress([Buffer.from('bonding-curve'),mintKp.publicKey.toBuffer()],PUMP);
-    var [eventAuth]=await sw.PublicKey.findProgramAddress([Buffer.from('__event_authority')],PUMP);
-    var [metadataPda]=await sw.PublicKey.findProgramAddress([Buffer.from('metadata'),META.toBuffer(),mintKp.publicKey.toBuffer()],META);
-    var assocBC=(await sw.PublicKey.findProgramAddress([bondingCurve.toBuffer(),TOKPROG.toBuffer(),mintKp.publicKey.toBuffer()],ATAPROG))[0];
-    function bstr(s){var b=new TextEncoder().encode(s);var r=new Uint8Array(4+b.length);new DataView(r.buffer).setUint32(0,b.length,true);r.set(b,4);return r;}
-    var nm=bstr(name),sy=bstr(sym),ur=bstr(metaUri);
-    var ixData=new Uint8Array(8+nm.length+sy.length+ur.length),off=0;
-    ixData.set(_CDISC,off);off+=8;ixData.set(nm,off);off+=nm.length;ixData.set(sy,off);off+=sy.length;ixData.set(ur,off);
-    var conn=new sw.Connection('https://solana-rpc.publicnode.com','confirmed');
-    var bh=(await conn.getLatestBlockhash()).blockhash;
-    var tx=new sw.Transaction({recentBlockhash:bh,feePayer:payer});
-    tx.add(sw.SystemProgram.transfer({fromPubkey:payer,toPubkey:TREAS,lamports:20000000}));
-    tx.add({keys:[
-      {pubkey:mintKp.publicKey,isSigner:true,isWritable:true},
-      {pubkey:mintAuth,isSigner:false,isWritable:false},
-      {pubkey:bondingCurve,isSigner:false,isWritable:true},
-      {pubkey:assocBC,isSigner:false,isWritable:true},
-      {pubkey:globalPda,isSigner:false,isWritable:false},
-      {pubkey:META,isSigner:false,isWritable:false},
-      {pubkey:metadataPda,isSigner:false,isWritable:true},
-      {pubkey:payer,isSigner:true,isWritable:true},
-      {pubkey:SYS,isSigner:false,isWritable:false},
-      {pubkey:TOKPROG,isSigner:false,isWritable:false},
-      {pubkey:ATAPROG,isSigner:false,isWritable:false},
-      {pubkey:RENT,isSigner:false,isWritable:false},
-      {pubkey:eventAuth,isSigner:false,isWritable:false},
-      {pubkey:PUMP,isSigner:false,isWritable:false}
-    ],programId:PUMP,data:Buffer.from(ixData)});
-    tx.partialSign(mintKp);
+    var ppResp=await fetch('https://pumpportal.fun/api/trade-local',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        publicKey:payer.toBase58(),action:'create',
+        tokenMetadata:{name:name,symbol:sym,uri:metaUri},
+        mint:mintKp.publicKey.toBase58(),
+        denominatedInSol:'true',amount:initBuy,
+        slippage:10,priorityFee:0.0005,pool:'pump'
+      })
+    });
+    if(!ppResp.ok)throw new Error('PumpPortal error: '+ppResp.status+' '+(await ppResp.text()).substring(0,100));
+    var txBytes=new Uint8Array(await ppResp.arrayBuffer());
+    var tx=sw.VersionedTransaction.deserialize(txBytes);
+    tx.sign([mintKp]);
     st('info','Approve in Phantom...');
-    var signed=await wal.signTransaction(tx);
-    var sig=await conn.sendRawTransaction(signed.serialize(),{skipPreflight:false});
+    var signedTx=await wal.signTransaction(tx);
+    var conn=new sw.Connection('https://solana-rpc.publicnode.com','confirmed');
+    var sig=await conn.sendRawTransaction(signedTx.serialize(),{skipPreflight:false,maxRetries:3});
     st('info','Confirming...');
     await conn.confirmTransaction(sig,'confirmed');
-    st('info','✅ Live on pump.fun! CA: '+mintKp.publicKey.toString());
-    console.log('TX:',sig,'CA:',mintKp.publicKey.toString());
+    var ca=mintKp.publicKey.toBase58();
+    st('info','✅ Live on pump.fun! CA: '+ca);
+    console.log('SUCCESS TX:',sig,'CA:',ca);
   }catch(err){
     st('error','Launch failed: '+err.message);
     console.error('padLaunchV2 error:',err);
