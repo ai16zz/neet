@@ -2024,9 +2024,9 @@ window.padLaunchV2=async function(){
     ],programId:new sw.PublicKey(TPROG),data:mtd}));
     function encStr(s){var b=enc.encode(s);var d=new Uint8Array(4+b.length);d[0]=b.length&255;d[1]=(b.length>>8)&255;d.set(b,4);return d;}
     var nm=encStr(name.substring(0,32)),sy=encStr(sym.substring(0,10)),ur=encStr((imgUrl||'https://neetpredict.xyz/').substring(0,200));
-    var mLen=1+nm.length+sy.length+ur.length+2+1+1+1+1,mData=new Uint8Array(mLen),off=0;
+    var mLen=1+nm.length+sy.length+ur.length+2+1+1+1+1+1,mData=new Uint8Array(mLen),off=0;
     mData[off++]=33;mData.set(nm,off);off+=nm.length;mData.set(sy,off);off+=sy.length;mData.set(ur,off);off+=ur.length;
-    mData[off++]=0;mData[off++]=0;mData[off++]=0;mData[off++]=0;mData[off++]=0;mData[off++]=1;
+    mData[off++]=0;mData[off++]=0;mData[off++]=0;mData[off++]=0;mData[off++]=0;mData[off++]=1;mData[off++]=0;
     tx.add(new sw.TransactionInstruction({keys:[
       {pubkey:metaAddr,isSigner:false,isWritable:true},
       {pubkey:mintPk,isSigner:false,isWritable:false},
