@@ -1945,8 +1945,7 @@ function switchToScan(){
 </script>
 
 <script>
-// NEET PAD - SPL Token Launcher
-// st() status helper (defined here because page's own st may not load due to syntax errors)
+// NEET PAD - pump.fun Token Launcher
 if(typeof window.st!=='function'){
   window.st=function(type,msg){
     var el=document.getElementById('padSt');
@@ -1955,9 +1954,35 @@ if(typeof window.st!=='function'){
   };
 }
 
+var _PUMP='6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
+var _META='metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s';
+var _TOK='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+var _ATA='ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
+var _CDISC=new Uint8Array([24,30,200,40,5,28,7,119]);
+
+async function _uploadMeta(name,sym,desc,imgUrl,tw,tg,web){
+  var imageBlob;
+  try{var r=await fetch(imgUrl);imageBlob=await r.blob();}catch(e){
+    var px=new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,1,0,0,0,1,8,2,0,0,0,144,119,83,222,0,0,0,12,73,68,65,84,8,215,99,248,207,192,0,0,0,2,0,1,226,33,188,51,0,0,0,0,73,69,78,68,174,66,96,130]);
+    imageBlob=new Blob([px],{type:'image/png'});
+  }
+  var fd=new FormData();
+  fd.append('file',imageBlob,'image.png');
+  fd.append('name',name);fd.append('symbol',sym);
+  fd.append('description',desc||(name+' on NEET PAD'));
+  fd.append('twitter',tw||'');fd.append('telegram',tg||'');
+  fd.append('website',web||'https://ai16zz.github.io/neet/neet-predict_2.html');
+  fd.append('showName','true');
+  var eps=['https://pump.fun/api/ipfs','https://corsproxy.io/?'+encodeURIComponent('https://pump.fun/api/ipfs')];
+  for(var ep of eps){
+    try{var r=await fetch(ep,{method:'POST',body:fd});if(r.ok){var d=await r.json();if(d.metadataUri)return d.metadataUri;}}catch(e){console.log('meta upload failed:',ep,e.message);}
+  }
+  return imgUrl||'https://neetpredict.xyz/';
+}
+
 window.padLaunchV2=async function(){
   var wal=window.solana;
-  if(!wal){st('error','Phantom not found — install Phantom wallet');return;}
+  if(!wal){st('error','Phantom not found');return;}
   if(!wal.isConnected||!wal.publicKey){
     st('info','Connecting wallet...');
     try{await wal.connect();}catch(e){st('error','Wallet connection rejected');return;}
@@ -1966,49 +1991,59 @@ window.padLaunchV2=async function(){
   var payer=wal.publicKey,sw=window.solanaWeb3;
   var name=((document.getElementById('padName')||{}).value||'').trim();
   var sym=((document.getElementById('padSym')||{}).value||'').trim();
-  var imgUrl=((document.getElementById('padImg')||{}).value||'https://neetpredict.xyz/').trim();
-  var supRaw=((document.getElementById('padSupply')||{}).value||'1000000000').replace(/,/g,'');
+  var imgUrl=((document.getElementById('padImg')||{}).value||'').trim();
+  var desc=((document.getElementById('padDesc')||{}).value||'').trim();
+  var tw=((document.getElementById('padTw')||{}).value||'').trim();
+  var tg=((document.getElementById('padTg')||{}).value||'').trim();
+  var web=((document.getElementById('padWeb')||{}).value||'').trim();
   if(!name||!sym){st('error','Name and ticker required');return;}
-  var supplyAmt=BigInt(Math.round(parseFloat(supRaw)))*1000000n;
-  if(supplyAmt<=0n){st('error','Invalid supply');return;}
   try{
-    st('info','Generating token...');
+    st('info','Uploading metadata...');
+    var metaUri=await _uploadMeta(name,sym,desc,imgUrl,tw,tg,web);
+    st('info','Building transaction...');
     var mintKp=sw.Keypair.generate();
-    st('info','CA: '+mintKp.publicKey.toString()+' — building tx...');
-    var conn=new sw.Connection('https://solana-rpc.publicnode.com','confirmed');
+    var PUMP=new sw.PublicKey(_PUMP),META=new sw.PublicKey(_META);
+    var TOKPROG=new sw.PublicKey(_TOK),ATAPROG=new sw.PublicKey(_ATA);
+    var SYS=sw.SystemProgram.programId,RENT=sw.SYSVAR_RENT_PUBKEY;
     var TREAS=new sw.PublicKey('H8tw1MkTKiqotp1hvR4Xna7Q4jt2t5yAvCru3UbrsJcb');
-    var TOKEN_PROG=new sw.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
-    var ATA_PROG=new sw.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
-    var META_PROG=new sw.PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s');
-    var SYS=sw.SystemProgram.programId;
-    var RENT=sw.SYSVAR_RENT_PUBKEY;
-    var [metaPda]=await sw.PublicKey.findProgramAddress(
-      [Buffer.from('metadata'),META_PROG.toBuffer(),mintKp.publicKey.toBuffer()],META_PROG);
-    var ata=(await sw.PublicKey.findProgramAddress(
-      [payer.toBuffer(),TOKEN_PROG.toBuffer(),mintKp.publicKey.toBuffer()],ATA_PROG))[0];
-    var lam=await conn.getMinimumBalanceForRentExemption(82);
+    var [globalPda]=await sw.PublicKey.findProgramAddress([Buffer.from('global')],PUMP);
+    var [mintAuth]=await sw.PublicKey.findProgramAddress([Buffer.from('mint-authority')],PUMP);
+    var [bondingCurve]=await sw.PublicKey.findProgramAddress([Buffer.from('bonding-curve'),mintKp.publicKey.toBuffer()],PUMP);
+    var [eventAuth]=await sw.PublicKey.findProgramAddress([Buffer.from('__event_authority')],PUMP);
+    var [metadataPda]=await sw.PublicKey.findProgramAddress([Buffer.from('metadata'),META.toBuffer(),mintKp.publicKey.toBuffer()],META);
+    var assocBC=(await sw.PublicKey.findProgramAddress([bondingCurve.toBuffer(),TOKPROG.toBuffer(),mintKp.publicKey.toBuffer()],ATAPROG))[0];
+    function bstr(s){var b=new TextEncoder().encode(s);var r=new Uint8Array(4+b.length);new DataView(r.buffer).setUint32(0,b.length,true);r.set(b,4);return r;}
+    var nm=bstr(name),sy=bstr(sym),ur=bstr(metaUri);
+    var ixData=new Uint8Array(8+nm.length+sy.length+ur.length),off=0;
+    ixData.set(_CDISC,off);off+=8;ixData.set(nm,off);off+=nm.length;ixData.set(sy,off);off+=sy.length;ixData.set(ur,off);
+    var conn=new sw.Connection('https://solana-rpc.publicnode.com','confirmed');
     var bh=(await conn.getLatestBlockhash()).blockhash;
     var tx=new sw.Transaction({recentBlockhash:bh,feePayer:payer});
     tx.add(sw.SystemProgram.transfer({fromPubkey:payer,toPubkey:TREAS,lamports:20000000}));
-    tx.add(sw.SystemProgram.createAccount({fromPubkey:payer,newAccountPubkey:mintKp.publicKey,lamports:lam,space:82,programId:TOKEN_PROG}));
-    var im2=new Uint8Array(67);im2[0]=20;im2[1]=6;im2.set(payer.toBytes(),2);im2[34]=0;
-    tx.add({keys:[{pubkey:mintKp.publicKey,isSigner:false,isWritable:true},{pubkey:RENT,isSigner:false,isWritable:false}],programId:TOKEN_PROG,data:Buffer.from(im2)});
-    tx.add({keys:[{pubkey:payer,isSigner:true,isWritable:true},{pubkey:ata,isSigner:false,isWritable:true},{pubkey:payer,isSigner:false,isWritable:false},{pubkey:mintKp.publicKey,isSigner:false,isWritable:false},{pubkey:SYS,isSigner:false,isWritable:false},{pubkey:TOKEN_PROG,isSigner:false,isWritable:false}],programId:ATA_PROG,data:Buffer.from([1])});
-    var mtData=new Uint8Array(9);mtData[0]=7;new DataView(mtData.buffer).setBigUint64(1,supplyAmt,true);
-    tx.add({keys:[{pubkey:mintKp.publicKey,isSigner:false,isWritable:true},{pubkey:ata,isSigner:false,isWritable:true},{pubkey:payer,isSigner:true,isWritable:false}],programId:TOKEN_PROG,data:Buffer.from(mtData)});
-    function bstr(s){var b=new TextEncoder().encode(s);var r=new Uint8Array(4+b.length);new DataView(r.buffer).setUint32(0,b.length,true);r.set(b,4);return r;}
-    var nm=bstr(name),sy=bstr(sym),ur=bstr(imgUrl);
-    var mLen=1+nm.length+sy.length+ur.length+2+1+1+1+1+1;
-    var mData=new Uint8Array(mLen),mOff=0;
-    mData[mOff++]=33;mData.set(nm,mOff);mOff+=nm.length;mData.set(sy,mOff);mOff+=sy.length;mData.set(ur,mOff);mOff+=ur.length;
-    mData[mOff++]=0;mData[mOff++]=0;mData[mOff++]=0;mData[mOff++]=0;mData[mOff++]=0;mData[mOff++]=1;mData[mOff++]=0;
-    tx.add({keys:[{pubkey:metaPda,isSigner:false,isWritable:true},{pubkey:mintKp.publicKey,isSigner:false,isWritable:false},{pubkey:payer,isSigner:true,isWritable:false},{pubkey:payer,isSigner:true,isWritable:true},{pubkey:payer,isSigner:true,isWritable:false},{pubkey:SYS,isSigner:false,isWritable:false},{pubkey:RENT,isSigner:false,isWritable:false}],programId:META_PROG,data:Buffer.from(mData)});
+    tx.add({keys:[
+      {pubkey:mintKp.publicKey,isSigner:true,isWritable:true},
+      {pubkey:mintAuth,isSigner:false,isWritable:false},
+      {pubkey:bondingCurve,isSigner:false,isWritable:true},
+      {pubkey:assocBC,isSigner:false,isWritable:true},
+      {pubkey:globalPda,isSigner:false,isWritable:false},
+      {pubkey:META,isSigner:false,isWritable:false},
+      {pubkey:metadataPda,isSigner:false,isWritable:true},
+      {pubkey:payer,isSigner:true,isWritable:true},
+      {pubkey:SYS,isSigner:false,isWritable:false},
+      {pubkey:TOKPROG,isSigner:false,isWritable:false},
+      {pubkey:ATAPROG,isSigner:false,isWritable:false},
+      {pubkey:RENT,isSigner:false,isWritable:false},
+      {pubkey:eventAuth,isSigner:false,isWritable:false},
+      {pubkey:PUMP,isSigner:false,isWritable:false}
+    ],programId:PUMP,data:Buffer.from(ixData)});
     tx.partialSign(mintKp);
     st('info','Approve in Phantom...');
     var signed=await wal.signTransaction(tx);
     var sig=await conn.sendRawTransaction(signed.serialize(),{skipPreflight:false});
+    st('info','Confirming...');
     await conn.confirmTransaction(sig,'confirmed');
-    st('info','✅ Launched! CA: '+mintKp.publicKey.toString());
+    st('info','✅ Live on pump.fun! CA: '+mintKp.publicKey.toString());
+    console.log('TX:',sig,'CA:',mintKp.publicKey.toString());
   }catch(err){
     st('error','Launch failed: '+err.message);
     console.error('padLaunchV2 error:',err);
