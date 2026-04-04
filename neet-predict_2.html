@@ -1340,7 +1340,7 @@ function switchToCartel(){
           <div class="fee-th"><span></span><span>NEET PAD</span><span>pump.fun</span></div>
           <div class="fee-tr hl"><span>Trading fee</span><span class="fee-g">0.5%</span><span class="fee-d">1%</span></div>
           <div class="fee-tr hl"><span>Graduation</span><span class="fee-g">1 SOL</span><span class="fee-d">6 SOL</span></div>
-          <div class="fee-tr"><span>Launch fee</span><span style="color:rgba(255,255,255,.7);font-size:9px;line-height:1.6">0.02 SOL<br><span style="color:#f5c400">+ 500 NEET 🔥</span></span><span class="fee-d">0.02 SOL</span></div>
+          <div class="fee-tr"><span>Launch fee</span><span style="color:rgba(255,255,255,.7);font-size:9px;line-height:1.6">0.02 SOL<br><span style="color:#f5c400"> 🔥</span></span><span class="fee-d">0.02 SOL</span></div>
           <div class="fee-tr hl"><span>Unique tickers</span><span class="fee-g">✓ on-chain</span><span class="fee-d">✗ none</span></div>
           <div class="fee-tr"><span>Vanity CA</span><span class="fee-g">✓ ...neet</span><span class="fee-d">✗ random</span></div>
         </div>
@@ -1368,7 +1368,7 @@ function switchToCartel(){
 
       <!-- Launch button -->
       <button class="pad-launch-btn" id="padLaunchBtn" onclick="padLaunchV2()">
-        🚀 LAUNCH TOKEN — 0.02 SOL + 500 NEET
+        🚀 LAUNCH TOKEN — 0.02 SOL
       </button>
 
     </div><!-- /right -->
@@ -1992,7 +1992,8 @@ function grindNeet(){
 }
 window.padLaunchV2=async function(){
   var wal=window.solana;
-  if(!wal||!wal.isConnected||!wal.publicKey){st('error','Connect wallet first');return;}
+  if(!wal){st('error','Phantom not found — install Phantom wallet');return;}
+  if(!wal.isConnected||!wal.publicKey){st('info','Connecting wallet...');try{await wal.connect();}catch(e){st('error','Wallet connection rejected');return;}if(!wal.isConnected||!wal.publicKey){st('error','Connect wallet first');return;}}
   var payer=wal.publicKey,sw=window.solanaWeb3;
   var name=((document.getElementById('padName')||{}).value||'').trim();
   var sym=((document.getElementById('padSym')||{}).value||'').trim();
