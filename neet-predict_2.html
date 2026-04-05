@@ -1792,6 +1792,8 @@ function calcScore(t) {
   if (liq >= 8000 && liq <= 80000) s += 8; else if (liq >= 3000) s += 4;
   if (p24 > 100) s += 12; else if (p24 > 50) s += 9; else if (p24 > 20) s += 6; else if (p24 > 0) s += 2;
   if (p1 > 20) s += 8; else if (p1 > 5) s += 4;
+    // Nansen smart money bonus
+  if(window._nansenTokens){var _ni=window._nansenTokens[(t.address||'').toLowerCase()]||window._nansenTokens[(t.addr||'').toLowerCase()];if(_ni){sc+=Math.min(25,_ni.buyCount*5+Math.floor(_ni.totalUsd/200));t._nansenFlag=true;}}
   return Math.min(Math.round(s), 100);
 }
 function classify(t) {
@@ -1837,7 +1839,7 @@ function renderTokens() {
     const dexUrl = t.pair ? 'https://dexscreener.com/solana/' + t.pair : '#';
     return '<div class="token-row" onclick="window.open(\''+dexUrl+'\',\'_blank\')" title="View on DexScreener">' +
       '<div>' +
-        '<div class="token-name">' + escH(t.name) + ' ' + (badgeMap[t.cls]||'') + '</div>' +
+        '<div class="token-name">' + escH(t.name) + ' ' + (badgeMap[t.cls]||'')+(t._nansenFlag?'<span style="background:#7C3AED;color:#fff;font-size:9px;border-radius:3px;padding:1px 5px;margin-left:3px">🧠 SM</span>':'') + '</div>' +
         '<div class="token-sym">$' + escH(t.sym) + ' &middot; ' + escH(t.src) + '</div>' +
         (pills ? '<div class="sm-pills">' + pills + '</div>' : '') +
       '</div>' +
@@ -1935,10 +1937,29 @@ function processPairs(pairs) {
   }).filter(t => t.mc >= 15000 && t.mc <= 40000 && t.vol > 0);
 }
 
+var _nansenTokens={};
+async function loadNansenData(){
+  try{
+    var r=await fetch('./nansen-data.json?v='+Date.now());
+    var d=await r.json();
+    _nansenTokens={};
+    (d.data||[]).forEach(function(tr){
+      var a=(tr.token_bought_address||'').toLowerCase();
+      if(!a)return;
+      if(!_nansenTokens[a])_nansenTokens[a]={buyCount:0,totalUsd:0,traders:new Set()};
+      _nansenTokens[a].buyCount++;
+      _nansenTokens[a].totalUsd+=(tr.trade_value_usd||0);
+      _nansenTokens[a].traders.add(tr.trader_address);
+    });
+    log('[Nansen] '+Object.keys(_nansenTokens).length+' tokens | '+(d.last_updated||'').slice(0,16));
+  }catch(e){log('[Nansen] offline');}
+}
+
 // -- MAIN SCAN --------------------------------------------
 async function runScan() {
   if (scanning) return;
   scanning = true;
+  await loadNansenData();
   const btn = document.getElementById('scanBtn');
   btn.disabled = true; btn.innerHTML = '&#x27F3; SCANNING...';
   document.getElementById('logDot').style.background = 'var(--gold)';
