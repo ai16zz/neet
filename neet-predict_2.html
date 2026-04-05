@@ -1837,7 +1837,6 @@ function renderTokens() {
     const scoreColor = t.score >= 70 ? '#00ff87' : t.score >= 50 ? '#f5c400' : '#ff3b5c';
     const pills = (t.smNames||[]).slice(0,3).map(n => '<span class="sm-pill">'+n+'</span>').join('');
     const dexUrl = t.pair ? 'https://dexscreener.com/solana/' + t.pair : '#';
-    const padreUrl = t.address ? 'https://trade.padre.gg/trade/solana/'+t.address : '#';
     return '<div class="token-row" onclick="window.open(\''+dexUrl+'\',\'_blank\')" title="View on DexScreener">' +
       '<div>' +
         '<div class="token-name">' + escH(t.name) + ' ' + (badgeMap[t.cls]||'')+(t._nansenFlag?'<span style="background:#7C3AED;color:#fff;font-size:9px;border-radius:3px;padding:1px 5px;margin-left:3px">🧠 SM</span>':'') + '</div>' +
@@ -1856,8 +1855,6 @@ function renderTokens() {
         '<div class="mono" style="font-size:11px;color:var(--green)">' + t.smCount + ' wallet' + (t.smCount===1?'':'s') + '</div>' +
         '<div style="font-size:10px;color:var(--t2);margin-top:2px">' + fmtPct(t.p24) + ' 24h &middot; ' + fmtPct(t.p1) + ' 1h</div>' +
       '</div>' +
-    '<div style="display:flex;justify-content:flex-end;padding:2px 8px 6px">' +
-    '<button data-u="'+padreUrl+'" onclick="event.stopPropagation();window.open(this.dataset.u,\'_blank\') style="background:#00ff88;color:#0d0d0d;border:none;border-radius:5px;padding:4px 12px;font-size:10px;font-weight:800;cursor:pointer;letter-spacing:.3px">&#x26A1; TRADE</button></div>' +
     '</div>';
   }).join('');
 }
