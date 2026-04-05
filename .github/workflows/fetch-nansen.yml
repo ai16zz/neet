@@ -1,0 +1,40 @@
+name: Fetch Nansen Smart Money Data
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch-nansen:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch Nansen DEX Trades (Solana)
+        run: |
+          curl -s -X POST https://api.nansen.ai/api/v1/smart-money/dex-trades \
+            -H "apiKey: ${{ secrets.NANSEN_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"chains":["solana"],"filters":{"token_bought_age_days":{"max":30,"min":0},"trade_value_usd":{"min":50}},"pagination":{"page":1,"per_page":200},"order_by":[{"field":"block_timestamp","direction":"DESC"}]}' > nansen-data.json
+
+      - name: Add timestamp and validate
+        run: |
+          python3 -c "
+import json, datetime, sys
+with open('nansen-data.json') as f:
+    d = json.load(f)
+d['last_updated'] = datetime.datetime.utcnow().isoformat() + 'Z'
+with open('nansen-data.json', 'w') as f:
+    json.dump(d, f)
+print('Trades fetched:', len(d.get('data', [])), '| Updated:', d['last_updated'])
+"
+
+      - name: Commit and push
+        run: |
+          git config user.email "nansen-bot@github.com"
+          git config user.name "Nansen Data Bot"
+          git add nansen-data.json
+          git diff --staged --quiet && echo "No new data" || (git commit -m "data: update nansen smart money [skip ci]" && git push)
