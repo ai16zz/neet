@@ -1,7 +1,7 @@
-name: Fetch Pump.fun Graduations
+name: Fetch Pump.fun Dev Stats
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 jobs:
   fetch-pumpfun:
@@ -10,41 +10,103 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch recent Pump.fun graduations
+
+      - name: Fetch pump.fun dev stats
         run: |
-          curl -s "https://frontend-api.pump.fun/coins/recently-migrated?offset=0&limit=50&includeNsfw=false" \
-            -H "Accept: application/json" \
-            -H "User-Agent: Mozilla/5.0" > pumpfun-grads-raw.json
-      - name: Process graduations
-        run: |
-          python3 -c "
-          import json, datetime
+          pip install requests -q
+          python3 << 'PYEOF'
+          import json, datetime, time, requests
+
+          headers = {'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0'}
+          dev_cache = {}
+          token_stats = {}
+
+          # Fetch recent coins from multiple endpoints
+          endpoints = [
+            "https://frontend-api.pump.fun/coins?offset=0&limit=50&sort=last_trade_timestamp&order=DESC&includeNsfw=false",
+            "https://frontend-api.pump.fun/coins?offset=0&limit=50&sort=market_cap&order=DESC&includeNsfw=false",
+            "https://frontend-api.pump.fun/coins?offset=0&limit=50&sort=created_timestamp&order=DESC&includeNsfw=false",
+          ]
+          all_coins = []
+          for url in endpoints:
+            try:
+              r = requests.get(url, headers=headers, timeout=10)
+              data = r.json()
+              coins = data if isinstance(data, list) else data.get('coins', data.get('data', []))
+              all_coins.extend(coins)
+              print(f"Got {len(coins)} from {url.split('?')[0]}")
+            except Exception as e:
+              print(f"Error: {e}")
+
+          # Deduplicate by mint
+          seen = set()
+          unique = []
+          for c in all_coins:
+            m = c.get('mint', '')
+            if m and m not in seen:
+              seen.add(m)
+              unique.append(c)
+          print(f"Unique tokens: {len(unique)}")
+
+          # For each token, get creator history
+          for coin in unique:
+            mint = coin.get('mint', '')
+            creator = coin.get('creator', '')
+            if not mint or not creator:
+              continue
+            if creator not in dev_cache:
+              try:
+                url = f"https://frontend-api.pump.fun/coins/user-created-coins/{creator}?offset=0&limit=200&includeNsfw=false"
+                r = requests.get(url, headers=headers, timeout=10)
+                cc = r.json()
+                if not isinstance(cc, list):
+                  cc = cc.get('coins', [])
+                total = len(cc)
+                grad = sum(1 for x in cc if x.get('complete') or x.get('raydium_pool'))
+                rate = round(grad / total * 100) if total > 0 else 0
+                dev_cache[creator] = {"total": total, "grad": grad, "rate": rate}
+                print(f"  Dev {creator[:8]}: {grad}/{total} = {rate}%")
+              except Exception as e:
+                dev_cache[creator] = {"total": 0, "grad": 0, "rate": 0}
+              time.sleep(0.15)
+            s = dev_cache.get(creator, {})
+            rate = s.get('rate', 0)
+            total = s.get('total', 0)
+            rank = 'elite' if rate >= 70 else 'good' if rate >= 40 else 'avg' if rate >= 20 else ('new' if total < 3 else 'rug')
+            token_stats[mint] = {
+              "devRate": rate, "devGrad": s.get('grad', 0),
+              "devTotal": total, "devRank": rank,
+              "creator": creator[:8]
+            }
+
+          # Also fetch recently graduated coins
+          grads = []
           try:
-            raw = json.load(open('pumpfun-grads-raw.json'))
-          except:
-            raw = []
-          if isinstance(raw, list):
-            coins = raw
-          else:
-            coins = raw.get('coins', raw.get('data', []))
-          result = []
-          for c in coins:
-            result.append({
-              'mint': c.get('mint', ''),
-              'name': c.get('name', ''),
-              'symbol': c.get('symbol', ''),
-              'raydium_pool': c.get('raydium_pool', ''),
-              'usd_market_cap': c.get('usd_market_cap', 0),
-              'migrated_at': c.get('updated_at', '') or c.get('created_timestamp', '')
-            })
-          out = {'data': result, 'last_updated': datetime.datetime.utcnow().isoformat(), 'count': len(result)}
-          json.dump(out, open('pumpfun-grads.json','w'))
-          print(f'Saved {len(result)} graduated tokens')
-          "
+            r = requests.get("https://frontend-api.pump.fun/coins?offset=0&limit=50&sort=last_trade_timestamp&order=DESC&includeNsfw=false&complete=true", headers=headers, timeout=10)
+            data = r.json()
+            raw = data if isinstance(data, list) else data.get('coins', data.get('data', []))
+            grads = [{'mint': c.get('mint',''), 'name': c.get('name',''), 'symbol': c.get('symbol',''),
+                      'usd_market_cap': c.get('usd_market_cap', 0), 'migrated_at': c.get('updated_at','')} for c in raw]
+            print(f"Got {len(grads)} graduated coins")
+          except Exception as e:
+            print(f"Grads error: {e}")
+
+          # Save dev stats
+          out = {"updated": datetime.datetime.utcnow().isoformat(),
+                 "tokenCount": len(token_stats), "devCount": len(dev_cache),
+                 "tokens": token_stats}
+          json.dump(out, open('neet-dev-stats.json', 'w'))
+
+          # Save grads
+          json.dump({"data": grads, "last_updated": datetime.datetime.utcnow().isoformat(), "count": len(grads)},
+                    open('pumpfun-grads.json', 'w'))
+
+          print(f"Done: {len(token_stats)} tokens, {len(dev_cache)} devs, {len(grads)} grads")
+          PYEOF
+
       - name: Commit and push
         run: |
           git config user.email "nansen-bot@github.com"
           git config user.name "Nansen Data Bot"
-          git add pumpfun-grads.json
-          rm -f pumpfun-grads-raw.json
-          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update pumpfun grads [skip ci]" && git push)
+          git add neet-dev-stats.json pumpfun-grads.json
+          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update pumpfun dev stats [skip ci]" && git push)
