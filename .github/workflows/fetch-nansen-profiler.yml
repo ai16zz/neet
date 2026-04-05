@@ -1,0 +1,79 @@
+name: Fetch Nansen SM Wallet Profiler
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+jobs:
+  fetch-profiler:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch SM Wallet Recent Trades
+        run: |
+          curl -s -X POST https://api.nansen.ai/api/v1/smart-money/dex-trades \
+            -H "apiKey: ${{ secrets.NANSEN_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "chains":["solana"],
+              "filters":{
+                "trader_addresses":["DpYuj2At1Z1tH4baoz5A1XV4AanjJa8bgbB51BWSZUyn","69SzLy86mUfdeFqYurR4YsvcTuvYsVAqwdeTGWiGvRgt","3fupiyLEr2BnFE9myQY8FS1kzqjhVZd7MdxUj74TFev4","FMkNK3u7ZhS84hqxt9ETNSeC9w43RThiN6RvQJaSEhC8","2X4H5Y9C4Fy6Pf3wpq8Q4gMvLcWvfrrwDv2bdR8AAwQv","8q3vQtV9kuWdzzXVrweivhbKbZ5jXGq426fX4AhahZPX","A2vZY74JHBBwfjo3F1Bo5iiLXpABfAhmgdyfUGzABY9F","D3MuDmrs2dm6U9CiZur651CnPjLwUWjs9p1a3PoDs76H","HZrd9c6ag9hBtJhHQZvHeJHeZG8jYQQPVqq21U39GvyP","4hfcN3bk5gCWNCrbowJBgFzvtPFCgf5bynR4bCBut7E3"],
+                "token_bought_age_days":{"max":3,"min":0},
+                "trade_value_usd":{"min":100}
+              },
+              "pagination":{"page":1,"per_page":500},
+              "order_by":[{"field":"block_timestamp","direction":"DESC"}]
+            }' > nansen-profiler.json
+      - name: Add timestamp
+        run: |
+          python3 -c "
+          import json, datetime
+          try:
+            d = json.load(open('nansen-profiler.json'))
+          except:
+            d = {'data': []}
+          d['last_updated'] = datetime.datetime.utcnow().isoformat()
+          json.dump(d, open('nansen-profiler.json','w'))
+          "
+      - name: Check high-score tokens and alert via Telegram
+        run: |
+          python3 -c "
+          import json, urllib.request, collections
+          try:
+            d = json.load(open('nansen-profiler.json'))
+          except:
+            d = {'data': []}
+          token_counts = collections.Counter()
+          token_vol = collections.defaultdict(float)
+          for tr in (d.get('data') or []):
+            a = tr.get('token_bought_address','')
+            if a:
+              token_counts[a] += 1
+              token_vol[a] += float(tr.get('trade_value_usd') or 0)
+          hot = [(a, token_counts[a], token_vol[a]) for a in token_counts if token_counts[a] >= 3]
+          hot.sort(key=lambda x: -x[2])
+          if hot:
+            import os
+            bot = os.environ.get('TELEGRAM_BOT_TOKEN','')
+            chat = os.environ.get('TELEGRAM_CHAT_ID','')
+            if bot and chat:
+              msg = '🧠 SM Wallets Active:\n'
+              for addr, cnt, vol in hot[:5]:
+                msg += f'{addr[:8]}... {cnt} buys ${vol:,.0f}\n'
+              req = urllib.request.Request(
+                f'https://api.telegram.org/bot{bot}/sendMessage',
+                data=json.dumps({'chat_id': chat, 'text': msg, 'parse_mode': 'HTML'}).encode(),
+                headers={'Content-Type': 'application/json'}
+              )
+              urllib.request.urlopen(req)
+          "
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - name: Commit and push
+        run: |
+          git config user.email "nansen-bot@github.com"
+          git config user.name "Nansen Data Bot"
+          git add nansen-profiler.json
+          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update nansen profiler [skip ci]" && git push)
