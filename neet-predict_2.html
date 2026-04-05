@@ -2007,7 +2007,7 @@ async function connectWallet() {
     log('wallet connected: '+a.slice(0,8)+'...');
   } catch(e) { log('wallet connection cancelled','log-warn'); }
 }
-document.getElementById('walletBtn').addEventListener('click', connectWallet);
+var _wbtn = document.getElementById('walletBtn'); if(_wbtn) _wbtn.addEventListener('click', connectWallet);
 
 // -- INIT -------------------------------------------------
 runScan();
