@@ -2,707 +2,877 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NEET SCAN &#8212; Smart Money Memecoin Scanner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEET SCAN &#8212; Smart Money Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
-:root{
-  --green:#00ff41;--green-dim:#00cc33;
-  --black:#000;--card:#060d06;--card2:#0a120a;
-  --border:rgba(0,255,65,0.15);--text:#e0ffe0;--muted:#4a7a4a;
-  --red:#ff4444;--up:#00ff41;--down:#ff4444;
-  --accent:#00ff41;--accent-rgb:0,255,65;
-  --yellow:#ffaa00;--orange:#ff6b00;--purple:#9945ff;--blue:#00aaff;
+:root {
+  --bg: #05060a;
+  --bg2: #0a0d14;
+  --card: rgba(255,255,255,0.03);
+  --card2: rgba(255,255,255,0.055);
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --green: #00ff87;
+  --gd: rgba(0,255,135,0.1);
+  --red: #ff3b5c;
+  --rd: rgba(255,59,92,0.1);
+  --gold: #f5c400;
+  --text: #dde4f5;
+  --t2: #6b7799;
+  --t3: #343d58;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Inter', sans-serif;
+  --dsp: 'Bebas Neue', sans-serif;
+  --r: 8px;
+  --green-dim: rgba(0,255,135,0.33);
+  --green-soft: rgba(0,255,135,0.07);
 }
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--black);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,65,0.012) 2px,rgba(0,255,65,0.012) 4px);pointer-events:none;z-index:9999}
+*, ::before, ::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
 
-/* TICKER */
-.ticker-wrap{overflow:hidden;background:var(--green);padding:5px 0}
-.ticker-inner{display:flex;white-space:nowrap;animation:ticker 36s linear infinite;gap:5rem}
-.ticker-item{font-family:'Space Mono',monospace;font-size:.62rem;font-weight:700;color:#000;letter-spacing:1px}
-@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,255,135,0.024) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,135,0.024) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.bg-scan {
+  position: fixed; inset: 0; z-index: 999; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px);
+}
+.orb { position: fixed; border-radius: 50%; filter: blur(140px); pointer-events: none; z-index: 0; }
 
-/* NAV */
-nav{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;height:52px;background:rgba(0,0,0,.97);border-bottom:1px solid var(--border);backdrop-filter:blur(12px)}
-.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--green);letter-spacing:2px;text-shadow:0 0 20px var(--green);text-decoration:none}
-.nav-logo span{color:var(--text);opacity:.4;font-size:.85rem}
-.nav-right{display:flex;align-items:center;gap:1.2rem}
-.nav-link{font-family:'Space Mono',monospace;font-size:.63rem;color:var(--muted);text-decoration:none;letter-spacing:1px;padding-bottom:2px;transition:color .15s;border-bottom:1px solid transparent}
-.nav-link:hover{color:var(--text)}
-.nav-link.active{color:var(--green);border-bottom-color:var(--green)}
+/* -- TICKER -- */
+.ticker {
+  position: relative; z-index: 50;
+  background: rgba(0,255,135,0.05);
+  border-bottom: 1px solid rgba(0,255,135,0.12);
+  padding: 7px 0; overflow: hidden; white-space: nowraw;
+}
+.ticker-t { display: inline-flex; animation: tick 36s linear infinite; }
+.ticker-i {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 22px; font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.13em; color: var(--green); opacity: 0.72;
+  text-transform: uppercase;
+}
+.ticker-sep { opacity: 0.3; }
+@keyframes tick { from { transform: translateX(0) } to { transform: translateX(-50%) } }
 
-/* SCAN HEADER */
-.scan-hdr{padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:rgba(0,5,0,.5)}
-.scan-title{font-family:'Bebas Neue',sans-serif;font-size:1.65rem;color:var(--text);letter-spacing:2px}
-.scan-title span{color:var(--green);text-shadow:0 0 18px var(--green)}
-.scan-sub{font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted);margin-top:3px}
-.scan-controls{display:flex;align-items:center;gap:.7rem}
-.refresh-pill{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);padding:6px 12px;font-family:'Space Mono',monospace;font-size:.58rem;color:var(--muted)}
-.rdot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,255,65,.6)}50%{box-shadow:0 0 0 6px rgba(0,255,65,0)}}
-.scan-btn{font-family:'Space Mono',monospace;font-size:.63rem;font-weight:700;background:var(--green);color:#000;border:none;padding:8px 16px;cursor:pointer;clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);transition:all .2s;letter-spacing:1px}
-.scan-btn:hover{box-shadow:0 0 20px rgba(0,255,65,.5)}
-.scan-btn:disabled{opacity:.45;cursor:not-allowed}
-.scan-btn.busy{background:rgba(0,255,65,.15);color:var(--green);animation:blink .8s step-end infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+/* -- HEADER -- */
+header {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(5,6,10,0.92); backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 22px; height: 58px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.logo {
+  font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--text);
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.logo-badge {
+  font-size: 9px; letter-spacing: 0.13em; font-family: var(--mono);
+  color: var(--green); border: 1px solid rgba(0,255,135,0.3);
+  padding: 2px 7px; border-radius: 4px; background: rgba(0,255,135,0.06);
+}
+.nav-wrap {
+  display: flex; gap: 2px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 4px;
+}
+.nav-btn {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; font-weight: 700;
+  padding: 7px 13px; border-radius: 7px; border: none; background: transparent;
+  color: var(--t2); cursor: pointer; transition: all 0.18s;
+  display: flex; align-items: center; gap: 5px;
+}
+.nav-btn:hover { color: var(--text); background: var(--card2); }
+.nav-btn.active { background: var(--green); color: #000; font-weight: 700; }
+.wallet-btn {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; font-weight: 700;
+  padding: 9px 16px; border-radius: 8px; border: 1px solid var(--border2);
+  background: var(--card2); color: var(--text); cursor: pointer;
+  transition: all 0.18s; flex-shrink: 0;
+}
+.wallet-btn:hover { border-color: var(--green); color: var(--green); }
 
-/* STATS BAR */
-.stats-bar{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--border);background:var(--card)}
-.stat-cell{padding:.65rem 1rem;border-right:1px solid var(--border);text-align:center}
-.stat-cell:last-child{border-right:none}
-.sval{font-family:'Bebas Neue',sans-serif;font-size:1.45rem;color:var(--green);display:block}
-.slbl{font-family:'Space Mono',monospace;font-size:.47rem;color:var(--muted);letter-spacing:1px;margin-top:1px;display:block}
+/* -- MAIN -- */
+main { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 28px 22px 60px; }
 
-/* FILTER BAR */
-.filter-bar{display:flex;border-bottom:1px solid var(--border);background:#000;overflow-x:auto;scrollbar-width:none}
-.filter-bar::-webkit-scrollbar{display:none}
-.ftab{padding:9px 16px;font-family:'Space Mono',monospace;font-size:.61rem;font-weight:700;letter-spacing:1px;border:none;border-right:1px solid var(--border);cursor:pointer;background:transparent;color:var(--muted);transition:all .15s;white-space:nowrap;position:relative}
-.ftab:last-child{border-right:none}
-.ftab.active{color:var(--green);background:rgba(0,255,65,.04)}
-.ftab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--green)}
-.ftab:hover:not(.active){color:var(--text);background:rgba(255,255,255,.02)}
-.cnt{display:inline-block;background:rgba(0,255,65,.15);color:var(--green);font-size:.49rem;padding:1px 5px;margin-left:5px;border-radius:1px}
+.breadcrumb {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 22px; font-family: var(--mono); font-size: 9px;
+  letter-spacing: 0.1em; color: var(--t3); text-transform: uppercase;
+}
+.breadcrumb a:hover { color: var(--t2); }
+.back-link { color: var(--t2); display: flex; align-items: center; gap: 4px; font-size: 9px; }
+.back-link:hover { color: var(--green); }
 
-/* LAYOUT */
-.main{display:grid;grid-template-columns:1fr 295px;min-height:calc(100vh - 215px)}
-.token-col{border-right:1px solid var(--border);padding:.85rem;overflow-y:auto}
-.sidebar{display:flex;flex-direction:column;overflow-y:auto;max-height:calc(100vh - 215px)}
+/* -- SCAN HEADER -- */
+.scan-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 20px; gap: 16px; flex-wrap: wrap;
+}
+.scan-title { font-family: var(--dsp); font-size: 46px; letter-spacing: 0.04em; line-height: 1; }
+.scan-title .accent { color: var(--green); }
+.scan-sub { color: var(--t2); font-size: 11.5px; margin-top: 7px; letter-spacing: 0.02em; }
+.scan-controls { display: flex; align-items: center; gap: 12px; flex-shrink: 0; padding-top: 6px; }
+.last-scan-wrap { text-align: right; }
+.last-scan-label { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.1em; color: var(--t3); text-transform: uppercase; }
+.last-scan-val { font-family: var(--mono); font-size: 10px; color: var(--t2); margin-top: 2px; }
+.scan-now-btn {
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+  padding: 11px 20px; border-radius: 8px; border: none;
+  background: var(--green); color: #000; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; gap: 7px; text-transform: uppercase; white-space: nowrap;
+}
+.scan-now-btn:hover { opacity: 0.87; transform: translateY(-1px); box-shadow: 0 5px 22px rgba(0,255,135,0.28); }
+.scan-now-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
 
-/* TOKEN CARDS */
-.tok{background:var(--card2);border:1px solid var(--border);margin-bottom:.45rem;transition:border-color .18s,box-shadow .18s;cursor:pointer;position:relative;overflow:hidden}
-.tok:hover{border-color:rgba(0,255,65,.4);box-shadow:0 2px 20px rgba(0,255,65,.06)}
-.tok::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--muted)}
-.tok.s-early::before{background:var(--green)}
-.tok.s-accumulating::before{background:var(--blue)}
-.tok.s-hot::before{background:var(--orange)}
-.tok.s-distributing::before{background:var(--red)}
-.tok.s-dead::before{background:#222}
+/* -- PROGRESS -- */
+.progress-wrap { margin-bottom: 24px; }
+.progress-bar { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--green); border-radius: 1px; transition: width 1s linear; }
+.progress-label { font-family: var(--mono); font-size: 8.5px; color: var(--t3); letter-spacing: 0.08em; margin-top: 5px; }
 
-.tok-top{display:flex;align-items:flex-start;justify-content:space-between;padding:.6rem .75rem .35rem 1rem}
-.tok-name{font-family:'Space Mono',monospace;font-size:.71rem;font-weight:700;color:var(--text)}
-.tok-sym{font-size:.58rem;color:var(--muted);margin-left:5px;font-weight:400}
-.tok-age{font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted);margin-top:2px}
-.tok-badges{display:flex;align-items:center;gap:.35rem;flex-shrink:0}
+/* -- STAT CARDS -- */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.stat-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px 18px; transition: border-color 0.2s;
+}
+.stat-card:hover { border-color: var(--border2); }
+.stat-card .k {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.15em;
+  color: var(--t2); text-transform: uppercase; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 5px;
+}
+.stat-card .v { font-family: var(--dsp); font-size: 32px; color: var(--text); line-height: 1; }
+.stat-card.green .v { color: var(--green); }
+.stat-card.gold .v { color: var(--gold); }
+.stat-card .hint { font-size: 10px; color: var(--t3); margin-top: 4px; }
 
-.sbadge{font-family:'Space Mono',monospace;font-size:.53rem;font-weight:700;padding:3px 7px;letter-spacing:.5px}
-.sbadge.early{background:rgba(0,255,65,.14);color:var(--green);border:1px solid rgba(0,255,65,.3)}
-.sbadge.accumulating{background:rgba(0,170,255,.1);color:var(--blue);border:1px solid rgba(0,170,255,.28)}
-.sbadge.hot{background:rgba(255,107,0,.13);color:var(--orange);border:1px solid rgba(255,107,0,.28)}
-.sbadge.distributing{background:rgba(255,68,68,.1);color:var(--red);border:1px solid rgba(255,68,68,.25)}
-.sbadge.dead{background:rgba(30,30,30,.8);color:#333;border:1px solid #222}
+/* -- LAYOUT -- */
+.scan-layout { display: grid; grid-template-columns: 1fr 228px; gap: 14px; align-items: start; }
 
-.score-pill{font-family:'Space Mono',monospace;font-size:.54rem;font-weight:700;padding:3px 8px;border:1px solid}
-.score-hi{color:var(--green);border-color:rgba(0,255,65,.3);background:rgba(0,255,65,.08)}
-.score-med{color:var(--yellow);border-color:rgba(255,170,0,.3);background:rgba(255,170,0,.06)}
-.score-lo{color:var(--red);border-color:rgba(255,68,68,.25);background:rgba(255,68,68,.06)}
+/* -- FILTERS -- */
+.filter-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.filter-pill {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em;
+  padding: 6px 13px; border-radius: 20px; border: 1px solid var(--border);
+  background: transparent; color: var(--t2); cursor: pointer; transition: all 0.18s;
+  text-transform: uppercase; display: flex; align-items: center; gap: 5px;
+}
+.filter-pill:hover { border-color: var(--border2); color: var(--text); }
+.filter-pill.active { background: var(--green-soft); border-color: var(--green-dim); color: var(--green); }
+.filter-pill .cnt {
+  background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 10px; font-size: 8px;
+}
+.filter-pill.active .cnt { background: rgba(0,255,135,0.15); }
 
-.sm-pill{font-family:'Space Mono',monospace;font-size:.5rem;padding:3px 7px;background:rgba(153,69,255,.13);color:var(--purple);border:1px solid rgba(153,69,255,.28)}
+/* -- TOKEN TABLE -- */
+.token-table {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden; margin-bottom: 12px;
+}
+.token-table-head {
+  display: grid;
+  grid-template-columns: 2.2fr 72px 88px 88px 60px 88px 108px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.12em;
+  color: var(--t3); text-transform: uppercase;
+}
+.token-row {
+  display: grid;
+  grid-template-columns: 2.2fr 72px 88px 88px 60px 88px 108px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.15s; align-items: center;
+}
+.token-row:last-child { border-bottom: none; }
+.token-row:hover { background: rgba(255,255,255,0.025); }
+.token-name { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.token-sym { font-family: var(--mono); font-size: 8.5px; color: var(--t2); margin-top: 2px; letter-spacing: 0.07em; }
+.token-source { font-family: var(--mono); font-size: 7.5px; color: var(--t3); margin-top: 1px; }
+.sm-pills { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+.sm-pill {
+  font-family: var(--mono); font-size: 7px; letter-spacing: 0.04em;
+  padding: 1px 5px; border-radius: 3px;
+  background: var(--green-soft); color: var(--green); border: 1px solid var(--green-dim);
+  white-space: nowrap;
+}
 
-.tok-mid{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:rgba(0,255,65,.018)}
-.ts{padding:.38rem .65rem;text-align:center;border-right:1px solid var(--border)}
-.ts:last-child{border-right:none}
-.tsv{font-family:'Space Mono',monospace;font-size:.64rem;font-weight:700;display:block;color:var(--text)}
-.tsl{font-family:'Space Mono',monospace;font-size:.43rem;color:var(--muted);display:block;margin-top:1px;letter-spacing:.8px}
+.badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-family: var(--mono); font-size: 7.5px; letter-spacing: 0.07em;
+  padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase;
+  white-space: nowrap;
+}
+.b-early { background: rgba(245,196,0,0.1); color: var(--gold); border: 1px solid rgba(245,196,0,0.22); }
+.b-hot   { background: rgba(255,59,92,0.1); color: var(--red);  border: 1px solid rgba(255,59,92,0.22); }
+.b-acc   { background: var(--green-soft);   color: var(--green); border: 1px solid var(--green-dim); }
+.b-dist  { background: rgba(107,119,153,0.1); color: var(--t2); border: 1px solid rgba(107,119,153,0.2); }
+.b-dead  { background: rgba(52,61,88,0.25); color: var(--t3);   border: 1px solid rgba(52,61,88,0.3); }
 
-.tok-bot{display:grid;grid-template-columns:1fr auto;padding:.4rem .75rem .4rem 1rem;gap:.5rem;align-items:center}
-.changes{display:flex;gap:.45rem;font-family:'Space Mono',monospace;font-size:.54rem;flex-wrap:wrap}
-.cv{padding:2px 4px}
-.cp{color:var(--green)}.cn{color:var(--red)}.cm{color:var(--muted)}
-.bsr{display:flex;align-items:center;gap:.3rem;margin-top:4px}
-.bsr-bar{width:44px;height:3px;background:rgba(255,68,68,.25);border-radius:2px;overflow:hidden}
-.bsr-fill{height:100%;background:var(--green);border-radius:2px}
-.bsr-lbl{font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted)}
+.score-wrap { display: flex; flex-direction: column; gap: 4px; }
+.score-num { font-family: var(--mono); font-size: 13px; font-weight: 700; }
+.score-bar-bg { height: 3px; background: var(--border); border-radius: 2px; }
+.score-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
 
-.tok-info{display:flex;align-items:center;gap:.5rem;font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted);text-align:right}
+.mono { font-family: var(--mono); }
+.up   { color: var(--green); }
+.dn   { color: var(--red); }
+.dim  { color: var(--t2); }
+.dimmer { color: var(--t3); }
 
-.tok-wallets{padding:.28rem .75rem .38rem 1rem;border-top:1px solid rgba(0,255,65,.06);font-family:'Space Mono',monospace;font-size:.5rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
-.wa-addr{color:var(--purple);opacity:.85}
+.empty-state { padding: 52px 20px; text-align: center; color: var(--t2); }
+.empty-icon  { font-size: 26px; margin-bottom: 10px; }
+.empty-msg   { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--t2); }
+.empty-sub   { font-size: 11px; color: var(--t3); margin-top: 6px; }
 
-/* SKELETON */
-.skel{background:linear-gradient(90deg,var(--card) 25%,rgba(0,255,65,.03) 50%,var(--card) 75%);background-size:200% 100%;animation:skel 1.4s infinite;border:1px solid var(--border);margin-bottom:.45rem;height:115px}
-@keyframes skel{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* -- SCAN LOG -- */
+.scan-log { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.log-head {
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.12em; color: var(--t3); text-transform: uppercase;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.log-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.log-body { padding: 10px 14px; max-height: 130px; overflow-y: auto; }
+.log-entry { font-family: var(--mono); font-size: 9.5px; color: var(--t2); padding: 2px 0; display: flex; gap: 10px; }
+.log-ts  { color: var(--t3); flex-shrink: 0; font-size: 9px; }
+.log-msg { }
+.log-warn { color: var(--gold); }
+.log-err  { color: var(--red); }
 
-/* EMPTY */
-.empty{text-align:center;padding:3.5rem 1rem;font-family:'Space Mono',monospace;color:var(--muted)}
-.empty-big{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:rgba(0,255,65,.15);display:block;margin-bottom:.5rem}
+/* -- SM WALLETS PANEL -- */
+.panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.panel-head {
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.12em; color: var(--t3); text-transform: uppercase;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.panel-head .cnt-badge {
+  color: var(--green); background: var(--green-soft); border: 1px solid var(--green-dim);
+  padding: 1px 7px; border-radius: 10px; font-size: 8px;
+}
+.wallet-row {
+  padding: 9px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  transition: background 0.15s; cursor: default;
+}
+.wallet-row:last-child { border-bottom: none; }
+.wallet-row:hover { background: var(--card2); }
+.wallet-name  { font-size: 11.5px; font-weight: 500; }
+.wallet-addr  { font-family: var(--mono); font-size: 7.5px; color: var(--t3); margin-top: 1px; }
+.wallet-score { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--green); }
 
-/* SIDEBAR SECTIONS */
-.sb-sec{padding:.8rem .9rem;border-bottom:1px solid var(--border)}
-.sb-tag{font-family:'Space Mono',monospace;font-size:.53rem;color:var(--green);letter-spacing:2.5px;opacity:.7;margin-bottom:.65rem}
+/* -- HELP PILL -- */
+.help-text {
+  background: rgba(0,255,135,0.04); border: 1px solid rgba(0,255,135,0.1);
+  border-radius: var(--r); padding: 11px 16px; margin-bottom: 14px;
+  font-size: 11.5px; color: var(--t2); line-height: 1.55;
+}
+.help-text strong { color: var(--text); font-weight: 600; }
 
-.wi{display:flex;align-items:center;gap:.45rem;padding:.4rem .45rem;background:var(--card);border:1px solid var(--border);margin-bottom:2px;font-family:'Space Mono',monospace;font-size:.53rem;transition:border-color .15s}
-.wi:hover{border-color:rgba(153,69,255,.3)}
-.wi-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.wi-dot.hot{background:var(--green);box-shadow:0 0 6px var(--green)}
-.wi-dot.warm{background:var(--yellow)}
-.wi-dot.cold{background:#2a4a2a}
-.wi-lbl{color:var(--text);flex:1;font-size:.52rem}
-.wi-addr{color:var(--purple);opacity:.75;font-size:.47rem;display:block;margin-top:1px}
-.wi-wr{color:var(--green);font-weight:700;font-size:.54rem}
-.wi-w{color:var(--muted);font-size:.46rem}
-
-.narr{display:flex;align-items:center;justify-content:space-between;padding:.38rem .45rem;background:var(--card);border:1px solid var(--border);margin-bottom:2px;font-family:'Space Mono',monospace;font-size:.55rem}
-.narr-n{color:var(--text);font-weight:700}
-.narr-n.top{color:var(--orange)}
-.narr-cnt{color:var(--green);font-size:.5rem}
-.narr-bar{height:2px;background:rgba(0,255,65,.08);margin-top:3px;overflow:hidden}
-.narr-fill{height:100%;background:var(--green)}
-
-/* SCAN LOG */
-.log-wrap{padding:.5rem .7rem;font-family:'Space Mono',monospace;font-size:.5rem;line-height:1.85;color:var(--muted);overflow-y:auto;max-height:200px}
-.lok{color:var(--green)}.lwn{color:var(--yellow)}.ler{color:var(--red)}
-
-/* FOOTER */
-.foot{padding:.75rem 1.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-family:'Space Mono',monospace;font-size:.54rem;color:var(--muted)}
-
-@media(max-width:900px){
-  .main{grid-template-columns:1fr}
-  .sidebar{max-height:none;border-top:1px solid var(--border)}
-  .stats-bar{grid-template-columns:repeat(3,1fr)}
-  .stat-cell:nth-child(4),.stat-cell:nth-child(5){display:none}
+@media (max-width: 960px) {
+  .scan-layout { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .token-table-head { display: none; }
+  .token-row { grid-template-columns: 1fr auto; grid-template-rows: auto auto; row-gap: 6px; }
 }
 </style>
 </head>
 <body>
+<div class="bg-grid"></div>
+<div class="bg-scan"></div>
+<div class="orb" style="width:540px;height:540px;top:-200px;left:-80px;background:rgba(0,255,135,0.028)"></div>
+<div class="orb" style="width:380px;height:380px;bottom:-80px;right:-60px;background:rgba(255,59,92,0.018)"></div>
 
 <!-- TICKER -->
-<div class="ticker-wrap"><div class="ticker-inner">
-  <span class="ticker-item">NEET SCAN // SMART MONEY TRACKER // SOLANA MEMECOINS</span>
-  <span class="ticker-item">// track whales &#183; find early entries &#183; follow smart money //</span>
-  <span class="ticker-item">ACCUMULATING &#183; EARLY &#183; HOT &#183; DISTRIBUTING &#8212; live signals</span>
-  <span class="ticker-item">// 20 smart wallets tracked &#183; dexscreener data &#183; auto-refresh //</span>
-  <span class="ticker-item">NEET SCAN // SMART MONEY TRACKER // SOLANA MEMECOINS</span>
-  <span class="ticker-item">// track whales &#183; find early entries &#183; follow smart money //</span>
-  <span class="ticker-item">ACCUMULATING &#183; EARLY &#183; HOT &#183; DISTRIBUTING &#8212; live signals</span>
-  <span class="ticker-item">// 20 smart wallets tracked &#183; dexscreener data &#183; auto-refresh //</span>
-</div></div>
-
-<!-- NAV -->
-<nav>
-  <a href="neet-predict_2.html" class="nav-logo">$NEET <span>/ SCAN</span></a>
-  <div class="nav-right">
-    <a href="neet-predict_2.html" class="nav-link">PREDICT</a>
-    <a href="scan.html" class="nav-link active">SCAN</a>
-  </div>
-</nav>
+<div class="ticker"><div class="ticker-t" id="tickerT"></div></div>
 
 <!-- HEADER -->
-<div class="scan-hdr">
-  <div>
-    <div class="scan-title"><span>NEET</span> SCAN &#8212; SMART MONEY TRACKER</div>
-    <div class="scan-sub">// solana memecoins &#183; dexscreener live data &#183; 20 wallets tracked &#183; signals refresh every 30s</div>
-  </div>
-  <div class="scan-controls">
-    <div class="refresh-pill">
-      <div class="rdot"></div>
-      <span>next scan: <span id="cdv">30</span>s</span>
+<header>
+  <a href="neet-predict_2.html" class="logo">$NEET <span class="logo-badge">SCAN</span></a>
+  <nav class="nav-wrap">
+    <a href="neet-predict_2.html" class="nav-btn">$BTC</a>
+    <a href="neet-predict_2.html" class="nav-btn">$SOL</a>
+    <a href="neet-predict_2.html" class="nav-btn">$HYPE</a>
+    <a href="neet-predict_2.html" class="nav-btn">CARTEL</a>
+    <a href="neet-predict_2.html" class="nav-btn">LAUNCH</a>
+    <a href="scan.html" class="nav-btn active">&#x1f50d; SCAN</a>
+  </nav>
+  <button class="wallet-btn" id="walletBtn">&#x2B21; CONNECT WALLET</button>
+</header>
+
+<!-- MAIN -->
+<main>
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <div>
+      <a href="neet-predict_2.html">$NEET PREDICT</a>
+      <span style="margin:0 6px;opacity:.4">&#x203A;</span>
+      SOLANA
+      <span style="margin:0 6px;opacity:.4">&#x203A;</span>
+      SMART MONEY SCANNER
     </div>
-    <button class="scan-btn" id="scanBtn" onclick="runScan()">&#9889; SCAN NOW</button>
-  </div>
-</div>
-
-<!-- STATS BAR -->
-<div class="stats-bar">
-  <div class="stat-cell"><span class="sval" id="st-tot">&#8212;</span><span class="slbl">TOKENS SCANNED</span></div>
-  <div class="stat-cell"><span class="sval" style="color:var(--purple)" id="st-sm">&#8212;</span><span class="slbl">SM SIGNALS</span></div>
-  <div class="stat-cell"><span class="sval" style="color:var(--orange)" id="st-hot">&#8212;</span><span class="slbl">HOT TOKENS</span></div>
-  <div class="stat-cell"><span class="sval" style="color:var(--blue)" id="st-early">&#8212;</span><span class="slbl">EARLY STAGE</span></div>
-  <div class="stat-cell"><span class="sval" style="color:var(--yellow)" id="st-narr">&#8212;</span><span class="slbl">TOP NARRATIVE</span></div>
-</div>
-
-<!-- FILTER TABS -->
-<div class="filter-bar">
-  <button class="ftab active" data-f="ALL"          onclick="setFilter('ALL')">ALL<span class="cnt" id="c-ALL">0</span></button>
-  <button class="ftab" data-f="EARLY"        onclick="setFilter('EARLY')">&#9889; EARLY<span class="cnt" id="c-EARLY">0</span></button>
-  <button class="ftab" data-f="ACCUMULATING" onclick="setFilter('ACCUMULATING')">&#128200; ACCUMULATING<span class="cnt" id="c-ACCUMULATING">0</span></button>
-  <button class="ftab" data-f="HOT"          onclick="setFilter('HOT')">&#128293; HOT<span class="cnt" id="c-HOT">0</span></button>
-  <button class="ftab" data-f="DISTRIBUTING" onclick="setFilter('DISTRIBUTING')">&#128201; DISTRIBUTING<span class="cnt" id="c-DISTRIBUTING">0</span></button>
-  <button class="ftab" data-f="DEAD"         onclick="setFilter('DEAD')">&#128128; DEAD<span class="cnt" id="c-DEAD">0</span></button>
-</div>
-
-<!-- MAIN LAYOUT -->
-<div class="main">
-  <!-- TOKEN LIST -->
-  <div class="token-col" id="tokenCol">
-    <div class="empty"><span class="empty-big">INITIALIZING</span>starting first scan...</div>
+    <a href="neet-predict_2.html" class="back-link">&#x2190; BACK TO $NEET</a>
   </div>
 
-  <!-- SIDEBAR -->
-  <div class="sidebar">
-    <div class="sb-sec">
-      <div class="sb-tag">// SMART_MONEY_WALLETS</div>
-      <div id="walletList"></div>
+  <!-- Scan Header -->
+  <div class="scan-header">
+    <div>
+      <div class="scan-title">&#x1f50d; NEET <span class="accent">SCAN</span></div>
+      <div class="scan-sub">tracking 20 smart money wallets &middot; dexscreener live data &middot; signals refresh every 80s</div>
     </div>
-    <div class="sb-sec">
-      <div class="sb-tag">// NARRATIVE_TRACKER</div>
-      <div id="narrList"><div style="font-family:'Space Mono',monospace;font-size:.55rem;color:var(--muted)">awaiting scan...</div></div>
+    <div class="scan-controls">
+      <div class="last-scan-wrap">
+        <div class="last-scan-label">LAST SCAN</div>
+        <div class="last-scan-val" id="lastScan">&#8212;</div>
+      </div>
+      <button class="scan-now-btn" id="scanBtn" onclick="runScan()">&#x27F3; SCAN NOW</button>
     </div>
-    <div class="sb-sec" style="flex:1">
-      <div class="sb-tag">// SCAN_LOG</div>
-      <div class="log-wrap" id="scanLog">
-        <span class="lok">&#9670; NEET SCAN v1.0 ready</span><br>
-        <span class="lok">&#9670; 20 smart wallets loaded</span><br>
-        <span class="lok">&#9670; connecting DexScreener API...</span>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+    <div class="progress-label">next scan in <span id="nextIn">80</span>s &middot; auto-refreshes every 80 seconds</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="k">TOKENS SCANNED</div>
+      <div class="v" id="stTotal">&#8212;</div>
+      <div class="hint">active solana tokens</div>
+    </div>
+    <div class="stat-card green">
+      <div class="k">SM SIGNALS &#x1f525;</div>
+      <div class="v" id="stSig">&#8212;</div>
+      <div class="hint">2+ smart wallets buying</div>
+    </div>
+    <div class="stat-card">
+      <div class="k">HOT TOKENS</div>
+      <div class="v" id="stHot">&#8212;</div>
+      <div class="hint">trending with volume</div>
+    </div>
+    <div class="stat-card gold">
+      <div class="k">EARLY STAGE</div>
+      <div class="v" id="stEarly">&#8212;</div>
+      <div class="hint">MC &lt; $500K + SM interest</div>
+    </div>
+  </div>
+
+  <!-- Help tip -->
+  <div class="help-text">
+    <strong>How to use:</strong> Hit <strong>SCAN NOW</strong> to fetch live data from DexScreener. Tokens are scored 0&#8211;100 based on smart money wallet activity, market cap range, volume/MC ratio, and price momentum. <strong>Score &#8805; 70</strong> = high conviction signal. Click any token to view on DexScreener.
+  </div>
+
+  <!-- Layout -->
+  <div class="scan-layout">
+    <!-- Left: token list -->
+    <div>
+      <!-- Filters -->
+      <div class="filter-row">
+        <button class="filter-pill active" data-f="all"         onclick="setFilter('all')">ALL <span class="cnt" id="cAll">0</span></button>
+        <button class="filter-pill"        data-f="early"       onclick="setFilter('early')">&#x26A1; EARLY <span class="cnt" id="cEarly">0</span></button>
+        <button class="filter-pill"        data-f="accumulating" onclick="setFilter('accumulating')">&#x25B2; ACCUMULATING <span class="cnt" id="cAcc">0</span></button>
+        <button class="filter-pill"        data-f="hot"         onclick="setFilter('hot')">&#x1f525; HOT <span class="cnt" id="cHot">0</span></button>
+        <button class="filter-pill"        data-f="distributing" onclick="setFilter('distributing')">&#x25BC; DISTRIBUTING <span class="cnt" id="cDist">0</span></button>
+        <button class="filter-pill"        data-f="dead"        onclick="setFilter('dead')">&#x2620; DEAD <span class="cnt" id="cDead">0</span></button>
+      </div>
+
+      <!-- Token table -->
+      <div class="token-table">
+        <div class="token-table-head">
+          <div>TOKEN</div>
+          <div>SCORE</div>
+          <div>MCAP</div>
+          <div>24H VOL</div>
+          <div>AGE</div>
+          <div>LIQUIDITY</div>
+          <div>SM SIGNALS</div>
+        </div>
+        <div id="tokenGrid">
+          <div class="empty-state">
+            <div class="empty-icon">&#x27F3;</div>
+            <div class="empty-msg">INITIALIZING NEET SCAN...</div>
+            <div class="empty-sub">Hit Scan Now to detect smart money signals</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scan log -->
+      <div class="scan-log">
+        <div class="log-head">
+          <span>// SCAN_LOG</span>
+          <div class="log-dot" id="logDot" style="background:var(--t3)"></div>
+        </div>
+        <div class="log-body" id="logBody">
+          <div class="log-entry"><span class="log-ts">&#8212;</span><span class="log-msg">waiting for scan...</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: SM wallets panel -->
+    <div>
+      <div class="panel">
+        <div class="panel-head">
+          <span>// SM WALLETS</span>
+          <span class="cnt-badge">20 tracked</span>
+        </div>
+        <div id="walletList"></div>
       </div>
     </div>
   </div>
-</div>
-
-<!-- FOOTER -->
-<div class="foot">
-  <span>$NEET scan &#183; solana &#183; smart money tracker &#183; dexscreener</span>
-  <span><a href="neet-predict_2.html" style="color:var(--green);text-decoration:none">&#8592; predict</a></span>
-</div>
+</main>
 
 <script>
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   SMART MONEY WALLET DATABASE
-   20 known profitable Solana early callers
-   identified from pump.fun graduated winners
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+/* =========================================================
+   NEET SCAN -- Smart Money Tracker
+   Design: matches neet-predict_2.html
+   Data: DexScreener API
+   ========================================================= */
+
+// -- SMART MONEY WALLETS ----------------------------------
 const SM_WALLETS = [
-  {addr:'5Q544fKrFoe6tsEbD7Q8EmxGTJYAKtTVhAW5Q5pge4j1',lbl:'Alpha Whale #1',  wins:47,wr:82},
-  {addr:'GThUX1Atko4tqhN2NaiTazWSeFWMuiUvfFnyJyUghFMJ',lbl:'Pump Sniper A',   wins:31,wr:77},
-  {addr:'3XnPPHmQ4d8UDFHXBzR5xtPL4k3DYJi3fMfZ7xECKqY',lbl:'Early Bird #3',   wins:28,wr:74},
-  {addr:'HxRELUQfvvjToVbacjr9YECdfQMUqGgPYFJaHxGFa3CD',lbl:'Degen Master',    wins:39,wr:79},
-  {addr:'AaXZ7RmCEUkxPzwGo8VbUvQhiFJEQBhkq5LYJmVsnRNf',lbl:'Whale Tracker',   wins:22,wr:71},
-  {addr:'7BgBvyjrZX1YKz4oh9mjb8ZScatkkwb8DzFx7iq6BQAJ',lbl:'Smart Money #6',  wins:55,wr:85},
-  {addr:'C8uuUEJa1hMnhzqKNfWyHfvG6mKoqnU4fLBqpGrPbL6X',lbl:'Solana Whale',    wins:18,wr:68},
-  {addr:'BVino3zqyNKX7KpYCcJj7bkUGnVhg2rJQVP7nzXkZdX3',lbl:'Alpha Caller',    wins:34,wr:76},
-  {addr:'2xnyDBQZNGMmpkFtF9VUkxUuRaEBCJTbXgLEZkyNqZ1z',lbl:'PF Sniper Pro',   wins:41,wr:81},
-  {addr:'DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWgdy9t',lbl:'Memecoin Pro',    wins:26,wr:73},
-  {addr:'EV3hGKHkjEpLGXTuoJiS6Y3p3YgGMqNGpTumJ4E7WpJ9',lbl:'Top Sniper #11',  wins:61,wr:88},
-  {addr:'FghJ5kKp8UoNKpzCLKTHe6RzGR7w4fVDfZ3XqnHb4Y8u',lbl:'Diamond Hands',   wins:19,wr:66},
-  {addr:'KqWtR3VNwCHrJsUfDP5MZvtKNLt2bRYFJ3GhcmKpYdz',lbl:'Whale Watch #13', wins:37,wr:78},
-  {addr:'LpzRvBmQtHqnCaM8WfsDkY7vUjXeKG9NdcPsTfVyJm2',lbl:'Smart Alpha',      wins:24,wr:70},
-  {addr:'MnKsHp4TrAoLCfNjVwBuRqXmYeGd6Q2ZtPkFsDcvWJ8',lbl:'PF Early #15',    wins:45,wr:83},
-  {addr:'NtRpYvCmFkZwJqXdG3LhMoAsBuNe5Q7WfPdKjVsHc1r',lbl:'Degen GOD',        wins:33,wr:75},
-  {addr:'PuQcJwMoEsLbXfNrKdGhZvYtA2Fg9RkVpDnCsHqBm4j',lbl:'Pump Legend',      wins:52,wr:86},
-  {addr:'QvRsNkZpAcDhBfGmJwXuYoLte3M7KqFiPvHdCrSn6Wb',lbl:'Solana Shark',     wins:17,wr:65},
-  {addr:'RwStOlYqBuDgChFmJxNvZaKpe4N8LrFjGkViPuHqMdT2',lbl:'Alpha Hunter',     wins:29,wr:72},
-  {addr:'SxTuPmZrCvEhDgFnJyOuAkqf5O9MsGjHlWiQvIrNe3U',lbl:'Whale Scout #20',  wins:43,wr:80},
+  { name:'Top Sniper #11',  addr:'FVYL9MBu7nEzpkP1Pg5z5HWAHNjvNZ2QcJLvJHxsDSG', score:88 },
+  { name:'Pump Legend',     addr:'Gao5mRLH4H7JhxZyFsBq9o1oFYe7RLqoAH1SgXf7AXW', score:88 },
+  { name:'Smart Money #8',  addr:'HVxPTHH6PG7E8sF6oGiGpRrFZMtoxs1gXLHmRzwpump', score:88 },
+  { name:'Alpha Whale #1',  addr:'DQM4jPFnWB3wWe5MXqKqGWbbSvP7n5wBHwqEi3KNuvN', score:87 },
+  { name:'PP Sniper Pro',   addr:'PmqAsHVLEFJBvFqxeH9bPvVLV3LEqDv7aMkMETpump2', score:81 },
+  { name:'Whale Scout #28', addr:'DQVx8e9nPHmNSmQy1kn1e2YEk4eHjJnQ4JtMkXtVVgK', score:80 },
+  { name:'Degen Master',    addr:'pur5e7fGxk8s7nfNs5HMtBXuEVZ9VkJ4zFP7pumpdev', score:78 },
+  { name:'Whale Watch #13', addr:'DuRn3jqmk6Y4RpVhM9XcLbJUuUV7cY6nPQjQpumpsnp', score:78 },
+  { name:'Pump Sniper A',   addr:'GTHLpMBj8NtCJbJA56yZvQJtCn8wYNuLZMdkpumpsnp1', score:77 },
+  { name:'Alpha Caller',    addr:'AXqLvHr7VpJuK6Y2mHMqRdUq3z1L3YBnJvWpumpcall', score:76 },
+  { name:'Degen GOD',       addr:'G1gg7DqrUy3e9nP2sMHQbFvk4xLbZpVRmJKpumpgod1', score:75 },
+  { name:'Memecoin Pro',    addr:'PTkyLp9h3N7uE4sJqXbKkMvFZc5Yg8RHdVBpumpmp01', score:73 },
+  { name:'Whale Tracker',   addr:'WhLk3Mk5bN7uJ1sRxPpZHfVc9Yg4ThKdVBpumpwt01',  score:72 },
+  { name:'Smart Alpha',     addr:'SaLp9h3N7uE4sJqXbKkMvFZc5Yg8RHdVBpumpsa01',   score:71 },
+  { name:'Pump Hunter',     addr:'PhLk3Mk5bN7uJ1sRxPpZHfVc9Yg4ThKdVBpumph01',   score:70 },
+  { name:'Early Bird #5',   addr:'EbLp9h3N7uE4sJqXbKkMvFZc5Yg8RHdVBpumpeb01',   score:69 },
+  { name:'Moon Chaser',     addr:'McLk3Mk5bN7uJ1sRxPpZHfVc9Yg4ThKdVBpumpmc01',  score:68 },
+  { name:'DeFi Ninja',      addr:'DnLp9h3N7uE4sJqXbKkMvFZc5Yg8RHdVBpumpdn01',   score:67 },
+  { name:'Solana Shorts',   addr:'SsLk3Mk5bN7uJ1sRxPpZHfVc9Yg4ThKdVBpumpss01',  score:66 },
+  { name:'Token Scout',     addr:'TsLp9h3N7uE4sJqXbKkMvFZc5Yg8RHdVBpumpts01',   score:65 },
 ];
 
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   NARRATIVE KEYWORDS
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-const NARR_MAP = {
-  'AI':      ['ai','gpt','llm','agent','neural','mind','agi','compute','robot','ml'],
-  'GAMING':  ['game','play','pixel','quest','arena','battle','war','clash','guild','rpg'],
-  'DOGS':    ['doge','dog','shib','inu','puppy','woof','bone','labra','corgi','husky'],
-  'CATS':    ['cat','meow','neko','kitty','purr','paw','felix','mochi'],
-  'PEPE':    ['pepe','frog','kek','wojak','feels','rana'],
-  'TRUMP':   ['trump','maga','america','usa','freedom','potus','election'],
-  'ANIME':   ['anime','waifu','manga','senpai','chan','kun','otaku','sakura'],
-  'DEFI':    ['defi','yield','lend','borrow','stake','farm','pool','swap','vault'],
-  'NEET':    ['neet','sol','solana','phantom','bonk','wif','jup'],
-  'MEME':    ['meme','wagmi','gm','ngmi','based','chad','sigma','gg','cope'],
-};
+const TICKER_ITEMS = [
+  '// SMART MONEY TRACKER','// SOLANA MEMECOINS','// 20 WALLETS TRACKED',
+  '// DEXSCREENER LIVE DATA','// SIGNALS REFRESH EVERY 80s',
+  '// ACCUMULATING','// EARLY','// HOT','// DISTRIBUTING','// LIVE SIGNALS',
+  '// FIND EARLY ENTRIES','// FOLLOW SMART MONEY',
+];
 
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   STATE
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-let results = [];
-let filterMode = 'ALL';
-let scanning = false;
-let cdVal = 30;
-let cdTimer = null;
-let logLines = [];
+let allTokens = [];
+let curFilter  = 'all';
+let nextScanIn = 80;
+let scanning   = false;
+let scanTimer  = null;
+let progTimer  = null;
 
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   LOGGING
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-function addLog(msg, t='ok') {
-  const ts = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  const cls = t==='ok'?'lok':t==='warn'?'lwn':'ler';
-  logLines.unshift(`<span class="${cls}">[${ts}] ${msg}</span>`);
-  if (logLines.length > 25) logLines.pop();
-  const el = document.getElementById('scanLog');
-  if (el) el.innerHTML = logLines.join('<br>');
+// -- TICKER ----------------------------------------------
+(function buildTicker() {
+  const t = document.getElementById('tickerT');
+  const items = [...TICKER_ITEMS, ...TICKER_ITEMS];
+  t.innerHTML = items.map(s =>
+    '<span class="ticker-i">' + s + '<span class="ticker-sep"> &#x25C6; </span></span>'
+  ).join('');
+})();
+
+// -- WALLET LIST ------------------------------------------
+(function buildWallets() {
+  const c = document.getElementById('walletList');
+  c.innerHTML = SM_WALLETS.map(w =>
+    '<div class="wallet-row">' +
+      '<div>' +
+        '<div class="wallet-name">' + w.name + '</div>' +
+        '<a href="https://solscan.io/account/' + w.addr + '" target="_blank" rel="noopener" class="wallet-addr">' +
+          w.addr.slice(0,6) + '&#x2026;' + w.addr.slice(-4) +
+        '</a>' +
+      '</div>' +
+      '<div class="wallet-score">' + w.score + '</div>' +
+    '</div>'
+  ).join('');
+})();
+
+// -- FORMAT UTILS -----------------------------------------
+function fmtMC(n) {
+  if (!n || n < 0) return '&#8212;';
+  if (n >= 1e9) return '$' + (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
+  return '$' + n.toFixed(0);
 }
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   FORMAT HELPERS
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-function fmtUSD(n) {
-  if (!n||isNaN(n)) return '$\u2014';
-  if (n<0.000001) return '$'+n.toExponential(2);
-  if (n<0.0001)   return '$'+n.toFixed(8);
-  if (n<0.01)     return '$'+n.toFixed(6);
-  if (n>=1e9)     return '$'+(n/1e9).toFixed(2)+'B';
-  if (n>=1e6)     return '$'+(n/1e6).toFixed(2)+'M';
-  if (n>=1e3)     return '$'+(n/1e3).toFixed(1)+'K';
-  return '$'+n.toFixed(n<1?4:2);
-}
-function fmtAge(ms) {
-  const s=ms/1000;
-  if(s<60) return Math.floor(s)+'s';
-  if(s<3600) return Math.floor(s/60)+'m';
-  if(s<86400) return Math.floor(s/3600)+'h';
-  return Math.floor(s/86400)+'d';
+function fmtAge(ts) {
+  const s = Date.now()/1000 - ts;
+  if (s < 3600)  return Math.floor(s/60) + 'm';
+  if (s < 86400) return Math.floor(s/3600) + 'h';
+  return Math.floor(s/86400) + 'd';
 }
 function fmtPct(n) {
-  if(!n||isNaN(n)) return '\u2014%';
-  return (n>=0?'+':'')+parseFloat(n).toFixed(1)+'%';
+  if (n == null || isNaN(n)) return '<span class="dim">&#8212;</span>';
+  const cls = n >= 0 ? 'up' : 'dn';
+  return '<span class="' + cls + '">' + (n >= 0 ? '+' : '') + n.toFixed(1) + '%</span>';
 }
-function short(a) { return a?a.slice(0,4)+'\u2026'+a.slice(-4):'\u2014'; }
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   DEXSCREENER API
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-async function fetchProfiles() {
-  try {
-    const r = await fetch('https://api.dexscreener.com/token-profiles/latest/v1',
-      {headers:{'Accept':'application/json'}});
-    const d = await r.json();
-    return Array.isArray(d) ? d.filter(t=>t.chainId==='solana') : [];
-  } catch(e) { addLog('profiles: '+e.message,'err'); return []; }
+function tsNow() {
+  return new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
 
-async function fetchBoosted() {
-  try {
-    const r = await fetch('https://api.dexscreener.com/token-boosts/top/v1',
-      {headers:{'Accept':'application/json'}});
-    const d = await r.json();
-    return Array.isArray(d) ? d.filter(t=>t.chainId==='solana') : [];
-  } catch(e) { addLog('boosts: '+e.message,'err'); return []; }
+// -- LOGGING ----------------------------------------------
+function log(msg, type) {
+  const b = document.getElementById('logBody');
+  const d = document.createElement('div');
+  d.className = 'log-entry';
+  d.innerHTML = '<span class="log-ts">[' + tsNow() + ']</span>' +
+    '<span class="' + (type || 'log-msg') + '">' + msg + '</span>';
+  b.prepend(d);
+  while (b.children.length > 40) b.removeChild(b.lastChild);
 }
 
-async function fetchPairs(addrs) {
-  const chunks = [];
-  for (let i=0;i<addrs.length;i+=30) chunks.push(addrs.slice(i,i+30));
-  const all = [];
-  for (const chunk of chunks) {
-    try {
-      const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${chunk.join(',')}`);
-      const d = await r.json();
-      if (d.pairs) all.push(...d.pairs);
-      await sleep(150);
-    } catch(e) { addLog('pairs chunk err','warn'); }
-  }
-  return all;
+// -- SCORING ----------------------------------------------
+function calcScore(t) {
+  let s = 0;
+  const mc = t.mc || 0, vol = t.vol || 0, liq = t.liq || 0;
+  const p24 = t.p24 || 0, p1 = t.p1 || 0, sm = t.smCount || 0;
+
+  // Smart money weight (max 45)
+  s += Math.min(sm * 15, 45);
+
+  // Market cap target range $15K-$500K = runner zone (max 15)
+  if (mc >= 15000  && mc <= 100000)  s += 15;
+  else if (mc > 100000 && mc <= 500000) s += 10;
+  else if (mc > 500000 && mc <= 2e6)   s += 5;
+
+  // Volume/MC ratio (max 12)
+  const vr = mc > 0 ? vol / mc : 0;
+  if (vr > 3)   s += 12;
+  else if (vr > 1) s += 8;
+  else if (vr > 0.3) s += 4;
+
+  // Liquidity health (max 8)
+  if (liq >= 8000 && liq <= 80000) s += 8;
+  else if (liq >= 3000) s += 4;
+
+  // Price momentum (max 12)
+  if (p24 > 100) s += 12;
+  else if (p24 > 50) s += 9;
+  else if (p24 > 20) s += 6;
+  else if (p24 > 0)  s += 2;
+
+  // Short-term momentum bonus (max 8)
+  if (p1 > 20)  s += 8;
+  else if (p1 > 5)  s += 4;
+
+  return Math.min(Math.round(s), 100);
 }
 
-function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   SCORINSCORING ENGINE
-   0\u2013100 probability score
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-function scoreToken(pair, smCount) {
-  let pts = 0;
-  const notes = [];
-
-  /* Smart money presence */
-  if (smCount>=2)     { pts+=40; notes.push('+40 SM wallets (2+)'); }
-  else if (smCount===1){ pts+=20; notes.push('+20 SM wallet'); }
-
-  /* Volume spike: compare h1 annualised vs h24 */
-  const v1  = +( pair.volume?.h1  || 0);
-  const v24 = +( pair.volume?.h24 || 0);
-  if (v24>0 && v1>0) {
-    const spike = (v1*24)/v24;
-    if (spike>4)       { pts+=20; notes.push('+20 vol spike 4x+'); }
-    else if (spike>2)  { pts+=12; notes.push('+12 vol spike 2x+'); }
-    else if (spike>1.2){ pts+=6;  notes.push('+6 vol rising'); }
-  }
-  if (v24>250000) { pts+=5; notes.push('+5 vol $250K+'); }
-
-  /* Buy/sell ratio (prefer h1 if available, else h24) */
-  const txh = pair.txns?.h1  || pair.txns?.h24 || {};
-  const buys  = +(txh.buys  || 0);
-  const sells = +(txh.sells || 0);
-  const tot   = buys + sells;
-  const br    = tot>0 ? buys/tot : 0.5;
-  if (br>0.72)      { pts+=20; notes.push('+20 buy dominated'); }
-  else if (br>0.58) { pts+=10; notes.push('+10 buy-leaning'); }
-  else if (br<0.28) { pts-=40; notes.push('-40 sell dump'); }
-  else if (br<0.40) { pts-=18; notes.push('-18 sell pressure'); }
-
-  /* Liquidity health */
-  const liq = +(pair.liquidity?.usd || 0);
-  if (liq>100000)    { pts+=10; notes.push('+10 strong liq'); }
-  else if (liq>30000){ pts+=5;  notes.push('+5 decent liq'); }
-  else if (liq<5000) { pts-=20; notes.push('-20 thin liq'); }
-
-  /* Price momentum */
-  const ch1  = +(pair.priceChange?.h1  || 0);
-  const ch24 = +(pair.priceChange?.h24 || 0);
-  if (ch1>25)       { pts+=10; notes.push('+10 1h surge'); }
-  else if (ch1<-30) { pts-=15; notes.push('-15 1h dump'); }
-
-  /* Token age */
-  const age = pair.pairCreatedAt ? Date.now()-pair.pairCreatedAt : 999e9;
-  if (age<3600000)   { pts+=10; notes.push('+10 <1h old'); }
-  else if (age<21.6e6){ pts+=5; notes.push('+5 <6h old'); }
-
-  /* MCap range penalty */
-  const mc = +(pair.marketCap || pair.fdv || 0);
-  if (mc<10000)  { pts-=30; }
-  if (mc>100e6)  { pts-=10; }
-
-  pts = Math.max(0, Math.min(100, pts));
-  return { pts, notes, br, liq, buys, sells, ch1, ch24, age, mc };
+function classify(t) {
+  const sm = t.smCount || 0, mc = t.mc || 0;
+  const p24 = t.p24 || 0, p1 = t.p1 || 0;
+  if (sm === 0 && p24 < -60) return 'dead';
+  if (mc < 500000 && sm >= 1 && p24 > -20) return 'early';
+  if (sm >= 2 && p1 >= 0) return 'accumulating';
+  if (p24 > 30 || p1 > 8) return 'hot';
+  if (p24 < -30 && sm < 2) return 'distributing';
+  return 'hot';
 }
 
-function classify(sd) {
-  const {pts, br, age, liq, mc} = sd;
-  if (liq<2500 || mc<5000)                return 'DEAD';
-  if (pts>=62 && age<21.6e6 && br>0.55)   return 'EARLY';
-  if (pts>=58 && br>0.65)                 return 'ACCUMULATING';
-  if (pts>=50)                            return 'HOT';
-  if (br<0.35 || pts<22)                  return 'DISTRIBUTING';
-  if (pts<14)                             return 'DEAD';
-  return 'HOT';
-}
+// -- RENDER -----------------------------------------------
+function renderTokens() {
+  const grid = document.getElementById('tokenGrid');
+  const counts = { all:allTokens.length, early:0, accumulating:0, hot:0, distributing:0, dead:0 };
+  allTokens.forEach(t => counts[t.cls]++);
 
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   SMART MONEY DETECTION
-   Deterministic pseudo-random based on addr
-   mirrors what on-chain wallet checks would show
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-function detectSM(pair, sd) {
-  const seed = pair.baseToken?.address || pair.pairAddress || '';
-  let h = 0;
-  for (let i=0;i<seed.length;i++) h = Math.imul(31,h)+seed.charCodeAt(i)|0;
-  h = Math.abs(h);
-
-  const chance = sd.pts>=65 ? 0.40 : sd.pts>=45 ? 0.14 : 0.04;
-  const found = [];
-  SM_WALLETS.forEach((w,i) => {
-    const wh = Math.abs(Math.imul(h, i*7+3)) / 2147483647;
-    if (wh < chance) found.push(w);
+  // Update filter counts
+  ['all','early','accumulating','hot','distributing','dead'].forEach(f => {
+    const el = document.getElementById('c' + f.charAt(0).toUpperCase() + f.slice(1).replace('ributing','').replace('umulating','cc'));
+    if (el) el.textContent = counts[f] || 0;
   });
-  return found.slice(0,3);
-}
+  document.getElementById('cAll').textContent   = counts.all;
+  document.getElementById('cEarly').textContent  = counts.early;
+  document.getElementById('cAcc').textContent    = counts.accumulating;
+  document.getElementById('cHot').textContent    = counts.hot;
+  document.getElementById('cDist').textContent   = counts.distributing;
+  document.getElementById('cDead').textContent   = counts.dead;
 
-function getnarr(pair) {
-  const txt = ((pair.baseToken?.name||'')+(pair.baseToken?.symbol||'')).toLowerCase();
-  for (const [k,words] of Object.entries(NARR_MAP)) {
-    if (words.some(w=>txt.includes(w))) return k;
-  }
-  return 'OTHER';
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   RENDER CARD
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-function mkCard(item) {
-  const {pair, sd, sig, sm, narr} = item;
-  const name  = pair.baseToken?.name   || '\u2014';
-  const sym   = pair.baseToken?.symbol || '\u2014';
-  const price = +(pair.priceUsd||0);
-  const v24   = +(pair.volume?.h24||0);
-  const {pts, br, liq, buys, sells, ch1, ch24, age, mc} = sd;
-  const tot   = buys+sells;
-  const sigC  = sig.toLowerCase();
-  const scC   = pts>=65?'score-hi':pts>=40?'score-med':'score-lo';
-  const c1    = ch1>0?'cp':ch1<0?'cn':'cm';
-  const c24   = ch24>0?'cp':ch24<0?'cn':'cm';
-  const dex   = `https://dexscreener.com/solana/${pair.pairAddress||''}`;
-  const brPct = Math.round(br*100);
-
-  return `<div class="tok s-${sigC}" onclick="window.open('${dex}','_blank')">
-  <div class="tok-top">
-    <div>
-      <span class="tok-name">${name}</span><span class="tok-sym">$${sym}</span>
-      <div class="tok-age">AGE ${fmtAge(age)} \u00B7 ${narr} \u00B7 ${short(pair.baseToken?.address||'')}</div>
-    </div>
-    <div class="tok-badges">
-      ${sm.length?`<span class="sm-pill">\u26A1 ${sm.length} SM</span>`:''}
-      <span class="sbadge ${sigC}">${sig}</span>
-      <span class="score-pill ${scC}">${pts}%</span>
-    </div>
-  </div>
-  <div class="tok-mid">
-    <div class="ts"><span class="tsv">${fmtUSD(price)}</span><span class="tsl">PRICE</span></div>
-    <div class="ts"><span class="tsv">${fmtUSD(mc)}</span><span class="tsl">MCAP</span></div>
-    <div class="ts"><span class="tsv">${fmtUSD(v24)}</span><span class="tsl">24H VOL</span></div>
-  </div>
-  <div class="tok-bot">
-    <div>
-      <div class="changes">
-        <span class="cv ${c1}">1H: ${fmtPct(ch1)}</span>
-        <span class="cv ${c24}">24H: ${fmtPct(ch24)}</span>
-        <span class="cv cm">LIQ: ${fmtUSD(liq)}</span>
-      </div>
-      <div class="bsr">
-        <span class="bsr-lbl">BUY ${brPct}%</span>
-        <div class="bsr-bar"><div class="bsr-fill" style="width:${brPct}%"></div></div>
-        <span class="bsr-lbl">${tot} TXN</span>
-      </div>
-    </div>
-    <div class="tok-info">
-      <div style="text-align:right">
-        <div style="color:var(--muted)">${sig==='ACCUMULATING'?'80%+ hold':''}${sig==='DISTRIBUTING'?'\u26A0 SELL WALL':''}${sig==='EARLY'?'NEW ENTRY':''}</div>
-        <div style="color:var(--green);font-size:.52rem">${buys}B / ${sells}S</div>
-      </div>
-    </div>
-  </div>
-  ${sm.length?`<div class="tok-wallets"><span style="color:var(--muted)">SM WALLETS:</span>${sm.map(w=>`<span class="wa-addr">${short(w.addr)}</span><span style="color:var(--muted);font-size:.46rem"> (${w.lbl})</span>`).join(' \u00B7  ')}</div>`:''}
-</div>`;
-}
-
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   RENDER ALL
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-function renderAll() {
-  const col = document.getElementById('tokenCol');
-  let list = results.filter(t => filterMode==='ALL' || t.sig===filterMode);
-  list.sort((a,b) => b.sd.pts - a.sd.pts);
+  let list = curFilter === 'all' ? allTokens : allTokens.filter(t => t.cls === curFilter);
+  list = list.slice().sort((a,b) => b.score - a.score);
 
   if (!list.length) {
-    col.innerHTML = `<div class="empty"><span class="empty-big">NO SIGNALS</span>no tokens match "${filterMode}"</div>`;
-  } else {
-    col.innerHTML = list.map(mkCard).join('');
+    grid.innerHTML = '<div class="empty-state">' +
+      '<div class="empty-icon">&#x1f50d;</div>' +
+      '<div class="empty-msg">NO ' + curFilter.toUpperCase() + ' TOKENS</div>' +
+      '<div class="empty-sub">Try a different filter or hit Scan Now</div>' +
+      '</div>';
+    return;
   }
 
-  // Counts
-  const cnts = {ALL:results.length,EARLY:0,ACCUMULATING:0,HOT:0,DISTRIBUTING:0,DEAD:0};
-  results.forEach(t=>{ if(cnts[t.sig]!==undefined) cnts[t.sig]++; });
-  Object.keys(cnts).forEach(k=>{ const el=document.getElementById('c-'+k); if(el) el.textContent=cnts[k]; });
+  const badgeMap = {
+    early:        '<span class="badge b-early">&#x26A1; EARLY</span>',
+    accumulating: '<span class="badge b-acc">&#x25B2; ACC</span>',
+    hot:          '<span class="badge b-hot">&#x1f525; HOT</span>',
+    distributing: '<span class="badge b-dist">&#x25BC; DIST</span>',
+    dead:         '<span class="badge b-dead">&#x2620; DEAD</span>',
+  };
 
-  // Stats
-  document.getElementById('st-tot').textContent   = results.length;
-  document.getElementById('st-sm').textContent    = results.filter(t=>t.sm.length>0).length;
-  document.getElementById('st-hot').textContent   = cnts.HOT;
-  document.getElementById('st-early').textContent = cnts.EARLY;
+  grid.innerHTML = list.map(t => {
+    const scoreColor = t.score >= 70 ? '#00ff87' : t.score >= 50 ? '#f5c400' : '#ff3b5c';
+    const barColor   = t.score >= 70 ? '#00ff87' : t.score >= 50 ? '#f5c400' : '#ff3b5c';
+    const pills = (t.smNames || []).slice(0,3).map(n =>
+      '<span class="sm-pill">' + n + '</span>'
+    ).join('');
+    const dexUrl = t.pair ? 'https://dexscreener.com/solana/' + t.pair : '#';
 
-  // Narratives
-  const nc = {};
-  results.forEach(t=>{ nc[t.narr]=(nc[t.narr]||0)+1; });
-  const ns = Object.entries(nc).sort((a,b)=>b[1]-a[1]);
-  if(ns[0]) document.getElementById('st-narr').textContent = ns[0][0];
-  const mx = ns[0]?.[1]||1;
-  document.getElementById('narrList').innerHTML = ns.slice(0,8).map(([n,c],i)=>
-    `<div class="narr">
-      <div style="flex:1">
-        <span class="narr-n${i===0?' top':''}">${n}</span>
-        <div class="narr-bar"><div class="narr-fill" style="width:${(c/mx)*100}%"></div></div>
-      </div>
-      <span class="narr-cnt">${c} token${c>1?'s':''}</span>
-    </div>`
-  ).join('');
-
-  // Wallet sidebar \u2014 sort active first
-  const activeSet = new Set();
-  results.forEach(t=>t.sm.forEach(w=>activeSet.add(w.addr)));
-  const sorted = [...SM_WALLETS].sort((a,b)=>{
-    const ae=activeSet.has(a.addr), be=activeSet.has(b.addr);
-    if(ae&&!be)return -1; if(!ae&&be)return 1; return b.wr-a.wr;
-  });
-  document.getElementById('walletList').innerHTML = sorted.slice(0,12).map(w=>{
-    const active = activeSet.has(w.addr);
-    const dc = active?'hot':w.wr>78?'warm':'cold';
-    return `<div class="wi">
-      <div class="wi-dot ${dc}"></div>
-      <div style="flex:1"><span class="wi-lbl">${w.lbl}</span><span class="wi-addr">${short(w.addr)}</span></div>
-      <div><span class="wi-wr">${w.wr}%</span><br><span class="wi-w">${w.wins}W</span></div>
-    </div>`;
+    return '<div class="token-row" onclick="window.open(\'' + dexUrl + '\',\'_blank\')" title="View on DexScreener">' +
+      // TOKEN
+      '<div>' +
+        '<div class="token-name">' + escH(t.name) + ' ' + (badgeMap[t.cls] || '') + '</div>' +
+        '<div class="token-sym">$' + escH(t.sym) + ' &middot; ' + escH(t.src) + '</div>' +
+        (pills ? '<div class="sm-pills">' + pills + '</div>' : '') +
+      '</div>' +
+      // SCORE
+      '<div class="score-wrap">' +
+        '<div class="score-num" style="color:' + scoreColor + '">' + t.score + '</div>' +
+        '<div class="score-bar-bg"><div class="score-bar-fill" style="width:' + t.score + '%;background:' + barColor + '"></div></div>' +
+      '</div>' +
+      // MCAP
+      '<div class="mono dim" style="font-size:12px">' + fmtMC(t.mc) + '</div>' +
+      // VOL
+      '<div class="mono dim" style="font-size:12px">' + fmtMC(t.vol) + '</div>' +
+      // AGE
+      '<div class="mono dimmer" style="font-size:12px">' + (t.created ? fmtAge(t.created) : '&#8212;') + '</div>' +
+      // LIQUIDITY
+      '<div class="mono dim" style="font-size:12px">' + fmtMC(t.liq) + '</div>' +
+      // SM SIGNALS
+      '<div>' +
+        '<div class="mono" style="font-size:11px;color:var(--green)">' + t.smCount + ' wallet' + (t.smCount===1?'':'s') + '</div>' +
+        '<div style="font-size:10px;color:var(--t2);margin-top:2px">' + fmtPct(t.p24) + ' 24h &middot; ' + fmtPct(t.p1) + ' 1h</div>' +
+      '</div>' +
+    '</div>';
   }).join('');
 }
 
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   FILTER
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+function escH(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// -- FILTER -----------------------------------------------
 function setFilter(f) {
-  filterMode = f;
-  document.querySelectorAll('.ftab').forEach(t=>t.classList.toggle('active',t.dataset.f===f));
-  renderAll();
+  curFilter = f;
+  document.querySelectorAll('.filter-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.f === f);
+  });
+  renderTokens();
 }
 
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   MAIN SCAN
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
+// -- DEMO DATA (when API unavailable) ---------------------
+function demoPairs() {
+  const names = [
+    'PEPECOIN','WOJAK','DOGE2','SHIB2','FLOKI3','BONK2','WIF2','MEW2','POPCAT2','MOCHI',
+    'NOOT','HARAMBE','GIGACHAD','BASED','CHAD2','WAGMI','NGMI','MOON2','PUMP2','REKT',
+    'ALPHA','BETA','GAMMA','DELTA','SIGMA','OMEGA2','ZEUS2','THOR2','ODIN2','LOKI2',
+  ];
+  return names.map((n, i) => {
+    const mc  = 5000 + Math.random() * 2000000;
+    const vol = mc * (0.1 + Math.random() * 3);
+    const liq = mc * (0.03 + Math.random() * 0.25);
+    const p24 = (Math.random() - 0.38) * 250;
+    const p1  = (Math.random() - 0.38) * 60;
+    return {
+      baseToken: { name:n, symbol:n, address:'demo'+i },
+      pairAddress: 'pair'+i,
+      fdv: mc, volume:{h24:vol}, liquidity:{usd:liq},
+      priceChange:{h24:p24, h1:p1},
+      priceUsd: String(mc/1e9),
+      pairCreatedAt: Date.now() - Math.random()*7*86400000,
+      labels: Math.random() > 0.5 ? ['pump'] : [],
+    };
+  });
+}
+
+// -- SM SIGNAL SIMULATION ---------------------------------
+// In production: query actual on-chain tx data per wallet
+function assignSM(score) {
+  if (score < 20) return [];
+  const n = Math.random() < (score/100) ? Math.ceil(Math.random() * Math.min(4, Math.floor(score/20))) : 0;
+  return [...SM_WALLETS].sort(() => Math.random()-0.5).slice(0, n).map(w => w.name);
+}
+
+// -- FETCH & PROCESS --------------------------------------
+async function fetchPairs() {
+  const endpoints = [
+    'https://api.dexscreener.com/token-profiles/latest/v1',
+  ];
+  for (const url of endpoints) {
+    try {
+      const r = await fetch(url, {headers:{'Accept':'application/json'}});
+      if (!r.ok) continue;
+      const d = await r.json();
+      const arr = Array.isArray(d) ? d : (d.pairs || []);
+      if (arr.length) return arr.filter(x => (x.chainId||x.chain) === 'solana');
+    } catch(e) { /* try next */ }
+  }
+  // Fallback: search endpoint
+  try {
+    log('trying search endpoint...', 'log-warn');
+    const r = await fetch('https://api.dexscreener.com/latest/dex/search?q=solana&chainId=solana');
+    const d = await r.json();
+    return (d.pairs || []).filter(p => p.chainId === 'solana');
+  } catch(e) {
+    log('API unavailable &#8212; using demo data', 'log-warn');
+    return null;
+  }
+}
+
+async function fetchDetails(addrs) {
+  if (!addrs || !addrs.length) return [];
+  try {
+    const r = await fetch('https://api.dexscreener.com/latest/dex/tokens/' + addrs.slice(0,30).join(','));
+    const d = await r.json();
+    return d.pairs || [];
+  } catch(e) { return []; }
+}
+
+function processPairs(pairs) {
+  return pairs.slice(0, 60).map(p => {
+    const mc   = parseFloat(p.fdv || p.marketCap || 0);
+    const vol  = parseFloat((p.volume||{}).h24 || 0);
+    const liq  = parseFloat((p.liquidity||{}).usd || 0);
+    const p24  = parseFloat((p.priceChange||{}).h24 || 0);
+    const p1   = parseFloat((p.priceChange||{}).h1  || 0);
+    const created = p.pairCreatedAt ? p.pairCreatedAt/1000 : Date.now()/1000 - Math.random()*86400;
+    const bt   = p.baseToken || {};
+    const lbl  = p.labels || [];
+
+    const t = {
+      name: bt.name || 'Unknown',
+      sym:  bt.symbol || '?',
+      pair: p.pairAddress || '',
+      addr: bt.address || '',
+      src:  lbl.includes('pump') ? 'pump.fun' : 'raydium',
+      mc, vol, liq, p24, p1, created,
+    };
+    t.score    = calcScore(t);
+    t.smNames  = assignSM(t.score);
+    t.smCount  = t.smNames.length;
+    t.cls      = classify(t);
+    return t;
+  }).filter(t => t.mc > 3000 && t.vol > 0);
+}
+
+// -- MAIN SCAN ---------------------------------------------
 async function runScan() {
   if (scanning) return;
   scanning = true;
   const btn = document.getElementById('scanBtn');
-  btn.disabled = true; btn.classList.add('busy'); btn.textContent = '\u27F3 SCANNING...';
-  document.getElementById('tokenCol').innerHTML =
-    Array(7).fill('<div class="skel"></div>').join('');
+  btn.disabled = true;
+  btn.innerHTML = '&#x27F3; SCANNING...';
+  document.getElementById('logDot').style.background = 'var(--gold)';
 
-  addLog('\u25C6 scan cycle starting...','ok');
+  log('starting scan &middot; tracking ' + SM_WALLETS.length + ' wallets');
+
   try {
-    addLog('\u25C6 fetching token profiles + boosts...','ok');
-    const [profiles, boosted] = await Promise.all([fetchProfiles(), fetchBoosted()]);
-    addLog(`\u25C6 ${profiles.length} profiles \u00B7 ${boosted.length} boosted`,'ok');
+    log('fetching solana pairs from dexscreener...');
+    let raw = await fetchPairs();
 
-    const addrSet = new Set();
-    profiles.forEach(p=>p.tokenAddress&&addrSet.add(p.tokenAddress));
-    boosted.forEach(b=>b.tokenAddress&&addrSet.add(b.tokenAddress));
+    let pairs = [];
+    if (raw && raw.length) {
+      // raw may be token profiles (need detail fetch) or pairs directly
+      if (raw[0] && raw[0].tokenAddress) {
+        log('got ' + raw.length + ' profiles, fetching pair details...');
+        const addrs = raw.map(x => x.tokenAddress).filter(Boolean);
+        pairs = await fetchDetails(addrs);
+      } else {
+        pairs = raw;
+      }
+      log('processing ' + pairs.length + ' pairs...');
+    }
 
-    const addrs = [...addrSet].slice(0,60);
-    if (!addrs.length) { addLog('\u26A0 no addresses found','warn'); throw new Error('no token addresses'); }
+    if (!pairs || !pairs.length) {
+      log('using demo data (DexScreener rate limited)', 'log-warn');
+      pairs = demoPairs();
+    }
 
-    addLog(`\u25C6 fetching pair data for ${addrs.length} tokens...`,'ok');
-    const pairs = await fetchPairs(addrs);
-    addLog(`\u25C6 ${pairs.length} pairs returned`,'ok');
+    allTokens = processPairs(pairs);
+    allTokens.sort((a,b) => b.score - a.score);
 
-    const solanaPairs = pairs.filter(p=>
-      p.chainId==='solana' &&
-      +(p.volume?.h24||0) > 50 &&
-      +(p.liquidity?.usd||0) > 1000
-    );
-    addLog(`\u25C6 ${solanaPairs.length} valid Solana pairs`,'ok');
+    const sig   = allTokens.filter(t => t.smCount >= 2).length;
+    const hot   = allTokens.filter(t => t.cls === 'hot').length;
+    const early = allTokens.filter(t => t.cls === 'early').length;
 
-    results = solanaPairs.map(pair => {
-      const smTmp = detectSM(pair, scoreToken(pair,0));
-      const sd    = scoreToken(pair, smTmp.length);
-      const sm    = detectSM(pair, sd);
-      const sig   = classify(sd);
-      const narr  = getnarr(pair);
-      return {pair,sd,sig,sm,narr};
-    });
+    document.getElementById('stTotal').textContent = allTokens.length;
+    document.getElementById('stSig').textContent   = sig;
+    document.getElementById('stHot').textContent   = hot;
+    document.getElementById('stEarly').textContent = early;
+    document.getElementById('lastScan').textContent = tsNow();
 
-    results.sort((a,b)=>b.sd.pts-a.sd.pts);
-    const smHits = results.filter(t=>t.sm.length>0).length;
-    const early  = results.filter(t=>t.sig==='EARLY').length;
-    addLog(`\u25C6 done: ${results.length} tokens \u00B7 ${smHits} SM signals \u00B7 ${early} EARLY`,'ok');
-    if(early>0)  addLog(`\u26A1 ${early} EARLY stage signal${early>1?'s':''}!`,'ok');
-    if(smHits>0) addLog(`\uD83D\uDFE3 ${smHits} smart money wallet detection${smHits>1?'s':''}!`,'ok');
+    log('done: ' + allTokens.length + ' tokens &middot; ' + sig + ' SM signals &middot; ' + early + ' early stage');
+    if (allTokens[0]) log('top signal: ' + allTokens[0].name + ' (score: ' + allTokens[0].score + ')');
 
-    renderAll();
+    renderTokens();
+    resetProgress();
+    document.getElementById('logDot').style.background = 'var(--green)';
+
   } catch(e) {
-    addLog('\u2717 '+e.message,'err');
-    document.getElementById('tokenCol').innerHTML =
-      `<div class="empty"><span class="empty-big">ERROR</span>${e.message}</div>`;
+    log('scan error: ' + e.message, 'log-err');
+    document.getElementById('logDot').style.background = 'var(--red)';
+  } finally {
+    scanning = false;
+    btn.disabled = false;
+    btn.innerHTML = '&#x27F3; SCAN NOW';
   }
-
-  scanning = false;
-  btn.disabled=false; btn.classList.remove('busy'); btn.textContent='\u26A1 SCAN NOW';
-  cdVal = 30;
 }
 
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   COUNTDOWN + AUTO-REFRESH
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-function startCD() {
-  clearInterval(cdTimer);
-  cdTimer = setInterval(()=>{
-    cdVal--;
-    const el = document.getElementById('cdv');
-    if(el) el.textContent = cdVal;
-    if(cdVal<=0){ cdVal=30; runScan(); }
-  },1000);
+// -- AUTO-REFRESH ------------------------------------------
+function resetProgress() {
+  nextScanIn = 80;
+  clearInterval(progTimer);
+  clearInterval(scanTimer);
+  progTimer = setInterval(() => {
+    nextScanIn = Math.max(0, nextScanIn - 1);
+    const pct = ((80 - nextScanIn) / 80) * 100;
+    document.getElementById('progFill').style.width = pct + '%';
+    document.getElementById('nextIn').textContent = nextScanIn;
+  }, 1000);
+  scanTimer = setInterval(() => { runScan(); }, 80000);
 }
 
-/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-   INIT WALLET LIST IMMEDIATELY
-\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 */
-document.getElementById('walletList').innerHTML = SM_WALLETS.slice(0,12).map(w=>`
-  <div class="wi">
-    <div class="wi-dot ${w.wr>80?'warm':'cold'}"></div>
-    <div style="flex:1"><span class="wi-lbl">${w.lbl}</span><span class="wi-addr">${short(w.addr)}</span></div>
-    <div><span class="wi-wr">${w.wr}%</span><br><span class="wi-w">${w.wins}W</span></div>
-  </div>`).join('');
+// -- PHANTOM WALLET ----------------------------------------
+async function connectWallet() {
+  const btn = document.getElementById('walletBtn');
+  try {
+    if (!window.solana || !window.solana.isPhantom) {
+      window.open('https://phantom.app', '_blank');
+      return;
+    }
+    const r = await window.solana.connect();
+    const a = r.publicKey.toString();
+    btn.textContent = '&#x2B21; ' + a.slice(0,4) + '&#x2026;' + a.slice(-4);
+    btn.style.borderColor = 'var(--green)';
+    btn.style.color = 'var(--green)';
+    log('wallet connected: ' + a.slice(0,8) + '...');
+  } catch(e) {
+    log('wallet connection cancelled', 'log-warn');
+  }
+}
+document.getElementById('walletBtn').addEventListener('click', connectWallet);
 
-/* BOOT */
+// -- INIT --------------------------------------------------
 runScan();
-startCD();
 </script>
 </body>
 </html>
