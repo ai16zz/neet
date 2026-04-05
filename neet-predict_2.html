@@ -819,7 +819,7 @@ function fmtP(p){if(!p)return'——';return p>=1000?'$'+p.toLocaleString('en-US
 // ── Backend sync ──────────────────────────────────────────
 async function syncRound(){
   try{
-var _sr=document.getElementById('rn')||document.getElementById('vol_total');if(!_sr)return;
+var _rn=document.getElementById('rn');var _vol=document.getElementById('vol_total');if(!_rn||!_vol)return;
     
     const res=await fetch(`${API_URL}/round/current?market=${activeMarket}`);
     const {round}=await res.json();
