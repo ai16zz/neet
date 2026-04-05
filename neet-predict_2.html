@@ -1796,14 +1796,14 @@ function calcScore(t) {
   if (p24 > 100) s += 12; else if (p24 > 50) s += 9; else if (p24 > 20) s += 6; else if (p24 > 0) s += 2;
   if (p1 > 20) s += 8; else if (p1 > 5) s += 4;
     // Nansen smart money bonus
-  if(window._nansenTokens){var _ni=window._nansenTokens[(t.address||'').toLowerCase()]||window._nansenTokens[(t.addr||'').toLowerCase()];if(_ni){sc+=Math.min(25,_ni.buyCount*5+Math.floor(_ni.totalUsd/200));t._nansenFlag=true;}}
-  if(window._nansenScreener){var _si=_nansenScreener[(t.address||'').toLowerCase()]||_nansenScreener[(t.addr||'').toLowerCase()];if(_si){sc+=Math.min(20,(_si.smartMoneyCount||0)*7);if(_si.riskScore&&_si.riskScore>70)sc-=15;t._screenerFlag=true;t._screenerSMC=_si.smartMoneyCount||0;}}
-  if(window._nansenProfiler){var _pi=_nansenProfiler[(t.address||'').toLowerCase()]||_nansenProfiler[(t.addr||'').toLowerCase()];if(_pi&&_pi.buyCount>=2){sc+=Math.min(30,_pi.buyCount*8+Math.floor(_pi.totalUsd/500));t._profilerFlag=true;t._profilerCount=_pi.buyCount;t._profilerUsd=Math.round(_pi.totalUsd);}}
-  if(window._pumpfunGrads){var _gi=_pumpfunGrads[(t.address||'').toLowerCase()]||_pumpfunGrads[(t.addr||'').toLowerCase()];if(_gi){sc+=12;t._pumpGrad=true;}}
-  if(t._top10pct&&t._top10pct>60)sc-=20;
-  if(t._liquidityThin)sc-=10;
+  if(window._nansenTokens){var _ni=window._nansenTokens[(t.address||'').toLowerCase()]||window._nansenTokens[(t.addr||'').toLowerCase()];if(_ni){s+=Math.min(25,_ni.buyCount*5+Math.floor(_ni.totalUsd/200));t._nansenFlag=true;}}
+  if(window._nansenScreener){var _si=_nansenScreener[(t.address||'').toLowerCase()]||_nansenScreener[(t.addr||'').toLowerCase()];if(_si){s+=Math.min(20,(_si.smartMoneyCount||0)*7);if(_si.riskScore&&_si.riskScore>70)s-=15;t._screenerFlag=true;t._screenerSMC=_si.smartMoneyCount||0;}}
+  if(window._nansenProfiler){var _pi=_nansenProfiler[(t.address||'').toLowerCase()]||_nansenProfiler[(t.addr||'').toLowerCase()];if(_pi&&_pi.buyCount>=2){s+=Math.min(30,_pi.buyCount*8+Math.floor(_pi.totalUsd/500));t._profilerFlag=true;t._profilerCount=_pi.buyCount;t._profilerUsd=Math.round(_pi.totalUsd);}}
+  if(window._pumpfunGrads){var _gi=_pumpfunGrads[(t.address||'').toLowerCase()]||_pumpfunGrads[(t.addr||'').toLowerCase()];if(_gi){s+=12;t._pumpGrad=true;}}
+  if(t._top10pct&&t._top10pct>60)s-=20;
+  if(t._liquidityThin)s-=10;
   if(liq<15000)t._liquidityThin=true;
-  if(liq<15000&&(p24<-25||mc<25000)){sc-=40;t._rugRisk=true;}else if(liq<30000&&p24<-35){sc-=25;t._rugRisk=true;}
+  if(liq<15000&&(p24<-25||mc<25000)){s-=40;t._rugRisk=true;}else if(liq<30000&&p24<-35){s-=25;t._rugRisk=true;}
   return Math.min(Math.round(s), 100);
 }
 function classify(t) {
