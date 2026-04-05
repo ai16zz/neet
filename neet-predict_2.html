@@ -1802,8 +1802,8 @@ function calcScore(t) {
   if(window._pumpfunGrads){var _gi=_pumpfunGrads[(t.address||'').toLowerCase()]||_pumpfunGrads[(t.addr||'').toLowerCase()];if(_gi){s+=12;t._pumpGrad=true;}}
   if(t._top10pct&&t._top10pct>60)s-=20;
   if(t._liquidityThin)s-=10;
-  if(liq<15000)t._liquidityThin=true;
-  if(liq<15000&&(p24<-25||mc<25000)){s-=40;t._rugRisk=true;}else if(liq<30000&&p24<-35){s-=25;t._rugRisk=true;}
+  if(t.src!=='pump.fun'){if(liq<15000)t._liquidityThin=true;
+  if(liq<15000&&(p24<-25||mc<25000)){s-=40;t._rugRisk=true;}else if(liq<30000&&p24<-35){s-=25;t._rugRisk=true;}}
   return Math.min(Math.round(s), 100);
 }
 function classify(t) {
@@ -1953,7 +1953,7 @@ function processPairs(pairs) {
     t.smCount = t.smNames.length;
     t.cls     = classify(t);
     return t;
-  }).filter(t => t.mc >= 15000 && t.mc <= 40000 && t.vol > 0);
+  }).filter(t => t.mc >= 5000 && t.mc <= 200000 && t.vol > 0);
 }
 
 var _nansenTokens={};
