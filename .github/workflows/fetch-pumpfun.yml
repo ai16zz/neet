@@ -1,0 +1,50 @@
+name: Fetch Pump.fun Graduations
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+jobs:
+  fetch-pumpfun:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch recent Pump.fun graduations
+        run: |
+          curl -s "https://frontend-api.pump.fun/coins/recently-migrated?offset=0&limit=50&includeNsfw=false" \
+            -H "Accept: application/json" \
+            -H "User-Agent: Mozilla/5.0" > pumpfun-grads-raw.json
+      - name: Process graduations
+        run: |
+          python3 -c "
+          import json, datetime
+          try:
+            raw = json.load(open('pumpfun-grads-raw.json'))
+          except:
+            raw = []
+          if isinstance(raw, list):
+            coins = raw
+          else:
+            coins = raw.get('coins', raw.get('data', []))
+          result = []
+          for c in coins:
+            result.append({
+              'mint': c.get('mint', ''),
+              'name': c.get('name', ''),
+              'symbol': c.get('symbol', ''),
+              'raydium_pool': c.get('raydium_pool', ''),
+              'usd_market_cap': c.get('usd_market_cap', 0),
+              'migrated_at': c.get('updated_at', '') or c.get('created_timestamp', '')
+            })
+          out = {'data': result, 'last_updated': datetime.datetime.utcnow().isoformat(), 'count': len(result)}
+          json.dump(out, open('pumpfun-grads.json','w'))
+          print(f'Saved {len(result)} graduated tokens')
+          "
+      - name: Commit and push
+        run: |
+          git config user.email "nansen-bot@github.com"
+          git config user.name "Nansen Data Bot"
+          git add pumpfun-grads.json
+          rm -f pumpfun-grads-raw.json
+          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update pumpfun grads [skip ci]" && git push)
