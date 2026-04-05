@@ -1,0 +1,35 @@
+name: Fetch Nansen Token Screener
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+jobs:
+  fetch-screener:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch Nansen Token Screener
+        run: |
+          curl -s -X POST https://api.nansen.ai/api/v1/token-screener \
+            -H "apiKey: ${{ secrets.NANSEN_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"chains":["solana"],"filters":{"age_days":{"max":30,"min":0},"smart_money_count":{"min":2},"trade_value_usd":{"min":5000}},"pagination":{"page":1,"per_page":200},"order_by":[{"field":"smart_money_count","direction":"DESC"}]}' > nansen-screener.json
+      - name: Add timestamp
+        run: |
+          python3 -c "
+          import json, datetime
+          try:
+            d = json.load(open('nansen-screener.json'))
+          except:
+            d = {'data': []}
+          d['last_updated'] = datetime.datetime.utcnow().isoformat()
+          json.dump(d, open('nansen-screener.json','w'))
+          "
+      - name: Commit and push
+        run: |
+          git config user.email "nansen-bot@github.com"
+          git config user.name "Nansen Data Bot"
+          git add nansen-screener.json
+          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update nansen screener [skip ci]" && git push)
