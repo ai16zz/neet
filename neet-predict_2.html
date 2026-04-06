@@ -1937,7 +1937,6 @@ function trackSMWallets(addr,name,wallets,price){
     const ico=ev.type==='IN'?'🟢':'🔴';
     const wShort=ev.wallet.replace(/\[.*?\]/g,'').trim();
     const msg=ico+' '+wShort+' '+(ev.type==='IN'?'ENTERED':'EXITED')+' '+ev.token;
-    if('Notification'in window&&Notification.permission==='granted'){try{new Notification('SM Money Alert',{body:msg,tag:ev.addr+ev.wallet})}catch(e){}}
     const d=document.createElement('div');
     const col=ev.type==='IN'?'#00ff88':'#ff4444';
     d.style.cssText='position:fixed;bottom:'+(20+_smToastN*70)+'px;right:20px;z-index:9999;background:'+(ev.type==='IN'?'rgba(0,255,136,.12)':'rgba(255,68,68,.12)')+';border:1px solid '+col+';color:#fff;padding:12px 18px;border-radius:8px;font:13px monospace;max-width:340px;opacity:1;transition:opacity .4s;box-shadow:0 4px 24px rgba(0,0,0,.6);pointer-events:none;';
@@ -1960,7 +1959,6 @@ function notifyCoin(t,isNew){
   const dexUrl=t.pair?'https://dexscreener.com/solana/'+t.pair:'#';
   const sc=t.score>=70?'#00ff87':t.score>=50?'#f5c400':'#ff3b5c';
   const shortMsg=badge+' '+sym+' | MC:'+mcStr+' | Score:'+t.score+' | '+t.cls.toUpperCase();
-  if('Notification'in window&&Notification.permission==='granted'){try{new Notification(badge+' '+sym,{body:shortMsg,tag:t.addr||t.pair||t.sym})}catch(e){}}
   const d=document.createElement('div');
   const col='#00ccff';
   d.style.cssText='position:fixed;bottom:'+(20+_ncToastN*100)+'px;left:20px;z-index:9999;background:#0d1117;border:1px solid '+col+';color:#fff;padding:14px 16px;border-radius:10px;font:12px monospace;max-width:320px;opacity:1;transition:opacity .4s;box-shadow:0 4px 32px rgba(0,204,255,.2);pointer-events:auto;cursor:pointer;';
