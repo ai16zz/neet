@@ -1804,7 +1804,7 @@ function calcScore(t) {
   if(t._liquidityThin)s-=10;
   if(t.src!=='pump.fun'){if(liq<15000)t._liquidityThin=true;
   if(liq<15000&&(p24<-25||mc<25000)){s-=40;t._rugRisk=true;}else if(liq<30000&&p24<-35){s-=25;t._rugRisk=true;}}
-  var _ds=_devStats[t.addr||''];if(_ds&&_ds.devRate!==undefined){t._devRate=_ds.devRate;t._devRank=_ds.devRank;t._devTotal=_ds.devTotal;if(_ds.devRate>=70)s+=25;else if(_ds.devRate>=40)s+=10;else if(_ds.devRate<10&&(_ds.devTotal||0)>=5)s-=20;}
+  var _ds=_devStats[t.addr||''];if(_ds&&_ds.devRate!==undefined){t._devRate=_ds.devRate;t._devRank=_ds.devRank;t._devTotal=_ds.devTotal;t._devGrad=_ds.devGrad||0;var _dt=_ds.devTotal||0;var _wt=Math.min(1,_dt/3);if(_ds.devRate>=70)s+=Math.round(25*_wt);else if(_ds.devRate>=40)s+=Math.round(10*_wt);else if(_ds.devRate<10&&_dt>=5)s-=20;}
   return Math.min(Math.round(s), 100);
 }
 function classify(t) {
@@ -1871,7 +1871,8 @@ function renderTokens() {
       (t._profilerFlag?'<span style="background:#dc2626;color:#fff;font-size:9px;border-radius:3px;padding:1px 4px">🔴 LIVE '+t._profilerCount+'x $'+t._profilerUsd+'</span>':'')+
       (t._pumpGrad?'<span style="background:#f59e0b;color:#000;font-size:9px;border-radius:3px;padding:1px 4px">🎓 GRAD</span>':'')+
       (t._liquidityThin?'<span style="background:#78350f;color:#fbbf24;font-size:9px;border-radius:3px;padding:1px 4px">⚠️ THIN</span>':'')+
-      (t._rugRisk?'<span style="background:#7f1d1d;color:#fca5a5;font-size:9px;border-radius:3px;padding:1px 4px;font-weight:bold">\u{1F6A8} RUG</span>':'')+(t._devRate!==undefined?'<span style="background:#0f2027;color:'+(t._devRate>=70?'#6ee7b7':t._devRate>=40?'#fbbf24':'#fca5a5')+';font-size:9px;border-radius:3px;padding:1px 4px">\u{1F9E0} '+t._devRate+'%</span>':'')+ 
+      (t._rugRisk?'<span style="background:#7f1d1d;color:#fca5a5;font-size:9px;border-radius:3px;padding:1px 4px;font-weight:bold">\u{1F6A8} RUG</span>':'')+(t._devRate!==undefined?(function(r,g,n){var clr=r>=70&&n>=3?'#6ee7b7':r>=40&&n>=2?'#fbbf24':n<3?'#94a3b8':'#fca5a5';return'<span style="background:#0f2027;color:'+clr+';font-size:9px;border-radius:3px;padding:1px 4px" title="Dev: '+g+'/'+n+' graduated">\u{1F9E0} '+r+'% ['+g+'/'+n+']</span>';})(t._devRate,t._devGrad||0,t._devTotal||1):'')+
+      
       (t._top10pct?'<span style="color:#94a3b8;font-size:9px">👥'+t._top10pct+'%</span>':'')+
       '<button onclick="event.stopPropagation();openChart(this.dataset.a)" data-a="'+(t.address||t.addr||'')+'" style="margin-left:auto;background:#0f172a;color:#38bdf8;border:1px solid #1e40af;border-radius:3px;font-size:9px;padding:1px 7px;cursor:pointer">📊</button>'+
       '</div>'+
@@ -1958,7 +1959,7 @@ function processPairs(pairs) {
 }
 
 var _devStats={};
-async function loadDevStats(){try{var r=await fetch('./neet-dev-stats.json?v='+Date.now());var d=await r.json();if(d&&d.tokens){_devStats=d.tokens;log('[DevStats] loaded: '+Object.keys(_devStats).length+' tokens');if(allTokens.length>0){allTokens.forEach(function(t){var _ds=_devStats[t.addr||''];if(_ds&&_ds.devRate!==undefined){t._devRate=_ds.devRate;t._devRank=_ds.devRank;t._devTotal=_ds.devTotal;}});renderTokens();}}}catch(e){log('[DevStats] offline');}}
+async function loadDevStats(){try{var r=await fetch('./neet-dev-stats.json?v='+Date.now());var d=await r.json();if(d&&d.tokens){_devStats=d.tokens;log('[DevStats] loaded: '+Object.keys(_devStats).length+' tokens');if(allTokens.length>0){allTokens.forEach(function(t){var _ds=_devStats[t.addr||''];if(_ds&&_ds.devRate!==undefined){t._devRate=_ds.devRate;t._devRank=_ds.devRank;t._devTotal=_ds.devTotal;t._devGrad=_ds.devGrad||0;}});renderTokens();}}}catch(e){log('[DevStats] offline');}}
 loadDevStats();
 var _nansenTokens={};
 async function loadNansenData(){
@@ -2001,7 +2002,7 @@ function enrichTokensAsync(tokens){
       if(t._pumpGrad)html+='<span style="background:#f59e0b;color:#000;font-size:9px;border-radius:3px;padding:1px 4px">🎓 GRAD</span>';
       if(t._liquidityThin)html+='<span style="background:#78350f;color:#fbbf24;font-size:9px;border-radius:3px;padding:1px 4px">⚠️ THIN</span>';
       if(t._rugRisk)html+='<span style="background:#7f1d1d;color:#fca5a5;font-size:9px;border-radius:3px;padding:1px 4px;font-weight:bold">🚨 RUG</span>';
-            if(t._devRate!==undefined)html+='<span style="background:#0f2027;color:'+(t._devRate>=70?'#6ee7b7':t._devRate>=40?'#fbbf24':'#fca5a5')+';font-size:9px;border-radius:3px;padding:1px 4px">\u{1F9E0} '+t._devRate+'%</span>';
+            if(t._devRate!==undefined){var _dr=t._devRate,_dg=t._devGrad||0,_dn=t._devTotal||1;var _dc=_dr>=70&&_dn>=3?'#6ee7b7':_dr>=40&&_dn>=2?'#fbbf24':_dn<3?'#94a3b8':'#fca5a5';html+='<span style="background:#0f2027;color:'+_dc+';font-size:9px;border-radius:3px;padding:1px 4px" title="Dev: '+_dg+'/'+_dn+' graduated">\u{1F9E0} '+_dr+'% ['+_dg+'/'+_dn+']</span>';}
       if(t._top10pct)html+='<span style="color:#94a3b8;font-size:9px">👥'+t._top10pct+'%</span>';
       html+='<button onclick="event.stopPropagation();openChart(this.dataset.a)" data-a="'+addr+'" style="margin-left:auto;background:#1e3a5f;border:none;color:#60a5fa;font-size:10px;cursor:pointer;border-radius:3px;padding:1px 5px">📊</button>';
       row.innerHTML=html;
