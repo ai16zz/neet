@@ -1823,7 +1823,7 @@ function calcScore(t) {
   else if(liq<15000&&p24<-30){s-=30;t._rugRisk=true;}
   else if(liq<30000&&p24<-40){s-=20;t._rugRisk=true;}
   if(p1<-50){s-=30;t._rugRisk=true;}
-  if(liq<15000&&(p24<-25||mc<25000)){s-=40;t._rugRisk=true;}else if(liq<30000&&p24<-35){s-=25;t._rugRisk=true;}}
+  if(liq<15000&&(p24<-25||mc<25000)){s-=40;t._rugRisk=true;}else if(liq<30000&&p24<-35){s-=25;t._rugRisk=true;}
   var _ds=_devStats[t.addr||''];if(_ds&&_ds.devRate!==undefined){t._devRate=_ds.devRate;t._devRank=_ds.devRank;t._devTotal=_ds.devTotal;t._devGrad=_ds.devGrad||0;var _dt=_ds.devTotal||0;var _wt=Math.min(1,_dt/3);if(_ds.devRate>=70)s+=Math.round(25*_wt);else if(_ds.devRate>=40)s+=Math.round(10*_wt);else if(_ds.devRate<10&&_dt>=5)s-=20;}
   return Math.min(Math.round(s), 100);
 }
