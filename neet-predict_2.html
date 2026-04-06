@@ -919,7 +919,7 @@ async function init(){
   preloadCharts();
   showChart(activeMarket);
   await fetchPx();
-  ropx=cpx;
+  await syncRound();
   document.getElementById('op').textContent=fmtP(ropx);
   startTimer();
   // === BYBIT WEBSOCKET — real-time prices for HYPE / BTC / SOL ===
