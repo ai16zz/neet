@@ -15,93 +15,113 @@ jobs:
         run: |
           pip install requests -q
           python3 << 'PYEOF'
-          import json, datetime, time, requests
+          import json, datetime, time, requests, sys
 
-          headers = {'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0'}
-          dev_cache = {}
-          token_stats = {}
+          def try_get(url, headers, label=''):
+              try:
+                  r = requests.get(url, headers=headers, timeout=15)
+                  print(f"  {label} status={r.status_code} len={len(r.text)}", flush=True)
+                  if r.status_code == 200:
+                      return r.json()
+                  else:
+                      print(f"  {label} body: {r.text[:200]}", flush=True)
+              except Exception as e:
+                  print(f"  {label} error: {e}", flush=True)
+              return None
 
-          # Fetch recent coins from multiple endpoints
-          endpoints = [
-            "https://frontend-api.pump.fun/coins?offset=0&limit=50&sort=last_trade_timestamp&order=DESC&includeNsfw=false",
-            "https://frontend-api.pump.fun/coins?offset=0&limit=50&sort=market_cap&order=DESC&includeNsfw=false",
-            "https://frontend-api.pump.fun/coins?offset=0&limit=50&sort=created_timestamp&order=DESC&includeNsfw=false",
+          # Try multiple header sets
+          header_sets = [
+              {'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'},
+              {'Accept': 'application/json', 'User-Agent': 'curl/7.68.0'},
+              {'Accept': '*/*'},
           ]
-          all_coins = []
-          for url in endpoints:
-            try:
-              r = requests.get(url, headers=headers, timeout=10)
-              data = r.json()
-              coins = data if isinstance(data, list) else data.get('coins', data.get('data', []))
-              all_coins.extend(coins)
-              print(f"Got {len(coins)} from {url.split('?')[0]}")
-            except Exception as e:
-              print(f"Error: {e}")
 
-          # Deduplicate by mint
+          all_coins = []
+          for hdrs in header_sets:
+              print(f"Trying headers: {list(hdrs.items())[1]}", flush=True)
+              url = "https://frontend-api.pump.fun/coins?offset=0&limit=50&sort=last_trade_timestamp&order=DESC&includeNsfw=false"
+              data = try_get(url, hdrs, 'coins')
+              if data is not None:
+                  coins = data if isinstance(data, list) else data.get('coins', data.get('data', []))
+                  if coins:
+                      print(f"  Got {len(coins)} coins!", flush=True)
+                      all_coins.extend(coins)
+                      break
+              time.sleep(1)
+
+          # Also try the advanced API
+          if not all_coins:
+              print("Trying advanced-api.pump.fun...", flush=True)
+              urls2 = [
+                  "https://advanced-api.pump.fun/coins/list?page=1&limit=50&sortBy=created_timestamp&sortOrder=desc",
+              ]
+              for url in urls2:
+                  data = try_get(url, {'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0'}, url.split('/')[2])
+                  if data:
+                      coins = data if isinstance(data, list) else data.get('coins', data.get('data', data.get('result', [])))
+                      if coins:
+                          print(f"  Got {len(coins)} from advanced api", flush=True)
+                          all_coins.extend(coins)
+                          break
+
+          print(f"Total coins: {len(all_coins)}", flush=True)
+
+          # Deduplicate
           seen = set()
           unique = []
           for c in all_coins:
-            m = c.get('mint', '')
-            if m and m not in seen:
-              seen.add(m)
-              unique.append(c)
-          print(f"Unique tokens: {len(unique)}")
+              m = c.get('mint', '')
+              if m and m not in seen:
+                  seen.add(m)
+                  unique.append(c)
+          print(f"Unique: {len(unique)}", flush=True)
 
-          # For each token, get creator history
+          dev_cache = {}
+          token_stats = {}
+          hdrs = {'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+
           for coin in unique:
-            mint = coin.get('mint', '')
-            creator = coin.get('creator', '')
-            if not mint or not creator:
-              continue
-            if creator not in dev_cache:
-              try:
-                url = f"https://frontend-api.pump.fun/coins/user-created-coins/{creator}?offset=0&limit=200&includeNsfw=false"
-                r = requests.get(url, headers=headers, timeout=10)
-                cc = r.json()
-                if not isinstance(cc, list):
-                  cc = cc.get('coins', [])
-                total = len(cc)
-                grad = sum(1 for x in cc if x.get('complete') or x.get('raydium_pool'))
-                rate = round(grad / total * 100) if total > 0 else 0
-                dev_cache[creator] = {"total": total, "grad": grad, "rate": rate}
-                print(f"  Dev {creator[:8]}: {grad}/{total} = {rate}%")
-              except Exception as e:
-                dev_cache[creator] = {"total": 0, "grad": 0, "rate": 0}
-              time.sleep(0.15)
-            s = dev_cache.get(creator, {})
-            rate = s.get('rate', 0)
-            total = s.get('total', 0)
-            rank = 'elite' if rate >= 70 else 'good' if rate >= 40 else 'avg' if rate >= 20 else ('new' if total < 3 else 'rug')
-            token_stats[mint] = {
-              "devRate": rate, "devGrad": s.get('grad', 0),
-              "devTotal": total, "devRank": rank,
-              "creator": creator[:8]
-            }
+              mint = coin.get('mint', '')
+              creator = coin.get('creator', '')
+              if not mint or not creator:
+                  continue
+              if creator not in dev_cache:
+                  url = f"https://frontend-api.pump.fun/coins/user-created-coins/{creator}?offset=0&limit=200&includeNsfw=false"
+                  cc_data = try_get(url, hdrs, f"dev {creator[:8]}")
+                  cc = []
+                  if cc_data is not None:
+                      cc = cc_data if isinstance(cc_data, list) else cc_data.get('coins', [])
+                  total = len(cc)
+                  grad = sum(1 for x in cc if x.get('complete') or x.get('raydium_pool'))
+                  rate = round(grad / total * 100) if total > 0 else 0
+                  dev_cache[creator] = {"total": total, "grad": grad, "rate": rate}
+                  time.sleep(0.15)
+              s = dev_cache.get(creator, {})
+              rate = s.get('rate', 0)
+              total = s.get('total', 0)
+              rank = 'elite' if rate >= 70 else 'good' if rate >= 40 else 'avg' if rate >= 20 else ('new' if total < 3 else 'rug')
+              token_stats[mint] = {
+                  "devRate": rate, "devGrad": s.get('grad', 0),
+                  "devTotal": total, "devRank": rank,
+                  "creator": creator[:8]
+              }
 
-          # Also fetch recently graduated coins
           grads = []
-          try:
-            r = requests.get("https://frontend-api.pump.fun/coins?offset=0&limit=50&sort=last_trade_timestamp&order=DESC&includeNsfw=false&complete=true", headers=headers, timeout=10)
-            data = r.json()
-            raw = data if isinstance(data, list) else data.get('coins', data.get('data', []))
-            grads = [{'mint': c.get('mint',''), 'name': c.get('name',''), 'symbol': c.get('symbol',''),
-                      'usd_market_cap': c.get('usd_market_cap', 0), 'migrated_at': c.get('updated_at','')} for c in raw]
-            print(f"Got {len(grads)} graduated coins")
-          except Exception as e:
-            print(f"Grads error: {e}")
+          url = "https://frontend-api.pump.fun/coins?offset=0&limit=50&sort=last_trade_timestamp&order=DESC&includeNsfw=false&complete=true"
+          data = try_get(url, hdrs, 'grads')
+          if data:
+              raw = data if isinstance(data, list) else data.get('coins', data.get('data', []))
+              grads = [{'mint': c.get('mint',''), 'name': c.get('name',''), 'symbol': c.get('symbol',''),
+                        'usd_market_cap': c.get('usd_market_cap', 0)} for c in raw]
+          print(f"Grads: {len(grads)}", flush=True)
 
-          # Save dev stats
           out = {"updated": datetime.datetime.utcnow().isoformat(),
                  "tokenCount": len(token_stats), "devCount": len(dev_cache),
                  "tokens": token_stats}
           json.dump(out, open('neet-dev-stats.json', 'w'))
-
-          # Save grads
           json.dump({"data": grads, "last_updated": datetime.datetime.utcnow().isoformat(), "count": len(grads)},
                     open('pumpfun-grads.json', 'w'))
-
-          print(f"Done: {len(token_stats)} tokens, {len(dev_cache)} devs, {len(grads)} grads")
+          print(f"Done: {len(token_stats)} tokens, {len(dev_cache)} devs, {len(grads)} grads", flush=True)
           PYEOF
 
       - name: Commit and push
