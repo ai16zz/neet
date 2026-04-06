@@ -17,41 +17,42 @@ jobs:
           python3 << 'PYEOF'
           import json, datetime, time, requests
 
-          def try_get(url, hdrs, label=''):
+          HDRS = {
+              'Accept': 'application/json',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          }
+          BASE_URLS = [
+              'https://frontend-api-v3.pump.fun',
+              'https://frontend-api.pump.fun',
+          ]
+
+          def try_get(url, label=''):
               try:
-                  r = requests.get(url, headers=hdrs, timeout=15)
-                  print(f"  {label} status={r.status_code}", flush=True)
+                  r = requests.get(url, headers=HDRS, timeout=15)
+                  print(f"  {label} status={r.status_code} len={len(r.text)}", flush=True)
                   if r.status_code == 200:
                       return r.json()
                   else:
-                      print(f"  {label} body: {r.text[:300]}", flush=True)
+                      print(f"  {label} body: {r.text[:200]}", flush=True)
               except Exception as e:
                   print(f"  {label} error: {e}", flush=True)
               return None
 
-          HDRS = {'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
-
+          # Fetch recent coins - try v3 first
           all_coins = []
-
-          # Try pump.fun frontend API
-          for sort in ['last_trade_timestamp', 'market_cap', 'created_timestamp']:
-              url = f"https://frontend-api.pump.fun/coins?offset=0&limit=50&sort={sort}&order=DESC&includeNsfw=false"
-              data = try_get(url, HDRS, f"pumpfun/{sort}")
-              if data is not None:
-                  coins = data if isinstance(data, list) else data.get('coins', data.get('data', []))
-                  all_coins.extend(coins)
-                  print(f"  got {len(coins)} coins", flush=True)
-
-          # Fallback: client API (heroku)
-          if not all_coins:
-              print("Trying heroku fallback...", flush=True)
-              for sort in ['last_trade_timestamp', 'market_cap']:
-                  url = f"https://client-api-2-74b1891ee9f9.herokuapp.com/coins?offset=0&limit=50&sort={sort}&order=DESC&includeNsfw=false"
-                  data = try_get(url, HDRS, f"heroku/{sort}")
+          for base in BASE_URLS:
+              found = False
+              for sort in ['last_trade_timestamp', 'market_cap', 'created_timestamp']:
+                  url = f"{base}/coins?offset=0&limit=50&sort={sort}&order=DESC&includeNsfw=false"
+                  data = try_get(url, f"{base.split('//')[1].split('.')[1]}/{sort}")
                   if data is not None:
                       coins = data if isinstance(data, list) else data.get('coins', data.get('data', []))
-                      all_coins.extend(coins)
-                      print(f"  got {len(coins)} coins", flush=True)
+                      if coins:
+                          all_coins.extend(coins)
+                          print(f"  got {len(coins)} coins from {base}", flush=True)
+                          found = True
+              if found:
+                  break
 
           # Deduplicate
           seen = set()
@@ -72,11 +73,10 @@ jobs:
               if not mint or not creator:
                   continue
               if creator not in dev_cache:
-                  # Try frontend-api first, then heroku fallback
                   cc_data = None
-                  for base in ['https://frontend-api.pump.fun', 'https://client-api-2-74b1891ee9f9.herokuapp.com']:
+                  for base in BASE_URLS:
                       url = f"{base}/coins/user-created-coins/{creator}?offset=0&limit=200&includeNsfw=false"
-                      cc_data = try_get(url, HDRS, f"dev {creator[:8]}")
+                      cc_data = try_get(url, f"dev_{base.split('.')[0][-2:]}")
                       if cc_data is not None:
                           break
                   cc = []
@@ -86,7 +86,7 @@ jobs:
                   grad = sum(1 for x in cc if x.get('complete') or x.get('raydium_pool'))
                   rate = round(grad / total * 100) if total > 0 else 0
                   dev_cache[creator] = {"total": total, "grad": grad, "rate": rate}
-                  print(f"  dev {creator[:8]}: {grad}/{total} = {rate}%", flush=True)
+                  print(f"  dev {creator[:8]}: {grad}/{total}={rate}%", flush=True)
                   time.sleep(0.15)
               s = dev_cache.get(creator, {})
               rate = s.get('rate', 0)
@@ -94,15 +94,14 @@ jobs:
               rank = 'elite' if rate >= 70 else 'good' if rate >= 40 else 'avg' if rate >= 20 else ('new' if total < 3 else 'rug')
               token_stats[mint] = {
                   "devRate": rate, "devGrad": s.get('grad', 0),
-                  "devTotal": total, "devRank": rank,
-                  "creator": creator[:8]
+                  "devTotal": total, "devRank": rank, "creator": creator[:8]
               }
 
-          # Fetch graduated coins
+          # Graduated coins
           grads = []
-          for base in ['https://frontend-api.pump.fun', 'https://client-api-2-74b1891ee9f9.herokuapp.com']:
+          for base in BASE_URLS:
               url = f"{base}/coins?offset=0&limit=50&sort=last_trade_timestamp&order=DESC&includeNsfw=false&complete=true"
-              data = try_get(url, HDRS, 'grads')
+              data = try_get(url, 'grads')
               if data is not None:
                   raw = data if isinstance(data, list) else data.get('coins', data.get('data', []))
                   grads = [{'mint': c.get('mint',''), 'name': c.get('name',''), 'symbol': c.get('symbol',''),
@@ -111,12 +110,11 @@ jobs:
                       break
           print(f"Grads: {len(grads)}", flush=True)
 
-          out = {"updated": datetime.datetime.utcnow().isoformat(),
-                 "tokenCount": len(token_stats), "devCount": len(dev_cache),
-                 "tokens": token_stats}
-          json.dump(out, open('neet-dev-stats.json', 'w'))
-          json.dump({"data": grads, "last_updated": datetime.datetime.utcnow().isoformat(), "count": len(grads)},
-                    open('pumpfun-grads.json', 'w'))
+          json.dump({"updated": datetime.datetime.utcnow().isoformat(),
+                     "tokenCount": len(token_stats), "devCount": len(dev_cache),
+                     "tokens": token_stats}, open('neet-dev-stats.json', 'w'))
+          json.dump({"data": grads, "last_updated": datetime.datetime.utcnow().isoformat(),
+                     "count": len(grads)}, open('pumpfun-grads.json', 'w'))
           print(f"Done: {len(token_stats)} tokens, {len(dev_cache)} devs, {len(grads)} grads", flush=True)
           PYEOF
 
