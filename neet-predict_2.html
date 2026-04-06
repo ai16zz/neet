@@ -20,7 +20,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
 .ticker-t{display:inline-flex;animation:tick 32s linear infinite;}
 .ti{display:inline-flex;align-items:center;gap:18px;padding:0 32px;font-family:var(--mono);font-size:10px;letter-spacing:.13em;color:rgba(0,255,135,.5);}
 .ti b{color:var(--green);}.ts{color:rgba(0,255,135,.2);}
-@keyframes tick{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+@keyframes tick{from{transform:translateX(0);}to{transform:translateX(-50%);}}h
 header{position:sticky;top:0;z-index:200;background:rgba(5,6,10,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 22px;height:58px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .logo{text-decoration:none;display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .logo-t{font-family:var(--dsp);font-size:23px;letter-spacing:.06em;color:var(--text);}
@@ -2001,6 +2001,7 @@ function enrichTokensAsync(tokens){
       if(t._pumpGrad)html+='<span style="background:#f59e0b;color:#000;font-size:9px;border-radius:3px;padding:1px 4px">🎓 GRAD</span>';
       if(t._liquidityThin)html+='<span style="background:#78350f;color:#fbbf24;font-size:9px;border-radius:3px;padding:1px 4px">⚠️ THIN</span>';
       if(t._rugRisk)html+='<span style="background:#7f1d1d;color:#fca5a5;font-size:9px;border-radius:3px;padding:1px 4px;font-weight:bold">🚨 RUG</span>';
+            if(t._devRate!==undefined)html+='<span style="background:#0f2027;color:'+(t._devRate>=70?'#6ee7b7':t._devRate>=40?'#fbbf24':'#fca5a5')+';font-size:9px;border-radius:3px;padding:1px 4px">\u{1F9E0} '+t._devRate+'%</span>';
       if(t._top10pct)html+='<span style="color:#94a3b8;font-size:9px">👥'+t._top10pct+'%</span>';
       html+='<button onclick="event.stopPropagation();openChart(this.dataset.a)" data-a="'+addr+'" style="margin-left:auto;background:#1e3a5f;border:none;color:#60a5fa;font-size:10px;cursor:pointer;border-radius:3px;padding:1px 5px">📊</button>';
       row.innerHTML=html;
