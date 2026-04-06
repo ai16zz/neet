@@ -1807,7 +1807,7 @@ function calcScore(t) {
   else if (mc > 500000 && mc <= 2e6) s += 5;
   const vr = mc > 0 ? vol/mc : 0;
   if (vr > 3) s += 12; else if (vr > 1) s += 8; else if (vr > 0.3) s += 4;
-  if (liq >= 8000 && liq <= 80000) s += 8; else if (liq >= 3000) s += 4;
+  if (liq >= 8000 && liq <= 80000) s += 8; else if (liq >= 5000) s += 3;
   if (p24 > 100) s += 12; else if (p24 > 50) s += 9; else if (p24 > 20) s += 6; else if (p24 > 0) s += 2;
   if (p1 > 20) s += 8; else if (p1 > 5) s += 4;
     // Nansen smart money bonus
@@ -1816,8 +1816,13 @@ function calcScore(t) {
   if(window._nansenProfiler){var _pi=_nansenProfiler[(t.address||'').toLowerCase()]||_nansenProfiler[(t.addr||'').toLowerCase()];if(_pi&&_pi.buyCount>=2){s+=Math.min(30,_pi.buyCount*8+Math.floor(_pi.totalUsd/500));t._profilerFlag=true;t._profilerCount=_pi.buyCount;t._profilerUsd=Math.round(_pi.totalUsd);}}
   if(window._pumpfunGrads){var _gi=_pumpfunGrads[(t.address||'').toLowerCase()]||_pumpfunGrads[(t.addr||'').toLowerCase()];if(_gi){s+=12;t._pumpGrad=true;}}
   if(t._top10pct&&t._top10pct>60)s-=20;
-  if(t._liquidityThin)s-=10;
-  if(t.src!=='pump.fun'){if(liq<15000)t._liquidityThin=true;
+  const liqRatio=mc>0?liq/mc:0;
+  if(liq<5000){t._liquidityThin=true;s-=20;}
+  else if(liq<10000){t._liquidityThin=true;s-=10;}
+  if(liqRatio<0.03&&mc>20000){s-=35;t._rugRisk=true;}
+  else if(liq<15000&&p24<-30){s-=30;t._rugRisk=true;}
+  else if(liq<30000&&p24<-40){s-=20;t._rugRisk=true;}
+  if(p1<-50){s-=30;t._rugRisk=true;}
   if(liq<15000&&(p24<-25||mc<25000)){s-=40;t._rugRisk=true;}else if(liq<30000&&p24<-35){s-=25;t._rugRisk=true;}}
   var _ds=_devStats[t.addr||''];if(_ds&&_ds.devRate!==undefined){t._devRate=_ds.devRate;t._devRank=_ds.devRank;t._devTotal=_ds.devTotal;t._devGrad=_ds.devGrad||0;var _dt=_ds.devTotal||0;var _wt=Math.min(1,_dt/3);if(_ds.devRate>=70)s+=Math.round(25*_wt);else if(_ds.devRate>=40)s+=Math.round(10*_wt);else if(_ds.devRate<10&&_dt>=5)s-=20;}
   return Math.min(Math.round(s), 100);
@@ -2258,8 +2263,8 @@ async function runScan() {
     const _calledMC=JSON.parse(localStorage.getItem('neet_called_mc')||'{}');
     const _ntTs=JSON.parse(localStorage.getItem('neet_notif_ts')||'{}');
     let _ntDirty=false;
-    allTokens=allTokens.filter(t=>!t.liq||t.liq>=3000);
-    allTokens.forEach(t=>{const k=t.addr||t.pair||t.sym;if(!k)return;if(!_calledMC[k]){_calledMC[k]={mc:t.mc,ts:Date.now()};}t._calledMC=_calledMC[k].mc;_seenTokenKeys.add(k);if(_mcPrev[k]&&_mcPrev[k]>0&&t.mc>0){t._mcVel=(t.mc-_mcPrev[k])/_mcPrev[k];if(t._mcVel>=0.4){t._rocket=true;t.score=Math.min(100,t.score+15);}}  _mcPrev[k]=t.mc;const isRocket=!!t._rocket;const threshold=isRocket?35:50;const cooldown=isRocket?30*60*1000:4*3600*1000;if(t.score>=threshold){const lastN=_ntTs[k]||0;if(Date.now()-lastN>cooldown){_ntTs[k]=Date.now();_ntDirty=true;notifyCoin(t,!_prevKeys.has(k));}}});
+    allTokens=allTokens.filter(t=>!t.liq||t.liq>=5000);
+    allTokens.forEach(t=>{const k=t.addr||t.pair||t.sym;if(!k)return;if((t.p1<-50||t.p24<-70)&&!t._rocket)return;if(!_calledMC[k]){_calledMC[k]={mc:t.mc,ts:Date.now()};}t._calledMC=_calledMC[k].mc;_seenTokenKeys.add(k);if(_mcPrev[k]&&_mcPrev[k]>0&&t.mc>0){t._mcVel=(t.mc-_mcPrev[k])/_mcPrev[k];if(t._mcVel>=0.4){t._rocket=true;t.score=Math.min(100,t.score+15);}}  _mcPrev[k]=t.mc;const isRocket=!!t._rocket;const threshold=isRocket?35:50;const cooldown=isRocket?30*60*1000:4*3600*1000;if(t.score>=threshold){const lastN=_ntTs[k]||0;if(Date.now()-lastN>cooldown){_ntTs[k]=Date.now();_ntDirty=true;notifyCoin(t,!_prevKeys.has(k));}}});
     try{localStorage.setItem('neet_called_mc',JSON.stringify(_calledMC));}catch(e){}
     if(_ntDirty){try{localStorage.setItem('neet_notif_ts',JSON.stringify(_ntTs));}catch(e){}}
     logCalls(allTokens);
