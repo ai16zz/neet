@@ -1902,10 +1902,50 @@ function demoPairs() {
 }
 
 // -- SM SIGNAL SIMULATION ---------------------------------
-function assignSM(score) {
+// -- SM TRACKING ENGINE --
+function _smHash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h^s.charCodeAt(i))>>>0;return h;}
+let _smToastN=0;
+function _loadSMH(){try{return JSON.parse(localStorage.getItem('neet_smh')||'{}')}catch(e){return{}}}
+function _saveSMH(h){try{localStorage.setItem('neet_smh',JSON.stringify(h))}catch(e){}}
+function trackSMWallets(addr,name,wallets,price){
+  if(!addr)return[];
+  const hist=_loadSMH(),now=Date.now(),evts=[],cur=new Set(wallets);
+  if(!hist[addr])hist[addr]={n:name,w:{}};
+  wallets.forEach(wn=>{
+    if(!hist[addr].w[wn]){hist[addr].w[wn]={s:'IN',t0:now,ls:now,p0:price,ms:0};evts.push({type:'IN',wallet:wn,token:name,addr,price});}
+    else{const wd=hist[addr].w[wn];wd.ls=now;wd.ms=0;if(wd.s==='OUT'){wd.s='IN';wd.t0=now;wd.p0=price;evts.push({type:'IN',wallet:wn,token:name,addr,price});}}
+  });
+  Object.entries(hist[addr].w).forEach(([wn,wd])=>{
+    if(!cur.has(wn)&&wd.s==='IN'){wd.ms=(wd.ms||0)+1;if(wd.ms>=2){wd.s='OUT';wd.tOut=now;wd.pOut=price;evts.push({type:'OUT',wallet:wn,token:name,addr,price});}}
+  });
+  _saveSMH(hist);
+  evts.forEach(ev=>{
+    const ico=ev.type==='IN'?'🟢':'🔴';
+    const wShort=ev.wallet.replace(/\[.*?\]/g,'').trim();
+    const msg=ico+' '+wShort+' '+(ev.type==='IN'?'ENTERED':'EXITED')+' '+ev.token;
+    if('Notification'in window&&Notification.permission==='granted'){try{new Notification('SM Money Alert',{body:msg,tag:ev.addr+ev.wallet})}catch(e){}}
+    const d=document.createElement('div');
+    const col=ev.type==='IN'?'#00ff88':'#ff4444';
+    d.style.cssText='position:fixed;bottom:'+(20+_smToastN*70)+'px;right:20px;z-index:9999;background:'+(ev.type==='IN'?'rgba(0,255,136,.12)':'rgba(255,68,68,.12)')+';border:1px solid '+col+';color:#fff;padding:12px 18px;border-radius:8px;font:13px monospace;max-width:340px;opacity:1;transition:opacity .4s;box-shadow:0 4px 24px rgba(0,0,0,.6);pointer-events:none;';
+    d.innerHTML='<div style="color:'+col+';font-weight:700;margin-bottom:4px">SM '+ev.type+'</div>'+msg;
+    document.body.appendChild(d);_smToastN++;
+    setTimeout(()=>{d.style.opacity='0';setTimeout(()=>{d.remove();_smToastN=Math.max(0,_smToastN-1);},400);},7000);
+  });
+  return evts;
+}
+function getSMHistory(addr){const hist=_loadSMH();if(!hist[addr])return[];return Object.entries(hist[addr].w||{}).map(([name,d])=>({name,status:d.s,since:d.t0,lastSeen:d.ls,inPrice:d.p0,outPrice:d.pOut||null}));}
+function clearSMHistory(){localStorage.removeItem('neet_smh');}
+// -- SM WALLET ASSIGNMENT (deterministic, stable across refreshes) --
+function assignSM(score,addr) {
   if (score < 20) return [];
-  const n = Math.random() < (score/100) ? Math.ceil(Math.random()*Math.min(4,Math.floor(score/20))) : 0;
-  return [...SM_WALLETS].sort(()=>Math.random()-0.5).slice(0,n).map(w=>w.name);
+  addr=addr||'x';
+  const h1=_smHash(addr),h2=_smHash(addr+'seed');
+  if((h1%100)>=score)return[];
+  const maxN=Math.min(4,Math.floor(score/20));
+  const n=Math.max(1,(h2%maxN)+1);
+  const ws=[...SM_WALLETS];
+  for(let i=ws.length-1;i>0;i--){const j=_smHash(addr+i)%(i+1);[ws[i],ws[j]]=[ws[j],ws[i]];}
+  return ws.slice(0,n).map(w=>w.name);
 }
 
 // -- FETCH & PROCESS --------------------------------------
@@ -1951,7 +1991,8 @@ function processPairs(pairs) {
     const t = { name:bt.name||'Unknown', sym:bt.symbol||'?', pair:p.pairAddress||'', addr:bt.address||'',
       src:lbl.includes('pump')?'pump.fun':'raydium', mc, vol, liq, p24, p1, created };
     t.score   = calcScore(t);
-    t.smNames = assignSM(t.score);
+    t.smNames = assignSM(t.score, t.address||t.addr||'');
+    trackSMWallets(t.address||t.addr||'', t.name||t.symbol||'', t.smNames, t.price||t.px||0);
     t.smCount = t.smNames.length;
     t.cls     = classify(t);
     return t;
@@ -2012,6 +2053,7 @@ function enrichTokensAsync(tokens){
 }
 // -- MAIN SCAN --------------------------------------------
 async function runScan() {
+  if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();
   if (scanning) return;
   scanning = true;
   await loadNansenData();
