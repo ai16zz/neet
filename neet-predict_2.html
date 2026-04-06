@@ -2007,7 +2007,7 @@ function renderCallsLog(){
     const catIcon={early:'⚡',hot:'🔥',accumulating:'▲',distributing:'▼',dead:'☠'}[e.cls]||'';
     const dex=e.pair?'https://dexscreener.com/solana/'+e.pair:'#';
     const pills=(e.smNames||[]).slice(0,2).map(n=>'<span style="background:rgba(124,58,237,.25);border:1px solid #7C3AED;color:#c4b5fd;border-radius:3px;padding:1px 5px;font-size:10px">'+n+'</span>').join(' ');
-    return '<div onclick="window.open(''+dex+'','_blank')" style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 6px;border-bottom:1px solid #1a1a2e;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.03)'" onmouseout="this.style.background='none'">'
+    return '<div onclick="window.open(\x27'+dex+'\x27,\x27_blank\x27)" style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 6px;border-bottom:1px solid #1a1a2e;cursor:pointer;transition:background .15s">'
       +'<div>'
         +'<span style="color:#fff;font-weight:700">$'+e.sym+'</span> '
         +'<span style="color:#555;font-size:11px">'+e.name+'</span>'
