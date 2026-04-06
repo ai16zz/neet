@@ -1717,6 +1717,7 @@ const TICKER_ITEMS = [
 ];
 
 let allTokens = []; let curFilter = 'all';
+let _seenTokenKeys=new Set();
 let nextScanIn = 80; let scanning = false;
 let scanTimer = null; let progTimer = null;
 
@@ -1858,7 +1859,7 @@ function renderTokens() {
         '<div class="score-num" style="color:'+scoreColor+'">' + t.score + '</div>' +
         '<div class="score-bar-bg"><div class="score-bar-fill" style="width:'+t.score+'%;background:'+scoreColor+'"></div></div>' +
       '</div>' +
-      '<div class="mono dim" style="font-size:12px">' + fmtMC(t.mc)  + '</div>' +
+      '<div class="mono dim" style="font-size:12px">' + fmtMC(t.mc) + (t._calledMC&&t._calledMC!==t.mc?'<div style="font-size:10px;color:#00ccff;margin-top:1px">called '+fmtMC(t._calledMC)+'</div>':'') + '</div>' +
       '<div class="mono dim" style="font-size:12px">' + fmtMC(t.vol) + '</div>' +
       '<div class="mono dimmer" style="font-size:12px">' + (t.created ? fmtAge(t.created) : '&#8212;') + '</div>' +
       '<div class="mono dim" style="font-size:12px">' + fmtMC(t.liq) + '</div>' +
@@ -1904,7 +1905,7 @@ function demoPairs() {
 // -- SM SIGNAL SIMULATION ---------------------------------
 // -- SM TRACKING ENGINE --
 function _smHash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h^s.charCodeAt(i))>>>0;return h;}
-let _smToastN=0;
+let _smToastN=0;let _ncToastN=0;
 function _loadSMH(){try{return JSON.parse(localStorage.getItem('neet_smh')||'{}')}catch(e){return{}}}
 function _saveSMH(h){try{localStorage.setItem('neet_smh',JSON.stringify(h))}catch(e){}}
 function trackSMWallets(addr,name,wallets,price){
@@ -1935,6 +1936,18 @@ function trackSMWallets(addr,name,wallets,price){
 }
 function getSMHistory(addr){const hist=_loadSMH();if(!hist[addr])return[];return Object.entries(hist[addr].w||{}).map(([name,d])=>({name,status:d.s,since:d.t0,lastSeen:d.ls,inPrice:d.p0,outPrice:d.pOut||null}));}
 function clearSMHistory(){localStorage.removeItem('neet_smh');}
+function notifyNewCoin(t){
+  const sym='$'+(t.sym||t.name||'???');
+  const mcStr=fmtMC(t.mc);
+  const msg='🆕 '+sym+' found — MC: '+mcStr+' — '+t.cls.toUpperCase()+' (score: '+t.score+')';
+  if('Notification'in window&&Notification.permission==='granted'){try{new Notification('New Coin Found',{body:msg,tag:t.addr||t.pair||t.sym})}catch(e){}}
+  const d=document.createElement('div');
+  const col='#00ccff';
+  d.style.cssText='position:fixed;bottom:'+(20+_ncToastN*75)+'px;left:20px;z-index:9999;background:rgba(0,204,255,.10);border:1px solid '+col+';color:#fff;padding:12px 18px;border-radius:8px;font:13px monospace;max-width:340px;opacity:1;transition:opacity .4s;box-shadow:0 4px 24px rgba(0,0,0,.6);pointer-events:none;';
+  d.innerHTML='<div style="color:'+col+';font-weight:700;margin-bottom:4px">🆕 NEW COIN</div>'+sym+' &middot; MC: '+mcStr+'<div style="color:#aaa;font-size:11px;margin-top:3px">'+t.cls.toUpperCase()+' &middot; Score: '+t.score+'</div>';
+  document.body.appendChild(d);_ncToastN++;
+  setTimeout(()=>{d.style.opacity='0';setTimeout(()=>{d.remove();_ncToastN=Math.max(0,_ncToastN-1);},400);},9000);
+}
 // -- SM WALLET ASSIGNMENT (deterministic, stable across refreshes) --
 function assignSM(score,addr) {
   if (score < 20) return [];
@@ -2080,7 +2093,11 @@ async function runScan() {
       log('using demo data (DexScreener rate limited)','log-warn');
       pairs = demoPairs();
     }
+    const _prevKeys=new Set(_seenTokenKeys);
     allTokens = processPairs(pairs);
+    const _calledMC=JSON.parse(localStorage.getItem('neet_called_mc')||'{}');
+    allTokens.forEach(t=>{const k=t.addr||t.pair||t.sym;if(!k)return;if(!_calledMC[k]){_calledMC[k]={mc:t.mc,ts:Date.now()};}t._calledMC=_calledMC[k].mc;_seenTokenKeys.add(k);if(_prevKeys.size>0&&!_prevKeys.has(k))notifyNewCoin(t);});
+    try{localStorage.setItem('neet_called_mc',JSON.stringify(_calledMC));}catch(e){}
     allTokens.sort((a,b) => b.score - a.score);
     const sig   = allTokens.filter(t=>t.smCount>=2).length;
     const hot   = allTokens.filter(t=>t.cls==='hot').length;
