@@ -830,7 +830,7 @@ var _rn=document.getElementById('rn');var _vol=document.getElementById('vol_tota
     rnum=round.id;
     if(round.live_price!=null){
       cpx=round.live_price;
-      if(round.start_price){ropx=round.start_price;_ropxMap[activeMarket]=ropx;}else if(!ropx&&cpx)ropx=cpx;
+      if(round.start_price){ropx=round.start_price;_ropxMap[activeMarket]=ropx;var _opEl=document.getElementById('op');if(_opEl)_opEl.textContent=fmtP(ropx);}else if(!ropx&&cpx)ropx=cpx;
     }
     document.getElementById('rn').textContent='#'+String(rnum).padStart(3,'0');
     document.getElementById('vol_total').textContent=(pool.up+pool.dn).toFixed(3);
@@ -909,8 +909,8 @@ async function switchMarket(market){
   showChart(market);
   await fetchPx();
   if(!ropx)ropx=cpx;
-  document.getElementById('op').textContent=fmtP(ropx);
   await syncRound();
+  document.getElementById('op').textContent=fmtP(ropx);
 }
 
 var _liveWsPx={};
@@ -1908,7 +1908,7 @@ let _smToastN=0;
 function _loadSMH(){try{return JSON.parse(localStorage.getItem('neet_smh')||'{}')}catch(e){return{}}}
 function _saveSMH(h){try{localStorage.setItem('neet_smh',JSON.stringify(h))}catch(e){}}
 function trackSMWallets(addr,name,wallets,price){
-  if(!addr)return[];
+  addr=addr||name||'token';
   const hist=_loadSMH(),now=Date.now(),evts=[],cur=new Set(wallets);
   if(!hist[addr])hist[addr]={n:name,w:{}};
   wallets.forEach(wn=>{
@@ -1991,8 +1991,8 @@ function processPairs(pairs) {
     const t = { name:bt.name||'Unknown', sym:bt.symbol||'?', pair:p.pairAddress||'', addr:bt.address||'',
       src:lbl.includes('pump')?'pump.fun':'raydium', mc, vol, liq, p24, p1, created };
     t.score   = calcScore(t);
-    t.smNames = assignSM(t.score, t.address||t.addr||'');
-    trackSMWallets(t.address||t.addr||'', t.name||t.symbol||'', t.smNames, t.price||t.px||0);
+    t.smNames = assignSM(t.score, t.addr||t.pair||'');
+    trackSMWallets(t.addr||t.pair||'', t.name||t.sym||'', t.smNames, t.mc||0);
     t.smCount = t.smNames.length;
     t.cls     = classify(t);
     return t;
