@@ -1974,11 +1974,7 @@ function notifyCoin(t,isNew){
   d.onclick=(e)=>{if(e.target.tagName!=='A')window.open(dexUrl,'_blank');};
   document.body.appendChild(d);_ncToastN++;
   setTimeout(()=>{d.style.opacity='0';setTimeout(()=>{d.remove();_ncToastN=Math.max(0,_ncToastN-1);},400);},12000);
-  const tgMsg=badge+' *'+sym+'*
-├ MC: '+mcStr+' | Score: '+t.score+' '+catIcon+'
-├ Liq: '+liqStr+' | Vol: '+volStr+'
-├ SM: '+smList+'
-└ [DexScreener]('+dexUrl+')';
+  const tgMsg=badge+' *'+sym+'*'+'\n'+'MC: '+mcStr+' | Score: '+t.score+' '+catIcon+'\n'+'Liq: '+liqStr+' | Vol: '+volStr+'\n'+'SM: '+smList+'\n'+dexUrl;
   sendTelegram(tgMsg);
 }
 // -- CALLS LOG -------------------------------------------
