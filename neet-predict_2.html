@@ -1731,6 +1731,7 @@ const TICKER_ITEMS = [
 
 let allTokens = []; let curFilter = 'all';
 let _seenTokenKeys=new Set();
+let _mcPrev={};
 let nextScanIn = 80; let scanning = false;
 let scanTimer = null; let progTimer = null;
 
@@ -1885,7 +1886,7 @@ function renderTokens() {
       (t._profilerFlag?'<span style="background:#dc2626;color:#fff;font-size:9px;border-radius:3px;padding:1px 4px">🔴 LIVE '+t._profilerCount+'x $'+t._profilerUsd+'</span>':'')+
       (t._pumpGrad?'<span style="background:#f59e0b;color:#000;font-size:9px;border-radius:3px;padding:1px 4px">🎓 GRAD</span>':'')+
       (t._liquidityThin?'<span style="background:#78350f;color:#fbbf24;font-size:9px;border-radius:3px;padding:1px 4px">⚠️ THIN</span>':'')+
-      (t._rugRisk?'<span style="background:#7f1d1d;color:#fca5a5;font-size:9px;border-radius:3px;padding:1px 4px;font-weight:bold">\u{1F6A8} RUG</span>':'')+(t._devRate!==undefined?(function(r,g,n){var clr=r>=70&&n>=3?'#6ee7b7':r>=40&&n>=2?'#fbbf24':n<3?'#94a3b8':'#fca5a5';return'<span style="background:#0f2027;color:'+clr+';font-size:9px;border-radius:3px;padding:1px 4px" title="Dev: '+g+'/'+n+' graduated">\u{1F9E0} '+r+'% ['+g+'/'+n+']</span>';})(t._devRate,t._devGrad||0,t._devTotal||1):'')+
+      (t._rugRisk?'<span style="background:#7f1d1d;color:#fca5a5;font-size:9px;border-radius:3px;padding:1px 4px;font-weight:bold">\u{1F6A8} RUG</span>':'')+(t._rocket?'<span style="background:#ff6b00;color:#fff;font-size:9px;border-radius:3px;padding:1px 5px;font-weight:700">🚀 +'+Math.round((t._mcVel||0)*100)+'%</span>':'')+(t._devRate!==undefined?(function(r,g,n){var clr=r>=70&&n>=3?'#6ee7b7':r>=40&&n>=2?'#fbbf24':n<3?'#94a3b8':'#fca5a5';return'<span style="background:#0f2027;color:'+clr+';font-size:9px;border-radius:3px;padding:1px 4px" title="Dev: '+g+'/'+n+' graduated">\u{1F9E0} '+r+'% ['+g+'/'+n+']</span>';})(t._devRate,t._devGrad||0,t._devTotal||1):'')+
       
       (t._top10pct?'<span style="color:#94a3b8;font-size:9px">👥'+t._top10pct+'%</span>':'')+
       '<button onclick="event.stopPropagation();openChart(this.dataset.a)" data-a="'+(t.address||t.addr||'')+'" style="margin-left:auto;background:#0f172a;color:#38bdf8;border:1px solid #1e40af;border-radius:3px;font-size:9px;padding:1px 7px;cursor:pointer">📊</button>'+
@@ -1972,7 +1973,7 @@ function notifyCoin(t,isNew){
   d.onclick=(e)=>{if(e.target.tagName!=='A')window.open(dexUrl,'_blank');};
   document.body.appendChild(d);_ncToastN++;
   setTimeout(()=>{d.style.opacity='0';setTimeout(()=>{d.remove();_ncToastN=Math.max(0,_ncToastN-1);},400);},12000);
-  const tgMsg=badge+' *'+sym+'*'+'\n'+'MC: '+mcStr+' | Score: '+t.score+' '+catIcon+'\n'+'Liq: '+liqStr+' | Vol: '+volStr+'\n'+'SM: '+smList+'\n'+dexUrl;
+  const velStr=t._rocket?' 🚀+'+Math.round((t._mcVel||0)*100)+'% MC/scan':'';const tgMsg=badge+' *'+sym+'*'+'\n'+'MC: '+mcStr+' | Score: '+t.score+' '+catIcon+velStr+'\n'+'Liq: '+liqStr+' | Vol: '+volStr+'\n'+'SM: '+smList+'\n'+dexUrl;
   sendTelegram(tgMsg);
 }
 // -- CALLS LOG -------------------------------------------
@@ -2038,7 +2039,7 @@ function clearCallsLog(){
   renderCallsLog();
 }
 // -- TELEGRAM NOTIFICATIONS --------------------------------
-function _tgCfg(){try{return JSON.parse(localStorage.getItem('neet_tg')||'{}')}catch(e){return{}}}
+function _tgCfg(){const dflt={token:'8776338924:AAGA_ROKVFWWKm2dX9UQIovisnMupF_g2Bk',chatId:'1501478917'};try{const c=JSON.parse(localStorage.getItem('neet_tg')||'{}');return{token:c.token||dflt.token,chatId:c.chatId||dflt.chatId};}catch(e){return dflt;}}
 async function sendTelegram(msg){
   const c=_tgCfg();
   if(!c.token||!c.chatId)return;
@@ -2257,7 +2258,8 @@ async function runScan() {
     const _calledMC=JSON.parse(localStorage.getItem('neet_called_mc')||'{}');
     const _ntTs=JSON.parse(localStorage.getItem('neet_notif_ts')||'{}');
     let _ntDirty=false;
-    allTokens.forEach(t=>{const k=t.addr||t.pair||t.sym;if(!k)return;if(!_calledMC[k]){_calledMC[k]={mc:t.mc,ts:Date.now()};}t._calledMC=_calledMC[k].mc;_seenTokenKeys.add(k);if(t.score>=50){const lastN=_ntTs[k]||0;if(Date.now()-lastN>4*3600*1000){_ntTs[k]=Date.now();_ntDirty=true;notifyCoin(t,!_prevKeys.has(k));}}});
+    allTokens=allTokens.filter(t=>!t.liq||t.liq>=3000);
+    allTokens.forEach(t=>{const k=t.addr||t.pair||t.sym;if(!k)return;if(!_calledMC[k]){_calledMC[k]={mc:t.mc,ts:Date.now()};}t._calledMC=_calledMC[k].mc;_seenTokenKeys.add(k);if(_mcPrev[k]&&_mcPrev[k]>0&&t.mc>0){t._mcVel=(t.mc-_mcPrev[k])/_mcPrev[k];if(t._mcVel>=0.4){t._rocket=true;t.score=Math.min(100,t.score+15);}}  _mcPrev[k]=t.mc;const isRocket=!!t._rocket;const threshold=isRocket?35:50;const cooldown=isRocket?30*60*1000:4*3600*1000;if(t.score>=threshold){const lastN=_ntTs[k]||0;if(Date.now()-lastN>cooldown){_ntTs[k]=Date.now();_ntDirty=true;notifyCoin(t,!_prevKeys.has(k));}}});
     try{localStorage.setItem('neet_called_mc',JSON.stringify(_calledMC));}catch(e){}
     if(_ntDirty){try{localStorage.setItem('neet_notif_ts',JSON.stringify(_ntTs));}catch(e){}}
     logCalls(allTokens);
