@@ -3022,4 +3022,61 @@ window.padLaunchV2=async function(){
     <div id="tgStatus" style="margin-top:10px;font-size:11px;color:#555;text-align:center"></div>
   </div>
 </div>
+
+<!-- NEET TRENCHES CHAT -->
+<style>
+#neet-chat-tab{position:fixed;top:14px;right:18px;z-index:99998;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:10px;cursor:pointer;font-family:'Courier New',monospace;font-weight:700;font-size:13px;color:#00ffd1;background:rgba(0,20,18,.85);border:1px solid #00ffd1;box-shadow:0 0 12px rgba(0,255,209,.55),inset 0 0 6px rgba(0,255,209,.25);backdrop-filter:blur(6px);user-select:none;letter-spacing:1px;transition:transform .15s ease, box-shadow .2s ease}
+#neet-chat-tab:hover{transform:translateY(-1px);box-shadow:0 0 18px rgba(0,255,209,.85)}
+#neet-chat-tab .dot{width:8px;height:8px;border-radius:50%;background:#00ffd1;box-shadow:0 0 8px #00ffd1;animation:neetPulse 1.6s infinite}
+@keyframes neetPulse{0%,100%{opacity:1}50%{opacity:.35}}
+.neet-backdrop{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.78);backdrop-filter:blur(4px);font-family:'Courier New',monospace;color:#d6fff8}
+.neet-backdrop.show{display:flex}
+.neet-panel{width:min(560px,92vw);max-height:88vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#031613 0%,#000a09 100%);border:1px solid #00ffd1;border-radius:14px;overflow:hidden;box-shadow:0 0 40px rgba(0,255,209,.35)}
+.neet-panel.chat{width:min(720px,94vw);height:min(78vh,720px)}
+.neet-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid rgba(0,255,209,.3);background:rgba(0,255,209,.06)}
+.neet-head h3{margin:0;font-size:15px;color:#00ffd1;letter-spacing:1.5px}
+.neet-close{background:none;border:none;color:#00ffd1;font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
+.neet-body{padding:18px;overflow-y:auto;flex:1}
+.neet-row{margin-bottom:14px}
+.neet-row label{display:block;font-size:11px;color:#7fffe7;margin-bottom:6px;letter-spacing:1px}
+.neet-input{width:100%;padding:10px 12px;background:#000;color:#d6fff8;border:1px solid #007a66;border-radius:8px;font-family:inherit;font-size:13px;box-sizing:border-box}
+.neet-input:focus{outline:none;border-color:#00ffd1;box-shadow:0 0 8px rgba(0,255,209,.5)}
+.neet-btn{display:block;width:100%;padding:11px 14px;margin-top:6px;cursor:pointer;background:transparent;color:#00ffd1;border:1px solid #00ffd1;border-radius:8px;font-family:inherit;font-weight:700;font-size:13px;letter-spacing:1px;transition:all .15s ease}
+.neet-btn:hover{background:rgba(0,255,209,.12);box-shadow:0 0 12px rgba(0,255,209,.55)}
+.neet-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+.neet-btn.primary{background:#00ffd1;color:#001a16}
+.neet-btn.primary:hover{background:#5affe0}
+.neet-status{margin-top:10px;padding:10px;border-radius:6px;font-size:12px;line-height:1.5;background:rgba(0,255,209,.06);border-left:3px solid #00ffd1;color:#a8ffe9;word-break:break-all}
+.neet-status.err{background:rgba(255,60,80,.08);border-left-color:#ff3c50;color:#ffb0b8}
+.neet-status.ok{background:rgba(80,255,140,.08);border-left-color:#5aff8c;color:#b0ffc8}
+.neet-mini{font-size:10px;color:#5fbfae;margin-top:4px}
+.neet-chan{padding:6px 18px;font-size:11px;color:#7fffe7;border-bottom:1px solid rgba(0,255,209,.15);display:flex;justify-content:space-between;align-items:center}
+.neet-msgs{flex:1;overflow-y:auto;padding:14px 18px;font-size:13px;line-height:1.55;background:repeating-linear-gradient(0deg,transparent 0 24px,rgba(0,255,209,.025) 24px 25px)}
+.neet-msg{margin-bottom:10px;word-wrap:break-word}
+.neet-msg .u{color:#00ffd1;font-weight:700}
+.neet-msg .t{color:#4f8a80;font-size:10px;margin-left:6px}
+.neet-msg .b{color:#d6fff8;display:block;margin-top:2px}
+.neet-msgs::-webkit-scrollbar{width:8px}
+.neet-msgs::-webkit-scrollbar-thumb{background:#00ffd1;border-radius:4px}
+.neet-compose{display:flex;gap:8px;padding:12px 18px;border-top:1px solid rgba(0,255,209,.3);background:rgba(0,255,209,.04)}
+.neet-compose input{flex:1;padding:10px 12px;background:#000;color:#d6fff8;border:1px solid #007a66;border-radius:8px;font-family:inherit;font-size:13px}
+.neet-compose input:focus{outline:none;border-color:#00ffd1}
+.neet-compose button{padding:0 18px;background:#00ffd1;color:#001a16;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;letter-spacing:1px;font-size:12px}
+.neet-compose button:disabled{opacity:.4;cursor:not-allowed}
+.neet-cooldown{font-size:10px;color:#ff9e4a;padding:0 18px 8px;text-align:right}
+</style>
+<div id="neet-chat-tab" onclick="NeetChat.openGate()"><span class="dot"></span> CHAT</div>
+<div class="neet-backdrop" id="neet-gate"><div class="neet-panel"><div class="neet-head"><h3>// ENTER THE TRENCHES</h3><button class="neet-close" onclick="NeetChat.closeGate()">&times;</button></div><div class="neet-body"><p style="margin:0 0 16px;font-size:12px;color:#7fffe7;line-height:1.6">Holders only. Connect your Solana wallet and link your X handle. Wallet must hold <b style="color:#00ffd1">&ge; 1,000 $NEET</b> to chat.</p><div class="neet-row"><label>STEP 1 &mdash; SOLANA WALLET (Phantom)</label><button class="neet-btn" id="neet-wallet-btn" onclick="NeetChat.connectWallet()">CONNECT PHANTOM</button><div class="neet-mini" id="neet-wallet-info"></div></div><div class="neet-row"><label>STEP 2 &mdash; X (TWITTER) HANDLE</label><input class="neet-input" id="neet-x-input" placeholder="@yourhandle" maxlength="32"><div class="neet-mini">Used as your display name in chat.</div></div><button class="neet-btn primary" id="neet-enter-btn" disabled onclick="NeetChat.enterChat()">VERIFY &amp; ENTER #trenches</button><div class="neet-status" id="neet-status" style="display:none"></div></div></div></div>
+<div class="neet-backdrop" id="neet-room"><div class="neet-panel chat"><div class="neet-head"><h3>// #trenches</h3><button class="neet-close" onclick="NeetChat.closeRoom()">&times;</button></div><div class="neet-chan"><span id="neet-me-label">connected</span><span id="neet-online">&#9679;  live</span></div><div class="neet-msgs" id="neet-msgs"></div><div class="neet-cooldown" id="neet-cd"></div><div class="neet-compose"><input id="neet-input" placeholder="say something to the trenches..." maxlength="280" onkeydown="if(event.key==='Enter')NeetChat.send()"><button id="neet-send" onclick="NeetChat.send()">SEND</button></div></div></div>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script>
+const NEET_MINT='Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
+const NEET_MIN_HOLD=1000;
+const RATE_LIMIT_MS=60*1000;
+const SUPABASE_URL='https://YOUR-PROJECT.supabase.co';
+const SUPABASE_ANON_KEY='YOUR-PUBLIC-ANON-KEY';
+const SOLANA_RPC='https://api.mainnet-beta.solana.com';
+const NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastSentAt=0,cdTimer=null;const $=id=>document.getElementById(id);const setStatus=(m,t='')=>{const e=$('neet-status');e.style.display='block';e.className='neet-status '+t;e.textContent=m;};function openGate(){if(wallet&&xHandle&&neetBalance>=NEET_MIN_HOLD){openRoom();return;}$('neet-gate').classList.add('show');}function closeGate(){$('neet-gate').classList.remove('show');}function openRoom(){$('neet-room').classList.add('show');$('neet-me-label').textContent=xHandle+'  ·  '+wallet.slice(0,4)+'…'+wallet.slice(-4)+'  ·  '+neetBalance.toLocaleString()+' NEET';initSupabase();}function closeRoom(){$('neet-room').classList.remove('show');}async function connectWallet(){try{if(!window.solana||!window.solana.isPhantom){setStatus('Phantom wallet not found. Install it from phantom.app','err');return;}const resp=await window.solana.connect();wallet=resp.publicKey.toString();$('neet-wallet-btn').textContent=wallet.slice(0,4)+'…'+wallet.slice(-4)+'  ✓';$('neet-wallet-info').textContent='checking $NEET balance…';await fetchNeetBalance();validate();}catch(e){setStatus('Wallet connect failed: '+e.message,'err');}}async function fetchNeetBalance(){try{const body={jsonrpc:'2.0',id:1,method:'getTokenAccountsByOwner',params:[wallet,{mint:NEET_MINT},{encoding:'jsonParsed'}]};const r=await fetch(SOLANA_RPC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();let total=0;(j.result&&j.result.value||[]).forEach(a=>{const u=a.account.data.parsed.info.tokenAmount.uiAmount;if(u)total+=u;});neetBalance=total;$('neet-wallet-info').textContent='holds '+total.toLocaleString()+' $NEET';}catch(e){neetBalance=0;$('neet-wallet-info').textContent='balance check failed: '+e.message;}}function validate(){const x=$('neet-x-input').value.trim().replace(/^@/,'');const ok=wallet&&x.length>=2&&neetBalance>=NEET_MIN_HOLD;$('neet-enter-btn').disabled=!ok;if(wallet&&neetBalance<NEET_MIN_HOLD)setStatus('You hold '+neetBalance.toLocaleString()+' $NEET. Minimum required: '+NEET_MIN_HOLD.toLocaleString()+'.','err');else if(wallet&&neetBalance>=NEET_MIN_HOLD)setStatus('Verified holder. '+neetBalance.toLocaleString()+' $NEET ✓','ok');}function enterChat(){xHandle='@'+$('neet-x-input').value.trim().replace(/^@/,'');closeGate();openRoom();}function initSupabase(){if(supa)return;if(SUPABASE_URL.indexOf('YOUR-PROJECT')>=0){addLocal('system','⚠ Supabase not configured. Edit SUPABASE_URL/SUPABASE_ANON_KEY in the page source.');return;}supa=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);supa.from('messages').select('*').eq('channel','trenches').order('created_at',{ascending:true}).limit(50).then(({data,error})=>{if(error){addLocal('system','load error: '+error.message);return;}(data||[]).forEach(renderMsg);scrollBottom();});supa.channel('trenches-rt').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:'channel=eq.trenches'},p=>{renderMsg(p.new);scrollBottom();}).subscribe();}function renderMsg(m){const d=document.createElement('div');d.className='neet-msg';const t=new Date(m.created_at||Date.now());const time=t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});d.innerHTML='<span class="u">'+esc(m.handle)+'</span><span class="t">'+time+'</span><span class="b">'+esc(m.body)+'</span>';$('neet-msgs').appendChild(d);}function addLocal(h,b){renderMsg({handle:h,body:b,created_at:new Date().toISOString()});scrollBottom();}function scrollBottom(){const m=$('neet-msgs');m.scrollTop=m.scrollHeight;}function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}async function send(){const i=$('neet-input'),t=i.value.trim();if(!t)return;if(!supa){addLocal('system','chat backend not configured.');return;}const now=Date.now();if(now-lastSentAt<RATE_LIMIT_MS){const left=Math.ceil((RATE_LIMIT_MS-(now-lastSentAt))/1000);$('neet-cd').textContent='slow down — '+left+'s until next message';return;}await fetchNeetBalance();if(neetBalance<NEET_MIN_HOLD){addLocal('system','you no longer hold '+NEET_MIN_HOLD+' $NEET. access revoked.');$('neet-input').disabled=true;$('neet-send').disabled=true;return;}const{error}=await supa.from('messages').insert({channel:'trenches',handle:xHandle,wallet,body:t});if(error){addLocal('system','send failed: '+error.message);return;}i.value='';lastSentAt=now;startCooldown();}function startCooldown(){clearInterval(cdTimer);$('neet-send').disabled=true;cdTimer=setInterval(()=>{const left=Math.ceil((RATE_LIMIT_MS-(Date.now()-lastSentAt))/1000);if(left<=0){clearInterval(cdTimer);$('neet-cd').textContent='';$('neet-send').disabled=false;}else{$('neet-cd').textContent='cooldown — '+left+'s';}},250);}document.addEventListener('input',e=>{if(e.target&&e.target.id==='neet-x-input')validate();});return{openGate,closeGate,connectWallet,enterChat,openRoom,closeRoom,send};})();
+</script>
+<!-- /NEET TRENCHES CHAT -->
 </html>
