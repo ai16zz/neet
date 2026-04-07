@@ -1753,6 +1753,88 @@ let _mcPrev={};
 let nextScanIn = 80; let scanning = false;
 let scanTimer = null; let progTimer = null;
 
+// -- LEARN DB (Pattern Intelligence) -------------------------
+var _learnDB=(function(){
+  try{return JSON.parse(localStorage.getItem('neet_learn_db')||'{}');}catch(e){return{};}
+})();
+if(!_learnDB.badTickers)_learnDB.badTickers={};
+if(!_learnDB.dupTickers)_learnDB.dupTickers={};
+if(!_learnDB.rugAddrs)_learnDB.rugAddrs={};
+if(!_learnDB.goodTickers)_learnDB.goodTickers={};
+if(!_learnDB.stats)_learnDB.stats={scans:0,learned:0,blocked:0,lastLearn:0};
+function _saveLearnDB(){try{localStorage.setItem('neet_learn_db',JSON.stringify(_learnDB));}catch(e){}}
+function learnFromOutcomes(){
+  var log=[];try{log=JSON.parse(localStorage.getItem('neet_calls_log')||'[]');}catch(e){return;}
+  if(!log.length)return;
+  var seen={};var now=Date.now();
+  var pairs=log.filter(function(e){return e.pair&&!seen[e.k]&&(seen[e.k]=true);}).map(function(e){return{k:e.k,pair:e.pair,sym:e.sym,mc:e.calledMC||e.mc,ts:e.ts,addr:e.k};});
+  if(!pairs.length)return;
+  var chunks=[];for(var i=0;i<pairs.length;i+=30)chunks.push(pairs.slice(i,i+30));
+  chunks.forEach(function(chunk){
+    var addrs=chunk.map(function(p){return p.pair;}).join(',');
+    fetch('https://api.dexscreener.com/latest/dex/pairs/solana/'+addrs).then(function(r){return r.json();}).then(function(d){
+      if(!d.pairs)return;
+      d.pairs.forEach(function(p){
+        var pa=p.pairAddress||'';
+        var mc=p.marketCap||p.fdv||0;
+        var entry=chunk.find(function(e){return e.pair===pa;});
+        if(!entry)return;
+        var calledMC=entry.mc||1;
+        var mult=mc/calledMC;
+        var sym=(entry.sym||'').toUpperCase();
+        var addr=entry.addr||'';
+        if(sym){
+          if(!_learnDB.dupTickers[sym]){_learnDB.dupTickers[sym]={count:1,firstAddr:addr,firstTs:entry.ts,addrs:[addr]};}
+          else if(_learnDB.dupTickers[sym].addrs.indexOf(addr)===-1){_learnDB.dupTickers[sym].count++;_learnDB.dupTickers[sym].addrs.push(addr);}
+        }
+        if(mult<0.4){
+          if(!_learnDB.badTickers[sym])_learnDB.badTickers[sym]={rugCount:0,avgDrop:0,lastSeen:0,addrs:[]};
+          var bt=_learnDB.badTickers[sym];
+          bt.rugCount++;bt.avgDrop=(bt.avgDrop*(bt.rugCount-1)+(1-mult)*100)/bt.rugCount;bt.lastSeen=now;
+          if(bt.addrs.indexOf(addr)===-1)bt.addrs.push(addr);
+          _learnDB.rugAddrs[addr]={sym:sym,mc:calledMC,drop:Math.round((1-mult)*100),ts:entry.ts};
+          _learnDB.stats.learned++;
+        }
+        if(mult>=1.5&&sym){
+          if(!_learnDB.goodTickers[sym])_learnDB.goodTickers[sym]={winCount:0,avgMult:0,bestMult:0};
+          var gt=_learnDB.goodTickers[sym];
+          gt.winCount++;gt.avgMult=(gt.avgMult*(gt.winCount-1)+mult)/gt.winCount;
+          if(mult>gt.bestMult)gt.bestMult=mult;
+        }
+      });
+      _learnDB.stats.lastLearn=now;
+      _saveLearnDB();
+    }).catch(function(){});
+  });
+}
+function applyLearnPenalty(t){
+  var penalty=0;var flags=[];
+  var sym=(t.sym||t.name||'').toUpperCase();
+  var addr=(t.addr||t.address||'').toLowerCase();
+  if(_learnDB.rugAddrs[addr]){penalty+=50;flags.push('KNOWN_RUG');t._learnRug=true;}
+  if(_learnDB.badTickers[sym]){
+    var bt=_learnDB.badTickers[sym];
+    if(bt.rugCount>=2){penalty+=40;flags.push('BAD_TICKER_x'+bt.rugCount);}
+    else if(bt.rugCount>=1){penalty+=20;flags.push('RUGGED_BEFORE');}
+    t._learnBadTicker=bt.rugCount;
+  }
+  if(_learnDB.dupTickers[sym]){
+    var dt=_learnDB.dupTickers[sym];
+    if(dt.count>=2&&dt.firstAddr!==addr){
+      var isOriginal=dt.addrs.indexOf(addr)===0;
+      if(!isOriginal){penalty+=35;flags.push('COPYCAT_#'+dt.count);t._learnCopycat=true;}
+    }
+  }
+  if(_learnDB.goodTickers[sym]&&_learnDB.goodTickers[sym].winCount>=2){
+    penalty-=15;
+    flags.push('PROVEN_'+_learnDB.goodTickers[sym].avgMult.toFixed(1)+'x');
+    t._learnProven=true;
+  }
+  t._learnPenalty=penalty;
+  t._learnFlags=flags;
+  return penalty;
+}
+
 // -- TICKER ----------------------------------------------
 (function buildTicker() {
   const t = document.getElementById('tickerT');
@@ -1843,7 +1925,9 @@ function calcScore(t) {
   if(p1<-50){s-=30;t._rugRisk=true;}
   if(liq<15000&&(p24<-25||mc<25000)){s-=40;t._rugRisk=true;}else if(liq<30000&&p24<-35){s-=25;t._rugRisk=true;}
   var _ds=_devStats[t.addr||''];if(_ds&&_ds.devRate!==undefined){t._devRate=_ds.devRate;t._devRank=_ds.devRank;t._devTotal=_ds.devTotal;t._devGrad=_ds.devGrad||0;var _dt=_ds.devTotal||0;var _wt=Math.min(1,_dt/3);if(_ds.devRate>=70)s+=Math.round(25*_wt);else if(_ds.devRate>=40)s+=Math.round(10*_wt);else if(_ds.devRate<10&&_dt>=5)s-=20;}
-  return Math.min(Math.round(s), 100);
+  // Learn DB penalties/bonuses
+  s-=applyLearnPenalty(t);
+  return Math.min(Math.max(Math.round(s),0), 100);
 }
 function classify(t) {
   const sm = t.smCount||0, mc = t.mc||0, p24 = t.p24||0, p1 = t.p1||0;
@@ -1912,6 +1996,10 @@ function renderTokens() {
       (t._rugRisk?'<span style="background:#7f1d1d;color:#fca5a5;font-size:9px;border-radius:3px;padding:1px 4px;font-weight:bold">\u{1F6A8} RUG</span>':'')+(t._rocket?'<span style="background:#ff6b00;color:#fff;font-size:9px;border-radius:3px;padding:1px 5px;font-weight:700">🚀 +'+Math.round((t._mcVel||0)*100)+'%</span>':'')+(t._devRate!==undefined?(function(r,g,n){var clr=r>=70&&n>=3?'#6ee7b7':r>=40&&n>=2?'#fbbf24':n<3?'#94a3b8':'#fca5a5';return'<span style="background:#0f2027;color:'+clr+';font-size:9px;border-radius:3px;padding:1px 4px" title="Dev: '+g+'/'+n+' graduated">\u{1F9E0} '+r+'% ['+g+'/'+n+']</span>';})(t._devRate,t._devGrad||0,t._devTotal||1):'')+
       
       (t._top10pct?'<span style="color:#94a3b8;font-size:9px">👥'+t._top10pct+'%</span>':'')+
+      (t._learnRug?'<span style="background:#4c0519;color:#fb7185;font-size:9px;border-radius:3px;padding:1px 5px;font-weight:700">🧠 KNOWN RUG</span>':'')+
+      (t._learnCopycat?'<span style="background:#581c87;color:#d8b4fe;font-size:9px;border-radius:3px;padding:1px 5px;font-weight:700">🧛 COPYCAT</span>':'')+
+      (t._learnBadTicker?'<span style="background:#78350f;color:#fde68a;font-size:9px;border-radius:3px;padding:1px 4px">⚠ RUGGED x'+t._learnBadTicker+'</span>':'')+
+      (t._learnProven?'<span style="background:#064e3b;color:#6ee7b7;font-size:9px;border-radius:3px;padding:1px 4px">✅ PROVEN</span>':'')+
       '<button onclick="event.stopPropagation();openChart(this.dataset.a)" data-a="'+(t.address||t.addr||'')+'" style="margin-left:auto;background:#0f172a;color:#38bdf8;border:1px solid #1e40af;border-radius:3px;font-size:9px;padding:1px 7px;cursor:pointer">📊</button>'+
       '</div>'+
     '</div>';
@@ -2365,6 +2453,10 @@ function enrichTokensAsync(tokens){
       if(t._rugRisk)html+='<span style="background:#7f1d1d;color:#fca5a5;font-size:9px;border-radius:3px;padding:1px 4px;font-weight:bold">🚨 RUG</span>';
             if(t._devRate!==undefined){var _dr=t._devRate,_dg=t._devGrad||0,_dn=t._devTotal||1;var _dc=_dr>=70&&_dn>=3?'#6ee7b7':_dr>=40&&_dn>=2?'#fbbf24':_dn<3?'#94a3b8':'#fca5a5';html+='<span style="background:#0f2027;color:'+_dc+';font-size:9px;border-radius:3px;padding:1px 4px" title="Dev: '+_dg+'/'+_dn+' graduated">\u{1F9E0} '+_dr+'% ['+_dg+'/'+_dn+']</span>';}
       if(t._top10pct)html+='<span style="color:#94a3b8;font-size:9px">👥'+t._top10pct+'%</span>';
+      if(t._learnRug)html+='<span style="background:#4c0519;color:#fb7185;font-size:9px;border-radius:3px;padding:1px 5px;font-weight:700">🧠 KNOWN RUG</span>';
+      if(t._learnCopycat)html+='<span style="background:#581c87;color:#d8b4fe;font-size:9px;border-radius:3px;padding:1px 5px;font-weight:700">🧛 COPYCAT</span>';
+      if(t._learnBadTicker)html+='<span style="background:#78350f;color:#fde68a;font-size:9px;border-radius:3px;padding:1px 4px">⚠ RUGGED x'+t._learnBadTicker+'</span>';
+      if(t._learnProven)html+='<span style="background:#064e3b;color:#6ee7b7;font-size:9px;border-radius:3px;padding:1px 4px">✅ PROVEN</span>';
       html+='<button onclick="event.stopPropagation();openChart(this.dataset.a)" data-a="'+addr+'" style="margin-left:auto;background:#1e3a5f;border:none;color:#60a5fa;font-size:10px;cursor:pointer;border-radius:3px;padding:1px 5px">📊</button>';
       row.innerHTML=html;
     });
@@ -2410,6 +2502,12 @@ async function runScan() {
     try{localStorage.setItem('neet_called_mc',JSON.stringify(_calledMC));}catch(e){}
     if(_ntDirty){try{localStorage.setItem('neet_notif_ts',JSON.stringify(_ntTs));}catch(e){}}
     logCalls(allTokens);
+    // Auto-learn from past call outcomes every 5th scan
+    _learnDB.stats.scans++;
+    if(_learnDB.stats.scans%5===0)learnFromOutcomes();
+    // Track duplicate tickers in current scan
+    allTokens.forEach(function(t){var sym=(t.sym||'').toUpperCase();var addr=t.addr||'';if(sym){if(!_learnDB.dupTickers[sym]){_learnDB.dupTickers[sym]={count:1,firstAddr:addr,firstTs:Date.now(),addrs:[addr]};}else if(_learnDB.dupTickers[sym].addrs.indexOf(addr)===-1){_learnDB.dupTickers[sym].count++;_learnDB.dupTickers[sym].addrs.push(addr);}}});
+    _saveLearnDB();
     allTokens.sort((a,b) => b.score - a.score);
     const sig   = allTokens.filter(t=>t.smCount>=2).length;
     const hot   = allTokens.filter(t=>t.cls==='hot').length;
