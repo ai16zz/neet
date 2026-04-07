@@ -3025,7 +3025,7 @@ window.padLaunchV2=async function(){
 
 <!-- NEET TRENCHES CHAT -->
 <style>
-#neet-chat-tab{position:fixed;top:14px;right:18px;z-index:99998;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:10px;cursor:pointer;font-family:'Courier New',monospace;font-weight:700;font-size:13px;color:#00ffd1;background:rgba(0,20,18,.85);border:1px solid #00ffd1;box-shadow:0 0 12px rgba(0,255,209,.55),inset 0 0 6px rgba(0,255,209,.25);backdrop-filter:blur(6px);user-select:none;letter-spacing:1px;transition:transform .15s ease, box-shadow .2s ease}
+#neet-chat-tab{position:fixed;bottom:20px;right:20px;z-index:99998;display:flex;align-items:center;gap:8px;padding:12px 20px;border-radius:30px;cursor:pointer;font-family:'Courier New',monospace;font-weight:700;font-size:13px;color:#00ffd1;background:rgba(0,20,18,.92);border:1px solid #00ffd1;box-shadow:0 4px 18px rgba(0,255,209,.55),inset 0 0 6px rgba(0,255,209,.25);backdrop-filter:blur(6px);user-select:none;letter-spacing:1px;transition:transform .15s ease, box-shadow .2s ease}
 #neet-chat-tab:hover{transform:translateY(-1px);box-shadow:0 0 18px rgba(0,255,209,.85)}
 #neet-chat-tab .dot{width:8px;height:8px;border-radius:50%;background:#00ffd1;box-shadow:0 0 8px #00ffd1;animation:neetPulse 1.6s infinite}
 @keyframes neetPulse{0%,100%{opacity:1}50%{opacity:.35}}
@@ -3064,6 +3064,10 @@ window.padLaunchV2=async function(){
 .neet-compose button{padding:0 18px;background:#00ffd1;color:#001a16;border:none;border-radius:8px;font-family:inherit;font-weight:700;cursor:pointer;letter-spacing:1px;font-size:12px}
 .neet-compose button:disabled{opacity:.4;cursor:not-allowed}
 .neet-cooldown{font-size:10px;color:#ff9e4a;padding:0 18px 8px;text-align:right}
+#neet-room{display:none;position:fixed;inset:auto;bottom:80px;right:20px;background:none;backdrop-filter:none;align-items:flex-end;justify-content:flex-end;width:auto;height:auto;pointer-events:none}
+#neet-room.show{display:block;pointer-events:auto}
+#neet-room .neet-panel.chat{width:380px;max-width:calc(100vw - 40px);height:540px;max-height:calc(100vh - 120px);box-shadow:0 12px 40px rgba(0,255,209,.4),0 0 0 1px rgba(0,255,209,.2)}
+@media (max-width:480px){#neet-room{bottom:70px;right:10px;left:10px}#neet-room .neet-panel.chat{width:auto}}
 </style>
 <div id="neet-chat-tab" onclick="NeetChat.openGate()"><span class="dot"></span> CHAT</div>
 <div class="neet-backdrop" id="neet-gate"><div class="neet-panel"><div class="neet-head"><h3>// ENTER THE TRENCHES</h3><button class="neet-close" onclick="NeetChat.closeGate()">&times;</button></div><div class="neet-body"><p style="margin:0 0 16px;font-size:12px;color:#7fffe7;line-height:1.6">Holders only. Connect your Solana wallet and link your X handle. Wallet must hold <b style="color:#00ffd1">&ge; 1,000 $NEET</b> to chat.</p><div class="neet-row"><label>STEP 1 &mdash; SOLANA WALLET (Phantom)</label><button class="neet-btn" id="neet-wallet-btn" onclick="NeetChat.connectWallet()">CONNECT PHANTOM</button><div class="neet-mini" id="neet-wallet-info"></div></div><div class="neet-row"><label>STEP 2 &mdash; X (TWITTER) HANDLE</label><input class="neet-input" id="neet-x-input" placeholder="@yourhandle" maxlength="32"><div class="neet-mini">Used as your display name in chat.</div></div><button class="neet-btn primary" id="neet-enter-btn" disabled onclick="NeetChat.enterChat()">VERIFY &amp; ENTER #trenches</button><div class="neet-status" id="neet-status" style="display:none"></div></div></div></div>
