@@ -1422,6 +1422,7 @@ function switchToCartel(){
         <button class="filter-pill"        data-f="distributing" onclick="setFilter('distributing')">&#x25BC; DISTRIBUTING <span class="cnt" id="cDist">0</span></button>
         <button class="filter-pill"        data-f="dead"         onclick="setFilter('dead')">&#x2620; DEAD <span class="cnt" id="cDead">0</span></button>
         <button class="filter-pill" onclick="toggleCallsPanel()" style="margin-left:8px;background:rgba(0,204,255,.12);border-color:#00ccff;color:#00ccff">&#x1f4cb; CALLS LOG</button>
+        <button class="filter-pill" onclick="togglePnlPanel()" style="background:rgba(0,255,135,.12);border-color:#00ff87;color:#00ff87">&#x1f4ca; PNL</button>
         <button class="filter-pill" onclick="openTGSettings()" style="background:rgba(39,174,255,.12);border-color:#27aeff;color:#27aeff">&#x2708;&#xfe0f; TELEGRAM</button>
       </div>
 
@@ -1440,6 +1441,23 @@ function switchToCartel(){
             </div>
           </div>
           <div id="callsLogList" style="max-height:500px;overflow-y:auto;padding:0 4px"></div>
+        </div>
+        <!-- PNL TRACKER PANEL -->
+        <div id="pnlPanel" style="display:none;padding:8px 0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:0 4px">
+            <span style="color:#00ff87;font-weight:700;font-size:14px">&#x1f4ca; PNL TRACKER</span>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span id="pnlLastRefresh" style="color:#555;font-size:10px"></span>
+              <button onclick="refreshPnlPrices()" style="background:rgba(0,255,135,.12);border:1px solid #00ff87;color:#00ff87;padding:4px 10px;border-radius:6px;cursor:pointer;font:11px monospace">&#x21bb; REFRESH PRICES</button>
+              <button onclick="clearPnlTracker()" style="background:rgba(255,68,68,.12);border:1px solid #ff4444;color:#ff4444;padding:4px 10px;border-radius:6px;cursor:pointer;font:11px monospace">&#x1f5d1; CLEAR</button>
+              <button onclick="togglePnlPanel()" style="background:rgba(255,255,255,.05);border:1px solid #333;color:#aaa;padding:4px 10px;border-radius:6px;cursor:pointer;font:11px monospace">&#x2715; CLOSE</button>
+            </div>
+          </div>
+          <div id="pnlSummary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;padding:0 4px"></div>
+          <div style="display:grid;grid-template-columns:2.2fr 1fr 1fr 0.8fr 0.6fr;gap:0;padding:6px 8px;border-bottom:1px solid #1a1a2e;color:#555;font-size:10px;font-weight:600;letter-spacing:.5px">
+            <span>TOKEN</span><span style="text-align:right">CALLED MC</span><span style="text-align:right">CURRENT MC</span><span style="text-align:right">PNL</span><span style="text-align:right">TIME</span>
+          </div>
+          <div id="pnlList" style="max-height:500px;overflow-y:auto;padding:0 4px"></div>
         </div>
         <div id="tokenGrid">
           <div class="empty-state">
@@ -2033,8 +2051,9 @@ function renderCallsLog(){
 function toggleCallsPanel(){
   const p=document.getElementById('callsPanel');
   const g=document.getElementById('tokenGrid');
+  const pnl=document.getElementById('pnlPanel');
   if(!p)return;
-  if(p.style.display==='none'||!p.style.display){p.style.display='block';if(g)g.style.display='none';renderCallsLog();}
+  if(p.style.display==='none'||!p.style.display){p.style.display='block';if(g)g.style.display='none';if(pnl)pnl.style.display='none';renderCallsLog();}
   else{p.style.display='none';if(g)g.style.display='';}
 }
 function clearCallsLog(){
@@ -2042,6 +2061,129 @@ function clearCallsLog(){
   localStorage.removeItem('neet_calls_log');
   localStorage.removeItem('neet_notif_ts');
   renderCallsLog();
+}
+// -- PNL TRACKER -------------------------------------------
+let _pnlCache={};
+function togglePnlPanel(){
+  const p=document.getElementById('pnlPanel');
+  const g=document.getElementById('tokenGrid');
+  const c=document.getElementById('callsPanel');
+  if(!p)return;
+  if(p.style.display==='none'||!p.style.display){
+    p.style.display='block';
+    if(g)g.style.display='none';
+    if(c)c.style.display='none';
+    renderPnlTracker();
+    refreshPnlPrices();
+  }else{p.style.display='none';if(g)g.style.display='';}
+}
+function clearPnlTracker(){
+  if(!confirm('Clear PNL tracker history?'))return;
+  localStorage.removeItem('neet_calls_log');
+  _pnlCache={};
+  renderPnlTracker();
+}
+function _pnlDedup(log){
+  const seen={};const out=[];
+  for(const e of log){
+    const k=e.k||e.pair||e.sym;
+    if(!seen[k]){seen[k]=true;out.push(e);}
+  }
+  return out;
+}
+function renderPnlTracker(){
+  const list=document.getElementById('pnlList');
+  const summary=document.getElementById('pnlSummary');
+  if(!list)return;
+  let log=[];try{log=JSON.parse(localStorage.getItem('neet_calls_log')||'[]')}catch(e){}
+  log=_pnlDedup(log);
+  if(!log.length){
+    list.innerHTML='<div style="color:#555;text-align:center;padding:40px 0;font-size:13px">No calls yet \u2014 run a scan first</div>';
+    if(summary)summary.innerHTML='';
+    return;
+  }
+  let totalCalls=log.length,winners=0,losers=0,bestX=0;
+  list.innerHTML=log.slice(0,200).map(e=>{
+    const calledMC=e.calledMC||e.mc||0;
+    const cur=_pnlCache[e.k];
+    const currentMC=cur?cur.mc:null;
+    const mult=currentMC&&calledMC>0?currentMC/calledMC:null;
+    const pnlPct=mult?(mult-1)*100:null;
+    if(mult!==null){if(mult>=1)winners++;else losers++;if(mult>bestX)bestX=mult;}
+    const pnlColor=mult===null?'#555':mult>=2?'#00ff87':mult>=1?'#4ade80':mult>=0.7?'#f5c400':'#ff3b5c';
+    const multStr=mult!==null?mult.toFixed(2)+'x':'...';
+    const pnlStr=pnlPct!==null?(pnlPct>=0?'+':'')+pnlPct.toFixed(1)+'%':'\u2014';
+    const age=Date.now()-e.ts;
+    const ageStr=age<3600000?Math.round(age/60000)+'m':age<86400000?Math.round(age/3600000)+'h':Math.round(age/86400000)+'d';
+    const dex=e.pair?'https://dexscreener.com/solana/'+e.pair:'#';
+    const catIcon={early:'\u26A1',hot:'\uD83D\uDD25',accumulating:'\u25B2',distributing:'\u25BC',dead:'\u2620'}[e.cls]||'';
+    const sc=e.score>=70?'#00ff87':e.score>=50?'#f5c400':'#ff3b5c';
+    const bar=mult!==null?Math.min(100,Math.max(0,(mult/3)*100)):0;
+    const barColor=mult>=2?'#00ff87':mult>=1?'#4ade80':mult>=0.7?'#f5c400':'#ff3b5c';
+    return '<div onclick="window.open(\x27'+dex+'\x27,\x27_blank\x27)" style="display:grid;grid-template-columns:2.2fr 1fr 1fr 0.8fr 0.6fr;gap:0 8px;padding:10px 8px;border-bottom:1px solid #1a1a2e;cursor:pointer;align-items:center;transition:background .15s" onmouseover="this.style.background=\'rgba(255,255,255,.03)\'" onmouseout="this.style.background=\'none\'">'
+      +'<div>'
+        +'<span style="color:#fff;font-weight:700;font-size:13px">$'+e.sym+'</span> '
+        +'<span style="color:#555;font-size:11px">'+catIcon+'</span> '
+        +'<span style="color:'+sc+';font-size:11px;font-weight:600">'+e.score+'</span>'
+      +'</div>'
+      +'<div style="text-align:right;font-family:monospace;font-size:12px;color:#888">'+fmtMC(calledMC)+'</div>'
+      +'<div style="text-align:right;font-family:monospace;font-size:12px;color:'+(currentMC?'#ddd':'#444')+'">'+(currentMC?fmtMC(currentMC):'<span style="color:#333">loading...</span>')+'</div>'
+      +'<div style="text-align:right">'
+        +'<div style="color:'+pnlColor+';font-weight:800;font-size:14px;font-family:monospace">'+multStr+'</div>'
+        +'<div style="font-size:10px;color:'+pnlColor+'">'+pnlStr+'</div>'
+        +'<div style="margin-top:3px;height:3px;background:#1a1a2e;border-radius:2px;overflow:hidden"><div style="width:'+bar+'%;height:100%;background:'+barColor+';border-radius:2px"></div></div>'
+      +'</div>'
+      +'<div style="text-align:right;color:#444;font-size:11px;font-family:monospace">'+ageStr+' ago</div>'
+    +'</div>';
+  }).join('');
+  if(summary){
+    const avgX=winners+losers>0?log.reduce((s,e)=>{const c=_pnlCache[e.k];if(!c)return s;const m=c.mc/(e.calledMC||e.mc||1);return s+m;},0)/(winners+losers):0;
+    summary.innerHTML=
+      '<div style="background:#0a0f1a;border:1px solid #1a1a2e;border-radius:8px;padding:10px 12px;text-align:center">'
+        +'<div style="color:#555;font-size:10px;letter-spacing:.5px">TOTAL CALLS</div>'
+        +'<div style="color:#fff;font-size:20px;font-weight:800">'+totalCalls+'</div>'
+      +'</div>'
+      +'<div style="background:#0a0f1a;border:1px solid #1a1a2e;border-radius:8px;padding:10px 12px;text-align:center">'
+        +'<div style="color:#555;font-size:10px;letter-spacing:.5px">WINNERS</div>'
+        +'<div style="color:#00ff87;font-size:20px;font-weight:800">'+winners+'</div>'
+      +'</div>'
+      +'<div style="background:#0a0f1a;border:1px solid #1a1a2e;border-radius:8px;padding:10px 12px;text-align:center">'
+        +'<div style="color:#555;font-size:10px;letter-spacing:.5px">BEST CALL</div>'
+        +'<div style="color:#00ff87;font-size:20px;font-weight:800">'+(bestX>0?bestX.toFixed(1)+'x':'\u2014')+'</div>'
+      +'</div>'
+      +'<div style="background:#0a0f1a;border:1px solid #1a1a2e;border-radius:8px;padding:10px 12px;text-align:center">'
+        +'<div style="color:#555;font-size:10px;letter-spacing:.5px">AVG RETURN</div>'
+        +'<div style="color:'+(avgX>=1?'#00ff87':'#ff3b5c')+';font-size:20px;font-weight:800">'+(avgX>0?avgX.toFixed(2)+'x':'\u2014')+'</div>'
+      +'</div>';
+  }
+}
+async function refreshPnlPrices(){
+  let log=[];try{log=JSON.parse(localStorage.getItem('neet_calls_log')||'[]')}catch(e){return;}
+  log=_pnlDedup(log);
+  const pairs=log.filter(e=>e.pair).map(e=>e.pair);
+  if(!pairs.length)return;
+  const chunks=[];
+  for(let i=0;i<pairs.length;i+=30)chunks.push(pairs.slice(i,i+30));
+  for(const chunk of chunks){
+    try{
+      const addrs=chunk.join(',');
+      const r=await fetch('https://api.dexscreener.com/latest/dex/pairs/solana/'+addrs);
+      const d=await r.json();
+      if(d.pairs){
+        d.pairs.forEach(p=>{
+          const pairAddr=p.pairAddress||'';
+          const mc=p.marketCap||p.fdv||0;
+          const price=parseFloat(p.priceUsd)||0;
+          const entry=log.find(e=>e.pair===pairAddr);
+          if(entry){
+            _pnlCache[entry.k]={mc,price,updated:Date.now()};
+          }
+        });
+      }
+    }catch(e){}
+  }
+  document.getElementById('pnlLastRefresh').textContent='updated '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  renderPnlTracker();
 }
 // -- TELEGRAM NOTIFICATIONS --------------------------------
 function _tgCfg(){const dflt={token:'8776338924:AAGA_ROKVFWWKm2dX9UQIovisnMupF_g2Bk',chatId:'1501478917'};try{const c=JSON.parse(localStorage.getItem('neet_tg')||'{}');return{token:c.token||dflt.token,chatId:c.chatId||dflt.chatId};}catch(e){return dflt;}}
