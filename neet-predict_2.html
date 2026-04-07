@@ -369,24 +369,7 @@ const CHART_EMBEDS={
 
 // All iframes live permanently in #cc stacked with position:absolute
 // Switching = CSS only (z-index + visibility). Never move iframes = no reload.
-function preloadCharts(){
-  const cc = document.getElementById('cc');
-  cc.style.cssText = 'position:relative;height:420px;overflow:hidden';
-  const ts = Date.now();
-  Object.keys(CHART_EMBEDS).forEach(mkt=>{
-    if(document.getElementById('chart_'+mkt)) return;
-    const url = CHART_EMBEDS[mkt];
-    const sep = url.includes('?')?'&':'?';
-    const f = document.createElement('iframe');
-    f.id = 'chart_'+mkt;
-    f.src = url + sep + '_t=' + ts;
-    const show = mkt === activeMarket;
-    f.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:450px;border:none;'
-      + (show ? 'z-index:2;opacity:1;pointer-events:auto' : 'z-index:1;opacity:0;pointer-events:none');
-    f.setAttribute('frameborder','0');
-    cc.appendChild(f);
-  });
-}
+function preloadCharts(){ /* disabled: lightweight chart kept for all timeframes */ }
 
 function showChart(market){
   Object.keys(CHART_EMBEDS).forEach(mkt=>{
