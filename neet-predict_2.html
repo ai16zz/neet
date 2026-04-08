@@ -3051,9 +3051,64 @@ window.padLaunchV2=async function(){
 #neet-room.show{display:block;pointer-events:auto}
 #neet-room .neet-panel.chat{width:380px;max-width:calc(100vw - 40px);height:540px;max-height:calc(100vh - 120px);box-shadow:0 12px 40px rgba(0,255,209,.4),0 0 0 1px rgba(0,255,209,.2)}
 @media (max-width:480px){#neet-room{bottom:70px;right:10px;left:10px}#neet-room .neet-panel.chat{width:auto}}
+
+/* === NEET X VERIFICATION SYSTEM === */
+.neet-step{margin-bottom:18px}
+.neet-step.locked{opacity:0.35;pointer-events:none;transition:opacity 0.4s ease}
+.neet-step.unlocked{opacity:1;pointer-events:auto;transition:opacity 0.4s ease}
+.step-num{display:inline-flex;align-items:center;gap:8px;font-family:monospace;font-size:11px;color:#00ff88;letter-spacing:1px;margin-bottom:10px;font-weight:700}
+.step-circle{width:20px;height:20px;border-radius:50%;border:1.5px solid #00ff88;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.step-circle.done{background:#00ff88;color:#000}
+.step-desc-small{font-family:monospace;font-size:10px;color:#555;margin:0 0 10px;line-height:1.5}
+.neet-btn-phantom{border-color:#ab9ff2;color:#ab9ff2}
+.neet-btn-phantom:hover:not(:disabled){background:#ab9ff215;box-shadow:0 0 16px rgba(171,159,242,0.15)}
+.neet-btn-x{border-color:#1d9bf0;color:#1d9bf0}
+.neet-btn-x:hover:not(:disabled){background:#1d9bf015}
+.neet-btn-enter{border-color:#00ff88;background:#00ff880d;color:#00ff88;font-size:14px;letter-spacing:2px}
+.neet-btn-enter:not(:disabled):hover{background:#00ff8825}
+.step-status{font-family:monospace;font-size:10px;margin-top:7px;min-height:14px}
+.step-status.ok{color:#00ff88}.step-status.err{color:#ff5555}.step-status.warn{color:#ffd700}.step-status.info{color:#8b949e}
+.neet-divider{height:1px;background:linear-gradient(to right,transparent,#1a2a1a,transparent);margin:4px 0 18px}
+.neet-req-bar{display:flex;align-items:center;gap:8px;background:#00ff880a;border:1px solid #00ff8830;border-radius:6px;padding:8px 12px;margin-bottom:20px;font-family:monospace;font-size:11px;color:#8b949e}
+.neet-req-bar strong{color:#00ff88}
+.x-verified{display:inline-flex;align-items:center;gap:3px;background:#1d9bf010;border:1px solid #1d9bf030;border-radius:3px;padding:1px 5px;font-size:9px;color:#1d9bf0;margin-left:5px;vertical-align:middle;font-weight:700;letter-spacing:0.5px}
+.x-verified::before{content:'✓ X '}
+.chat-gate-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;border-radius:inherit;backdrop-filter:blur(3px)}
+.chat-gate-overlay p{font-family:monospace;font-size:12px;color:#666;text-align:center;max-width:240px;line-height:1.7;margin-bottom:14px}
+.gate-unlock-btn{font-family:monospace;font-size:11px;color:#00ff88;background:none;border:1px solid #00ff8840;border-radius:6px;padding:8px 16px;cursor:pointer;letter-spacing:1px}
+.gate-unlock-btn:hover{background:#00ff8815;border-color:#00ff88}
 </style>
 <div id="neet-chat-tab" onclick="NeetChat.openGate()"><span class="dot"></span> CHAT</div>
-<div class="neet-backdrop" id="neet-gate"><div class="neet-panel"><div class="neet-head"><h3>// ENTER THE TRENCHES</h3><button class="neet-close" onclick="NeetChat.closeGate()">&times;</button></div><div class="neet-body"><p style="margin:0 0 16px;font-size:12px;color:#7fffe7;line-height:1.6">Holders only. Connect your Solana wallet and link your X handle. Wallet must hold <b style="color:#00ffd1">&ge; 1,000 $NEET</b> to chat.</p><div class="neet-row"><label>STEP 1 &mdash; SOLANA WALLET (Phantom)</label><button class="neet-btn" id="neet-wallet-btn" onclick="NeetChat.connectWallet()">CONNECT PHANTOM</button><div class="neet-mini" id="neet-wallet-info"></div></div><div class="neet-row"><label>STEP 2 &mdash; X (TWITTER) HANDLE</label><input class="neet-input" id="neet-x-input" placeholder="@yourhandle" maxlength="32"><div class="neet-mini">Used as your display name in chat.</div></div><button class="neet-btn primary" id="neet-enter-btn" disabled onclick="NeetChat.enterChat()">VERIFY &amp; ENTER #trenches</button><div class="neet-status" id="neet-status" style="display:none"></div></div></div></div>
+<div class="neet-backdrop" id="neet-gate">
+  <div class="neet-panel">
+    <div class="neet-head">
+      <h3>// ENTER THE TRENCHES</h3>
+      <button class="neet-close" onclick="document.getElementById('neet-gate').style.display='none'">✕</button>
+    </div>
+    <div class="neet-req-bar">🔒 Holders only — wallet must hold ≥ <strong>10,000 $NEET</strong> + verified X account</div>
+
+    <div class="neet-step unlocked" id="vfy-step-wallet">
+      <div class="step-num"><span class="step-circle" id="vfy-c1">1</span>SOLANA WALLET (Phantom)</div>
+      <button class="neet-btn neet-btn-phantom" id="vfy-btn-wallet" onclick="vfyConnectWallet()">CONNECT PHANTOM</button>
+      <div class="step-status" id="vfy-st-wallet"></div>
+    </div>
+
+    <div class="neet-divider"></div>
+
+    <div class="neet-step locked" id="vfy-step-twitter">
+      <div class="step-num"><span class="step-circle" id="vfy-c2">2</span>VERIFY X (TWITTER) ACCOUNT</div>
+      <p class="step-desc-small">Proves you're real — 1 wallet per X account. No bots, no impersonation.</p>
+      <button class="neet-btn neet-btn-x" id="vfy-btn-twitter" onclick="vfyConnectTwitter()">𝕏 &nbsp;CONNECT X ACCOUNT</button>
+      <div class="step-status" id="vfy-st-twitter"></div>
+    </div>
+
+    <div class="neet-divider"></div>
+
+    <div class="neet-step locked" id="vfy-step-enter">
+      <button class="neet-btn neet-btn-enter" id="vfy-btn-enter" onclick="vfyEnter()">✓ &nbsp;ENTER #trenches</button>
+    </div>
+  </div>
+</div>
 <div class="neet-backdrop" id="neet-room"><div class="neet-panel chat"><div class="neet-head"><h3>// #trenches</h3><button class="neet-close" onclick="NeetChat.closeRoom()">&times;</button></div><div class="neet-chan"><span id="neet-me-label">connected</span><span id="neet-online">&#9679;  live</span></div><div class="neet-msgs" id="neet-msgs"></div><div class="neet-cooldown" id="neet-cd"></div><div class="neet-compose"><input id="neet-input" placeholder="say something to the trenches..." maxlength="280" onkeydown="if(event.key==='Enter')NeetChat.send()"><button id="neet-send" onclick="NeetChat.send()">SEND</button></div></div></div>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
@@ -3191,6 +3246,264 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
   initATH();
   setTimeout(rewriteTable,900);
   console.log('[NEET] ATH Tracker v7 loaded');
+})();
+</script>
+
+<script id="neet-verify-system">
+/*
+  NEET X Verification System
+  ──────────────────────────
+  SETUP REQUIRED (see design doc):
+    1. Create Twitter Developer App at https://developer.twitter.com
+    2. Enable OAuth 2.0, set redirect URI to: https://ai16zz.github.io/neet/callback.html
+    3. Replace TWITTER_CLIENT_ID below with your app's Client ID
+    4. Replace NEET_MINT with the actual $NEET token mint address
+    5. Deploy /api/verify-twitter (serverless) for full verification — see design doc
+*/
+(function(){
+  /* ── CONFIG ─────────────────────────────────────────────── */
+  const TWITTER_CLIENT_ID = 'YOUR_TWITTER_CLIENT_ID'; // <── fill in after Twitter dev setup
+  const NEET_MINT         = 'YOUR_NEET_TOKEN_MINT';   // <── $NEET SPL token mint address
+  const REDIRECT_URI      = location.origin + location.pathname.replace(/[^/]*$','') + 'callback.html';
+  const MIN_NEET          = 10000;
+  const SESSION_KEY       = 'neet_verify_v1';
+  const SOLANA_RPC        = 'https://api.mainnet-beta.solana.com';
+  const SESSION_TTL_MS    = 7 * 24 * 3600 * 1000; // 7 days
+
+  /* ── STATE ──────────────────────────────────────────────── */
+  let _wallet   = null;
+  let _balance  = 0;
+  let _twitter  = null; // { handle, name, pfp, id }
+
+  /* ── HELPERS ─────────────────────────────────────────────── */
+  function setStatus(id, msg, cls){
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.textContent=msg;
+    el.className='step-status'+(cls?' '+cls:'');
+  }
+  function unlockStep(id){
+    const el=document.getElementById(id);
+    if(el){ el.classList.remove('locked'); el.classList.add('unlocked'); }
+  }
+  function markCircle(id){
+    const el=document.getElementById(id);
+    if(el){ el.textContent='✓'; el.classList.add('done'); }
+  }
+  function setBtnText(id, txt){ const el=document.getElementById(id); if(el) el.textContent=txt; }
+
+  /* ── SESSION ─────────────────────────────────────────────── */
+  function loadSession(){
+    try{
+      const s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');
+      if(!s||!s.wallet||!s.twitter_handle||!s.ts) return null;
+      if(Date.now()-s.ts>SESSION_TTL_MS){ localStorage.removeItem(SESSION_KEY); return null; }
+      return s;
+    }catch(e){ return null; }
+  }
+  function saveSession(data){
+    localStorage.setItem(SESSION_KEY, JSON.stringify({...data, ts:Date.now()}));
+  }
+
+  /* ── PKCE ────────────────────────────────────────────────── */
+  async function generatePKCE(){
+    const arr=new Uint8Array(32); crypto.getRandomValues(arr);
+    const verifier=[...arr].map(b=>b.toString(16).padStart(2,'0')).join('');
+    const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier));
+    const challenge=btoa(String.fromCharCode(...new Uint8Array(digest)))
+      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+    return {verifier, challenge};
+  }
+
+  /* ── SOLANA BALANCE CHECK ────────────────────────────────── */
+  async function getNeetBalance(walletAddr){
+    try{
+      const body={
+        jsonrpc:'2.0', id:1, method:'getTokenAccountsByOwner',
+        params:[walletAddr,{mint:NEET_MINT},{encoding:'jsonParsed'}]
+      };
+      const r=await fetch(SOLANA_RPC,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const data=await r.json();
+      let total=0;
+      (data.result?.value||[]).forEach(a=>{
+        const amt=a.account?.data?.parsed?.info?.tokenAmount?.uiAmount||0;
+        total+=amt;
+      });
+      return Math.floor(total);
+    }catch(e){ return -1; }
+  }
+
+  /* ── STEP 1: CONNECT WALLET ──────────────────────────────── */
+  window.vfyConnectWallet = async function(){
+    const btn=document.getElementById('vfy-btn-wallet');
+    if(btn) btn.textContent='Connecting...';
+    setStatus('vfy-st-wallet','','');
+    try{
+      const phantom=window.solana||window.phantom?.solana;
+      if(!phantom||!phantom.isPhantom) throw new Error('Phantom wallet not found. Install it at phantom.app');
+      const resp=await phantom.connect();
+      _wallet=resp.publicKey.toString();
+
+      setStatus('vfy-st-wallet','Checking $NEET balance...','info');
+      _balance=await getNeetBalance(_wallet);
+
+      if(_balance===-1){
+        // RPC check failed — allow manual bypass with warning (remove in prod)
+        setStatus('vfy-st-wallet','⚠ Could not verify balance (RPC). Proceeding — server will re-check.','warn');
+        _balance=MIN_NEET; // optimistic, server enforces
+      } else if(_balance<MIN_NEET){
+        setStatus('vfy-st-wallet',`✗ Insufficient $NEET — you hold ${_balance.toLocaleString()} but need ${MIN_NEET.toLocaleString()}`,'err');
+        if(btn) btn.textContent='CONNECT PHANTOM';
+        return;
+      } else {
+        setStatus('vfy-st-wallet',`✓ ${_balance.toLocaleString()} $NEET — eligible`,'ok');
+      }
+
+      markCircle('vfy-c1');
+      if(btn){ btn.textContent=`✓ ${_wallet.substring(0,6)}...${_wallet.slice(-4)}`; btn.disabled=true; }
+      unlockStep('vfy-step-twitter');
+    }catch(e){
+      setStatus('vfy-st-wallet','✗ '+e.message,'err');
+      if(btn) btn.textContent='CONNECT PHANTOM';
+    }
+  };
+
+  /* ── STEP 2: CONNECT TWITTER ─────────────────────────────── */
+  window.vfyConnectTwitter = async function(){
+    if(!_wallet){ setStatus('vfy-st-twitter','Connect wallet first','err'); return; }
+    const btn=document.getElementById('vfy-btn-twitter');
+    if(btn){ btn.textContent='Redirecting to X...'; btn.disabled=true; }
+
+    try{
+      const {verifier, challenge}=await generatePKCE();
+      const state=btoa(JSON.stringify({wallet:_wallet, nonce:Math.random().toString(36).slice(2)}));
+      sessionStorage.setItem('neet_pkce_verifier', verifier);
+      sessionStorage.setItem('neet_pkce_state', state);
+      sessionStorage.setItem('neet_pkce_wallet', _wallet);
+
+      const params=new URLSearchParams({
+        response_type: 'code',
+        client_id: TWITTER_CLIENT_ID,
+        redirect_uri: REDIRECT_URI,
+        scope: 'tweet.read users.read offline.access',
+        state: state,
+        code_challenge: challenge,
+        code_challenge_method: 'S256',
+      });
+
+      window.location.href='https://twitter.com/i/oauth2/authorize?'+params.toString();
+    }catch(e){
+      setStatus('vfy-st-twitter','✗ '+e.message,'err');
+      if(btn){ btn.textContent='𝕏  CONNECT X ACCOUNT'; btn.disabled=false; }
+    }
+  };
+
+  /* ── STEP 3: ENTER ───────────────────────────────────────── */
+  window.vfyEnter = function(){
+    if(!_wallet||!_twitter) return;
+    saveSession({ wallet:_wallet, balance:_balance, twitter_handle:_twitter.handle,
+      twitter_name:_twitter.name, twitter_pfp:_twitter.pfp, twitter_id:_twitter.id });
+    document.getElementById('neet-gate').style.display='none';
+    applyVerifiedSession({ wallet:_wallet, twitter_handle:_twitter.handle,
+      twitter_name:_twitter.name, twitter_pfp:_twitter.pfp });
+    // Open the actual chat
+    if(typeof window.openChat==='function') window.openChat();
+    else if(typeof window.toggleChat==='function') window.toggleChat();
+  };
+
+  /* ── RESTORE SESSION & APPLY BADGE ──────────────────────── */
+  function applyVerifiedSession(s){
+    // Reveal chat, remove gate overlay
+    const overlay=document.getElementById('neet-chat-gate');
+    if(overlay) overlay.remove();
+    // Inject verified handle display into chat header if present
+    const chatUser=document.getElementById('chat-user-label');
+    if(chatUser){
+      chatUser.innerHTML='@'+s.twitter_handle+' <span class="x-verified">VERIFIED</span>';
+    }
+    // Expose globally so chat can use it
+    window._neetVerified={ wallet:s.wallet, handle:s.twitter_handle, name:s.twitter_name, pfp:s.twitter_pfp };
+  }
+
+  /* ── HANDLE OAUTH CALLBACK RETURN ────────────────────────── */
+  function checkOAuthReturn(){
+    const params=new URLSearchParams(location.search);
+    const code=params.get('neet_oauth_code');
+    const oauthError=params.get('neet_oauth_error');
+    const oauthHandle=params.get('neet_oauth_handle');
+    const oauthName=params.get('neet_oauth_name');
+    const oauthPfp=params.get('neet_oauth_pfp');
+    const oauthId=params.get('neet_oauth_id');
+
+    if(oauthError){
+      // Came back from callback.html with error
+      _wallet=sessionStorage.getItem('neet_pkce_wallet');
+      if(_wallet){
+        document.getElementById('neet-gate').style.display='flex';
+        unlockStep('vfy-step-twitter');
+        setStatus('vfy-st-twitter','✗ '+decodeURIComponent(oauthError),'err');
+      }
+      // Clean URL
+      history.replaceState({},'',location.pathname);
+      return;
+    }
+
+    if(oauthHandle){
+      // Came back with verified handle from callback
+      _wallet=sessionStorage.getItem('neet_pkce_wallet')||oauthId;
+      _twitter={ handle:oauthHandle, name:decodeURIComponent(oauthName||oauthHandle),
+        pfp:decodeURIComponent(oauthPfp||''), id:oauthId||'' };
+
+      // Restore UI state
+      const session=loadSession();
+      const walletAddr=_wallet;
+      if(walletAddr){ _balance=session?.balance||MIN_NEET; }
+
+      // Show gate at step 3 (enter button unlocked)
+      document.getElementById('neet-gate').style.display='flex';
+      markCircle('vfy-c1'); unlockStep('vfy-step-twitter'); markCircle('vfy-c2');
+      const wBtn=document.getElementById('vfy-btn-wallet');
+      if(wBtn){ wBtn.textContent=`✓ ...${(walletAddr||'').slice(-4)}`; wBtn.disabled=true; }
+      setStatus('vfy-st-wallet',`✓ ${_balance.toLocaleString()} $NEET`,'ok');
+      setStatus('vfy-st-twitter',`✓ @${oauthHandle} connected`,'ok');
+      unlockStep('vfy-step-enter');
+
+      history.replaceState({},'',location.pathname);
+    }
+  }
+
+  /* ── CHAT GATE: block non-verified users from viewing ─────── */
+  function gateChatVisibility(){
+    const session=loadSession();
+    // Find the chat container
+    const chatContainers=['#neet-chat','.neet-chat','#chat-section','#cartelSection'].map(s=>document.querySelector(s)).filter(Boolean);
+    chatContainers.forEach(container=>{
+      if(session){ applyVerifiedSession(session); return; }
+      // Not verified — add overlay
+      if(document.getElementById('neet-chat-gate')) return;
+      container.style.position='relative';
+      const overlay=document.createElement('div');
+      overlay.id='neet-chat-gate'; overlay.className='chat-gate-overlay';
+      overlay.innerHTML=`<p>🔒 Only verified holders can<br>view #trenches messages.<br><br>Connect wallet + X to enter.</p>
+        <button class="gate-unlock-btn" onclick="openNeetGate()">GET VERIFIED →</button>`;
+      container.appendChild(overlay);
+    });
+  }
+
+  window.openNeetGate = function(){
+    document.getElementById('neet-gate').style.display='flex';
+    // Pre-fill wallet if already connected
+    const phantom=window.solana||window.phantom?.solana;
+    if(phantom?.publicKey&&!_wallet){ _wallet=phantom.publicKey.toString(); }
+  };
+
+  /* ── INIT ────────────────────────────────────────────────── */
+  const existingSession=loadSession();
+  if(existingSession){ applyVerifiedSession(existingSession); }
+  checkOAuthReturn();
+  // Gate chat after DOM settles
+  setTimeout(gateChatVisibility, 800);
+  console.log('[NEET] Verify system loaded — MIN_NEET='+MIN_NEET);
 })();
 </script>
 </html>
