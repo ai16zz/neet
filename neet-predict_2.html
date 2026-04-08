@@ -3067,13 +3067,13 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
 </script>
 <!-- /NEET TRENCHES CHAT -->
 <script id="neet-ath-tracker">
-/* NEET – ATH Tracker v6
-   Layout: TOKEN | CALLED MC | ATH MC | ATH  (CURRENT MC hidden)
-   pnlPanel.children[2] = column header row
-   pnlPanel.children[3] = #pnlList (all children are data rows)
-   cell[0]=TOKEN  cell[1]=CALLED MC  cell[2]->ATH MC  cell[3]->hidden  cell[4]->ATH mult
+/* NEET – ATH Tracker v7
+   Layout: TOKEN | CALLED MC | ATH MC | ATH  (4 columns, Excel-style right-alignment)
+   Key fix: override grid-template-columns to 4-col on header + every data row
+            so hidden cell[3] doesn't leave a ghost column gap
 */
 (function(){
+  const GRID='2fr 1fr 1fr 1fr';
   function parseMC(s){
     if(!s) return 0;
     s=String(s).replace(/[$,]/g,'').trim();
@@ -3106,23 +3106,42 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
     if(!panel||!list) return;
     if(obs) obs.disconnect();
     try{
-      // Header: rename cell[2]=ATH MC, hide cell[3], rename cell[4]=ATH
+      // ── Header row ──────────────────────────────────────────────
       const hdr=panel.children[2];
       if(hdr&&hdr.children.length>=5){
+        hdr.style.gridTemplateColumns=GRID;
         hdr.children[2].textContent='ATH MC';
+        hdr.children[2].style.textAlign='right';
+        hdr.children[2].style.paddingRight='12px';
         hdr.children[3].style.display='none';
         hdr.children[4].textContent='ATH';
+        hdr.children[4].style.textAlign='right';
+        hdr.children[4].style.paddingRight='12px';
+        // Also align CALLED MC header
+        hdr.children[1].style.textAlign='right';
+        hdr.children[1].style.paddingRight='12px';
       }
 
       const log=getLog(); let logChg=false;
+
+      // ── Data rows ────────────────────────────────────────────────
       Array.from(list.children).forEach(row=>{
         const c=row.children;
         if(!c||c.length<5) return;
 
+        // 4-column grid for this row
+        row.style.gridTemplateColumns=GRID;
+
+        // Hide CURRENT MC column
+        c[3].style.display='none';
+
         const sym=c[0].innerText.split('\n')[0].replace(/[^a-zA-Z0-9$]/g,'').replace('$','').toLowerCase();
         const calledMC=parseMC(c[1].innerText);
-        // Read current MC from cell[2] BEFORE we overwrite it (site puts currentMC there)
-        const currentMC=parseMC(c[2].innerText);
+        const currentMC=parseMC(c[2].innerText); // read BEFORE overwrite
+
+        // Right-align CALLED MC (cell[1]) — leave its value alone
+        c[1].style.textAlign='right';
+        c[1].style.paddingRight='12px';
 
         const entry=log.find(e=>{
           if(!e.sym) return false;
@@ -3130,28 +3149,24 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
           return sym===es||(sym.length>2&&es.includes(sym))||(es.length>2&&sym.includes(es));
         });
 
-        // Always hide cell[3] (was PNL/CURRENT MC)
-        c[3].style.display='none';
-
         if(entry){
-          // Update ATH peak
           if(currentMC>0&&currentMC>(entry.athMC||0)){entry.athMC=currentMC;logChg=true;}
           const athMC=entry.athMC||calledMC||0;
           const m=(athMC&&calledMC)?(athMC/calledMC):0;
 
-          // cell[2] = ATH MC value
+          // cell[2] = ATH MC value, right-aligned
           c[2].textContent=athMC?fmtMC(athMC):'--';
-          c[2].style.cssText='text-align:center;color:#8b949e;font-weight:600';
+          c[2].style.cssText='text-align:right;padding-right:12px;color:#8b949e;font-weight:600';
 
-          // cell[4] = ATH multiplier
-          c[4].style.textAlign='center';
+          // cell[4] = ATH multiplier, right-aligned
+          c[4].style.cssText='text-align:right;padding-right:12px';
           if(m>=2){c[4].style.color='#00ff88';c[4].textContent=m.toFixed(2)+'x (+'+((m-1)*100).toFixed(0)+'%)';}
           else if(m>=1.1){c[4].style.color='#ffd700';c[4].textContent=m.toFixed(2)+'x (+'+((m-1)*100).toFixed(0)+'%)';}
           else if(m>0){c[4].style.color='#ff6666';c[4].textContent=m.toFixed(2)+'x';}
           else{c[4].style.color='#555';c[4].textContent='--';}
         }else{
-          c[2].textContent='--'; c[2].style.cssText='text-align:center;color:#555';
-          c[4].textContent='--'; c[4].style.cssText='text-align:center;color:#555';
+          c[2].textContent='--'; c[2].style.cssText='text-align:right;padding-right:12px;color:#555';
+          c[4].textContent='--'; c[4].style.cssText='text-align:right;padding-right:12px;color:#555';
         }
       });
       if(logChg) saveLog(log);
@@ -3175,7 +3190,7 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
 
   initATH();
   setTimeout(rewriteTable,900);
-  console.log('[NEET] ATH Tracker v6 loaded');
+  console.log('[NEET] ATH Tracker v7 loaded');
 })();
 </script>
 </html>
