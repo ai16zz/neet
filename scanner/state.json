@@ -1,5 +1,8 @@
 {
-    "notifiedAt": {},
-    "mcPrev": {},
-    "seenKeys": []
+  "notifiedAt": {},
+  "mcPrev": {
+    "7PaEK6T2iL58oLAavA7VcWpxY5FKSW7r9SzcKZZ6pump": 21301,
+    "6HXRuGrJJomcf7cVbG8scwwSN5TLY5rrZWSkGr9xWokv": 21683
+  },
+  "seenKeys": []
 }
