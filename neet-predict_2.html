@@ -3369,17 +3369,29 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
   };
 
   /* ── STEP 2: CONNECT TWITTER ─────────────────────────────── */
+  let _oauthPopup = null;
+  let _oauthMsgListener = null;
+  let _oauthClosedTimer = null;
+
+  function _cleanupOauth(){
+    if(_oauthMsgListener){ window.removeEventListener('message',_oauthMsgListener); _oauthMsgListener=null; }
+    if(_oauthClosedTimer){ clearInterval(_oauthClosedTimer); _oauthClosedTimer=null; }
+    _oauthPopup=null;
+  }
+
   window.vfyConnectTwitter = async function(){
     if(!_wallet){ setStatus('vfy-st-twitter','Connect wallet first','err'); return; }
     const btn=document.getElementById('vfy-btn-twitter');
-    if(btn){ btn.textContent='Redirecting to X...'; btn.disabled=true; }
+    if(btn){ btn.textContent='Opening X…'; btn.disabled=true; }
+    setStatus('vfy-st-twitter','','');
 
     try{
       const {verifier, challenge}=await generatePKCE();
       const state=btoa(JSON.stringify({wallet:_wallet, nonce:Math.random().toString(36).slice(2)}));
-      sessionStorage.setItem('neet_pkce_verifier', verifier);
-      sessionStorage.setItem('neet_pkce_state', state);
-      sessionStorage.setItem('neet_pkce_wallet', _wallet);
+      // Use localStorage so the callback popup can read these (sessionStorage not shared)
+      localStorage.setItem('neet_pkce_verifier', verifier);
+      localStorage.setItem('neet_pkce_state', state);
+      localStorage.setItem('neet_pkce_wallet', _wallet);
 
       const params=new URLSearchParams({
         response_type: 'code',
@@ -3391,14 +3403,58 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
         code_challenge_method: 'S256',
       });
 
-      window.location.href='https://twitter.com/i/oauth2/authorize?'+params.toString();
+      const authUrl='https://twitter.com/i/oauth2/authorize?'+params.toString();
+      _cleanupOauth();
+      _oauthPopup=window.open(authUrl,'neet_oauth_popup',
+        'width=600,height=720,scrollbars=yes,resizable=yes,left='+
+        Math.round((screen.width-600)/2)+',top='+Math.round((screen.height-720)/2));
+
+      if(!_oauthPopup||_oauthPopup.closed){
+        // Popup blocked — fall back to full redirect
+        setStatus('vfy-st-twitter','Popup blocked, redirecting…','info');
+        window.location.href=authUrl;
+        return;
+      }
+
+      setStatus('vfy-st-twitter','Waiting for X authorization…','info');
+
+      // Listen for result posted back by callback.html
+      _oauthMsgListener=function(event){
+        if(event.origin!=='https://ai16zz.github.io') return;
+        const d=event.data||{};
+        if(d.type!=='neet_oauth') return;
+        _cleanupOauth();
+
+        if(d.error){
+          setStatus('vfy-st-twitter','✗ '+d.error,'err');
+          if(btn){ btn.textContent='𝕏  CONNECT X ACCOUNT'; btn.disabled=false; }
+          return;
+        }
+        _twitter={handle:d.handle, name:d.name||d.handle, pfp:d.pfp||'', id:d.id||''};
+        markCircle('vfy-c2');
+        setStatus('vfy-st-twitter','✓ @'+d.handle+' connected','ok');
+        unlockStep('vfy-step-enter');
+      };
+      window.addEventListener('message',_oauthMsgListener);
+
+      // Detect popup closed without completing
+      _oauthClosedTimer=setInterval(function(){
+        if(!_oauthPopup||_oauthPopup.closed){
+          _cleanupOauth();
+          if(!_twitter){
+            setStatus('vfy-st-twitter','X window was closed — try again','err');
+            if(btn){ btn.textContent='𝕏  CONNECT X ACCOUNT'; btn.disabled=false; }
+          }
+        }
+      },600);
+
     }catch(e){
       setStatus('vfy-st-twitter','✗ '+e.message,'err');
       if(btn){ btn.textContent='𝕏  CONNECT X ACCOUNT'; btn.disabled=false; }
     }
   };
 
-  /* ── STEP 3: ENTER ───────────────────────────────────────── */
+    /* ── STEP 3: ENTER ───────────────────────────────────────── */
   window.vfyEnter = function(){
     if(!_wallet||!_twitter) return;
     saveSession({ wallet:_wallet, balance:_balance, twitter_handle:_twitter.handle,
@@ -3437,7 +3493,7 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
 
     if(oauthError){
       // Came back from callback.html with error
-      _wallet=sessionStorage.getItem('neet_pkce_wallet');
+      _wallet=localStorage.getItem('neet_pkce_wallet')||sessionStorage.getItem('neet_pkce_wallet');
       if(_wallet){
         document.getElementById('neet-gate').style.display='flex';
         unlockStep('vfy-step-twitter');
@@ -3450,7 +3506,7 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
 
     if(oauthHandle){
       // Came back with verified handle from callback
-      _wallet=sessionStorage.getItem('neet_pkce_wallet')||oauthId;
+      _wallet=localStorage.getItem('neet_pkce_wallet')||sessionStorage.getItem('neet_pkce_wallet')||oauthId;
       _twitter={ handle:oauthHandle, name:decodeURIComponent(oauthName||oauthHandle),
         pfp:decodeURIComponent(oauthPfp||''), id:oauthId||'' };
 
