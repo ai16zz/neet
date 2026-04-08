@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>NEET – Verifying X Account...</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#080d08;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:monospace}
+    .box{text-align:center;color:#00ff88;padding:40px}
+    .box h2{font-size:14px;letter-spacing:3px;margin-bottom:16px;color:#00ff88}
+    .box p{font-size:11px;color:#666;margin-bottom:8px}
+    .spinner{width:36px;height:36px;border:2px solid #1a2a1a;border-top-color:#00ff88;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 20px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .err{color:#ff5555}.ok{color:#00ff88}
+  </style>
+</head>
+<body>
+<div class="box">
+  <div class="spinner" id="spinner"></div>
+  <h2>// VERIFYING X ACCOUNT</h2>
+  <p id="msg">Exchanging credentials with Twitter...</p>
+  <p id="sub" style="font-size:10px;color:#444;margin-top:8px"></p>
+</div>
+<script>
+/* callback.html – Twitter OAuth 2.0 PKCE callback handler
+   SETUP: Set BACKEND_URL to your deployed Vercel function URL. */
+const BACKEND_URL = 'https://your-vercel-app.vercel.app/api/verify-twitter';
+const MAIN_PAGE   = './neet-predict_2.html';
+function setMsg(t,c){const e=document.getElementById('msg');if(e){e.textContent=t;if(c)e.className=c;}}
+function setSub(t){const e=document.getElementById('sub');if(e)e.textContent=t;}
+function stopSpinner(){const s=document.getElementById('spinner');if(s)s.style.display='none';}
+async function handleCallback(){
+  const p=new URLSearchParams(location.search);
+  const code=p.get('code'),state=p.get('state'),err=p.get('error');
+  if(err){stopSpinner();setMsg('Auth rejected: '+err,'err');setTimeout(()=>{location.href=MAIN_PAGE+'?neet_oauth_error='+encodeURIComponent(err);},2000);return;}
+  if(!code||!state){stopSpinner();setMsg('Missing auth code.','err');setTimeout(()=>{location.href=MAIN_PAGE+'?neet_oauth_error=missing_code';},2000);return;}
+  const savedState=sessionStorage.getItem('neet_pkce_state');
+  const verifier=sessionStorage.getItem('neet_pkce_verifier');
+  const wallet=sessionStorage.getItem('neet_pkce_wallet');
+  if(state!==savedState){stopSpinner();setMsg('State mismatch (CSRF guard).','err');setTimeout(()=>{location.href=MAIN_PAGE+'?neet_oauth_error=state_mismatch';},2000);return;}
+  if(!verifier||!wallet){stopSpinner();setMsg('Session expired. Start over.','err');setTimeout(()=>{location.href=MAIN_PAGE+'?neet_oauth_error=session_expired';},2000);return;}
+  setMsg('Verifying with NEET server...');
+  try{
+    const resp=await fetch(BACKEND_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({wallet,code,code_verifier:verifier,redirect_uri:location.origin+location.pathname})});
+    const data=await resp.json();
+    if(!resp.ok||data.error) throw new Error(data.error||'Failed ('+resp.status+')');
+    sessionStorage.removeItem('neet_pkce_verifier');
+    sessionStorage.removeItem('neet_pkce_state');
+    sessionStorage.removeItem('neet_pkce_wallet');
+    setMsg('Verified! Returning to #trenches...','ok');
+    stopSpinner();
+    const qs=new URLSearchParams({neet_oauth_handle:data.handle,neet_oauth_name:encodeURIComponent(data.name||data.handle),neet_oauth_pfp:encodeURIComponent(data.pfp||''),neet_oauth_id:data.twitter_id||''});
+    setTimeout(()=>{location.href=MAIN_PAGE+'?'+qs.toString();},1200);
+  }catch(e){
+    stopSpinner();setMsg(e.message,'err');setSub('Returning...');
+    setTimeout(()=>{location.href=MAIN_PAGE+'?neet_oauth_error='+encodeURIComponent(e.message);},2500);
+  }
+}
+handleCallback();
+</script>
+</body>
+</html>
