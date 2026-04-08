@@ -1,1 +1,1 @@
-{"error": "Payment Required", "detail": "This endpoint requires payment via the x402 protocol. Include a Payment-Signature header with a valid x402 payment payload.", "docs": "https://www.x402.org/", "last_updated": "2026-04-08T20:45:37.364435"}
+{"error": "Payment Required", "detail": "This endpoint requires payment via the x402 protocol. Include a Payment-Signature header with a valid x402 payment payload.", "docs": "https://www.x402.org/", "last_updated": "2026-04-08T21:45:45.246859"}
