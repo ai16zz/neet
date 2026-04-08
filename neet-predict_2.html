@@ -3067,9 +3067,13 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
 </script>
 <!-- /NEET TRENCHES CHAT -->
 <script id="neet-ath-tracker">
-/* NEET – ATH Market Cap Tracker
-   Stores the highest MC each coin ever hit since being called.
-   Shows: CALLED MC | ATH MC | CURRENT MC  */
+/* NEET – ATH Tracker v3
+   Layout: TOKEN | CALLED MC | ATH MC | CURRENT MC | ATH
+   Works by reusing the 5 existing grid cells — no columns added/removed.
+   - Cell 2 (was CURRENT MC) → ATH MC dollar value
+   - Cell 3 (was PNL)        → CURRENT MC dollar value
+   - Cell 4 (was TIME)       → ATH multiplier (peak x from call)
+*/
 (function(){
   function parseMC(s){
     if(!s)return 0;
@@ -3080,109 +3084,136 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
     return parseFloat(s)||0;
   }
   function fmtMC(n){
-    if(!n||n<=0)return '-';
-    if(n>=1e9)return '$'+(n/1e9).toFixed(1)+'B';
-    if(n>=1e6)return '$'+(n/1e6).toFixed(1)+'M';
-    if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'K';
+    if(!n||n<=0)return '—';
+    if(n>=1e9)return '$'+(n/1e9).toFixed(2)+'B';
+    if(n>=1e6)return '$'+(n/1e6).toFixed(2)+'M';
+    if(n>=1e3)return '$'+Math.round(n/1e3)+'K';
     return '$'+Math.round(n);
   }
   function getLog(){try{return JSON.parse(localStorage.getItem('neet_calls_log')||'[]');}catch(e){return[];}}
   function saveLog(l){try{localStorage.setItem('neet_calls_log',JSON.stringify(l));}catch(e){}}
 
-  // Ensure every entry has an athMC field
+  // Ensure every entry has athMC
   function initATH(){
     const log=getLog();let ch=false;
     log.forEach(e=>{if(!e.athMC){e.athMC=e.mc||e.calledMC||0;ch=true;}});
     if(ch)saveLog(log);
   }
 
-  // After each render, read current MCs from DOM and update ATH if higher
-  function updateATH(){
-    const list=document.getElementById('pnlList');if(!list)return;
-    const log=getLog();let ch=false;
-    Array.from(list.children).slice(1).forEach(row=>{
-      const c=row.children;if(!c||c.length<3)return;
-      const sym=c[0].innerText.split('\n')[0].replace(/[🔥⚡🌕]/g,'').trim();
-      // Current MC is now at index 3 (after we insert ATH at index 2)
-      // Use the original index 2 before injection, detect via data attr
-      const curEl=row.dataset.athInj ? c[3] : c[2];
-      const cur=parseMC(curEl?.innerText?.trim());if(!cur)return;
-      const e=log.find(x=>sym.includes(x.sym)||sym.replace('$','')===x.sym?.replace('$',''));
-      if(e&&cur>(e.athMC||0)){e.athMC=cur;ch=true;}
-    });
-    if(ch)saveLog(log);
-  }
-
-  // Inject ATH MC column between CALLED MC and CURRENT MC
-  function injectATH(){
+  // Rewrite the entire pnlList to clean layout
+  function rewriteTable(){
     const list=document.getElementById('pnlList');
-    if(!list||list.dataset.athInj)return;
+    if(!list)return;
     const log=getLog();
-    const rows=Array.from(list.children);if(rows.length<2)return;
+    const rows=Array.from(list.children);
+    if(!rows.length)return;
 
-    // Header row — insert ATH MC header after CALLED MC (index 1)
+    // ── Header row ──────────────────────────────────────────────
     const hdr=rows[0];
-    if(!hdr.querySelector('.ath-hdr')){
-      const h=document.createElement('div');
-      h.className='ath-hdr';
-      h.style.cssText='color:#8b949e;font-size:11px;font-weight:600;text-align:center;padding:4px 8px;min-width:100px;letter-spacing:.5px;white-space:nowrap';
-      h.textContent='ATH MC';
-      // Insert after index 1 (CALLED MC)
-      hdr.insertBefore(h, hdr.children[2]);
+    if(hdr.children.length>=5&&!hdr.dataset.athDone){
+      const cells=hdr.children;
+      const baseStyle='color:#6e7681;font-size:11px;font-weight:600;letter-spacing:.06em;text-align:center;padding:4px 6px;white-space:nowrap;text-transform:uppercase';
+      cells[1].style.cssText=baseStyle+';text-align:left';
+      cells[1].textContent='CALLED MC';
+      cells[2].style.cssText=baseStyle;
+      cells[2].textContent='ATH MC';
+      cells[3].style.cssText=baseStyle;
+      cells[3].textContent='CURRENT MC';
+      cells[4].style.cssText=baseStyle;
+      cells[4].textContent='ATH';
+      hdr.dataset.athDone='1';
     }
 
-    // Data rows — insert ATH MC cell after CALLED MC cell
+    // ── Data rows ────────────────────────────────────────────────
     rows.slice(1).forEach(row=>{
-      if(row.querySelector('.ath-cell'))return;
-      const c=row.children;if(!c||c.length<4)return;
-      const sym=c[0].innerText.split('\n')[0].trim();
-      const e=log.find(x=>sym.includes(x.sym)||sym.replace('$','')===x.sym?.replace('$',''));
-      const ath=e?(e.athMC||0):0;
-      const calledMC=parseMC(c[1].innerText.trim());
-      const cell=document.createElement('div');
-      cell.className='ath-cell';
-      cell.style.cssText='text-align:center;padding:4px 8px;min-width:100px;font-size:12px;font-weight:700;white-space:nowrap';
-      if(ath>0&&calledMC>0&&ath>calledMC*1.1){
-        // Coin ran — show ATH in green with multiplier hint
-        const mult=(ath/calledMC);
-        cell.style.color='#00ff88';
-        cell.innerHTML=fmtMC(ath)+'<br><span style="font-size:9px;font-weight:400;color:#00cc66">('+mult.toFixed(1)+'x peak)</span>';
-      }else if(ath>0){
-        cell.style.color='#8b949e';
-        cell.textContent=fmtMC(ath);
-      }else{
-        cell.style.color='#444';cell.textContent='—';
+      if(row.dataset.athDone)return;
+      const c=row.children;
+      if(!c||c.length<5)return;
+
+      // Read the raw values BEFORE overwriting
+      const calledMC=parseMC(c[1].innerText);
+      const currentMCRaw=c[2].innerText.trim(); // this is current MC text
+      const currentMC=parseMC(currentMCRaw);
+
+      // Find entry in log to get ATH
+      const sym=c[0].innerText.split('\n')[0].replace(/[🔥⚡🌕💎🚀]/g,'').trim();
+      const entry=log.find(x=>{
+        if(!x.sym)return false;
+        const s=sym.toLowerCase().replace('$','');
+        const xs=x.sym.toLowerCase().replace('$','');
+        return s===xs||sym.toLowerCase().includes(xs);
+      });
+
+      // Update ATH if current MC is higher
+      if(entry&&currentMC>(entry.athMC||0)){
+        entry.athMC=currentMC;
+        saveLog(log);
       }
-      // Insert after CALLED MC (index 1)
-      row.insertBefore(cell, c[2]);
-      row.dataset.athInj='1';
+      const athMC=entry?(entry.athMC||0):0;
+      const calledForMult=entry?(entry.calledMC||calledMC):calledMC;
+      const athMult=(athMC&&calledForMult)?(athMC/calledForMult):0;
+
+      // ── Cell 2: ATH MC ────────────────────────────
+      const athIsUp=athMC>calledMC*1.05;
+      c[2].style.cssText='text-align:center;padding:6px 6px;font-size:12px;font-weight:700;white-space:nowrap';
+      if(athIsUp){
+        c[2].style.color='#00ff88';
+        c[2].textContent=fmtMC(athMC);
+      }else{
+        c[2].style.color='#6e7681';
+        c[2].textContent=fmtMC(athMC||calledMC);
+      }
+
+      // ── Cell 3: CURRENT MC ────────────────────────
+      const curIsUp=currentMC>=calledMC*0.95;
+      c[3].style.cssText='text-align:center;padding:6px 6px;font-size:12px;font-weight:600;white-space:nowrap';
+      c[3].style.color=curIsUp?'#e6edf3':'#f85149';
+      c[3].innerHTML=fmtMC(currentMC);
+
+      // ── Cell 4: ATH multiplier ────────────────────
+      c[4].style.cssText='text-align:center;padding:6px 6px;font-size:13px;font-weight:700;white-space:nowrap;min-width:64px';
+      if(athMult>=2){
+        c[4].style.color='#00ff88';
+        c[4].innerHTML=athMult.toFixed(2)+'x<br><span style="font-size:10px;font-weight:400;opacity:.8">+'+(((athMult-1)*100).toFixed(0))+'%</span>';
+      }else if(athMult>=1.1){
+        c[4].style.color='#ffd700';
+        c[4].innerHTML=athMult.toFixed(2)+'x<br><span style="font-size:10px;font-weight:400;opacity:.8">+'+(((athMult-1)*100).toFixed(0))+'%</span>';
+      }else if(athMult>0){
+        c[4].style.color='#f85149';
+        c[4].textContent=athMult.toFixed(2)+'x';
+      }else{
+        c[4].style.color='#444';c[4].textContent='—';
+      }
+
+      row.dataset.athDone='1';
     });
-    list.dataset.athInj='1';
   }
 
-  // Watch pnlPanel for re-renders and re-inject
+  // Re-run after every pnlList mutation
   new MutationObserver(()=>{
     const l=document.getElementById('pnlList');
-    if(l){delete l.dataset.athInj;Array.from(l.children).forEach(r=>delete r.dataset.athInj);}
-    updateATH();injectATH();
+    if(l){
+      delete l.dataset.athInj;
+      Array.from(l.children).forEach(r=>{delete r.dataset.athDone;});
+    }
+    rewriteTable();
   }).observe(document.getElementById('pnlPanel')||document.body,{childList:true,subtree:true});
 
-  // Wrap refreshPnlPrices to update ATH after each price refresh
+  // Wrap refreshPnlPrices
   const _r=window.refreshPnlPrices;
   if(typeof _r==='function')window.refreshPnlPrices=async function(...a){
     const res=await _r.apply(this,a);
-    setTimeout(()=>{updateATH();injectATH();},400);return res;
+    setTimeout(rewriteTable,350);return res;
   };
-  // Wrap logCalls so new entries start with athMC set
+  // Wrap logCalls
   const _l=window.logCalls;
   if(typeof _l==='function')window.logCalls=function(...a){
-    _l.apply(this,a);setTimeout(initATH,150);
+    _l.apply(this,a);setTimeout(initATH,120);
   };
 
   initATH();
-  updateATH();
-  setTimeout(injectATH,700);
-  console.log('[NEET] ATH MC tracker loaded ✓');
+  setTimeout(rewriteTable,800);
+  console.log('[NEET] ATH Tracker v3 loaded ✓');
 })();
 </script>
 </html>
