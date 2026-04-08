@@ -3067,14 +3067,10 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
 </script>
 <!-- /NEET TRENCHES CHAT -->
 <script id="neet-ath-tracker">
-/* NEET – ATH Tracker v4
-   Real DOM structure of pnlPanel:
-     child[0] = controls bar
-     child[1] = #pnlSummary
-     child[2] = column header row  (TOKEN | CALLED MC | CURRENT MC | PNL | TIME)
-     child[3] = #pnlList           (ALL children are data rows, no header row inside)
-   Rename header cells: [2]->ATH MC  [3]->CURRENT MC  [4]->ATH
-   Rewrite data cells:  [2]->athMC   [3]->currentMC   [4]->ATH multiplier
+/* NEET – ATH Tracker v5
+   DOM: pnlPanel.children[2] = column headers (TOKEN|CALLED MC|CURRENT MC|PNL|TIME)
+        pnlPanel.children[3] = #pnlList, all children are data rows
+   Fix: obs.disconnect() before DOM writes, obs.observe() after -> no infinite loop
 */
 (function(){
   function parseMC(s){
@@ -3092,20 +3088,25 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
     if(n>=1e3) return '$'+Math.round(n/1e3)+'K';
     return '$'+n.toFixed(0);
   }
-  function getLog(){ try{ return JSON.parse(localStorage.getItem('neet_calls_log')||'[]'); }catch(e){ return []; } }
-  function saveLog(l){ try{ localStorage.setItem('neet_calls_log',JSON.stringify(l)); }catch(e){} }
+  function getLog(){ try{return JSON.parse(localStorage.getItem('neet_calls_log')||'[]');}catch(e){return[];} }
+  function saveLog(l){ try{localStorage.setItem('neet_calls_log',JSON.stringify(l));}catch(e){} }
   function initATH(){
     const log=getLog(); let chg=false;
-    log.forEach(e=>{ if(!e.athMC){ e.athMC=parseMC(e.mc||e.calledMC)||0; chg=true; } });
+    log.forEach(e=>{ if(!e.athMC){e.athMC=parseMC(e.mc||e.calledMC)||0; chg=true;} });
     if(chg) saveLog(log);
   }
-  let _busy=false;
+
+  const OBS_CFG={childList:true,subtree:true};
+  let obs, watchTarget;
+
   function rewriteTable(){
-    if(_busy) return; _busy=true;
+    const panel=document.getElementById('pnlPanel');
+    const list=document.getElementById('pnlList');
+    if(!panel||!list) return;
+    // Disconnect BEFORE touching DOM to avoid re-triggering observer
+    if(obs) obs.disconnect();
     try{
-      const panel=document.getElementById('pnlPanel');
-      const list=document.getElementById('pnlList');
-      if(!panel||!list) return;
+      // Rename column headers in panel.children[2]
       const hdr=panel.children[2];
       if(hdr&&hdr.children.length>=5){
         hdr.children[2].textContent='ATH MC';
@@ -3116,12 +3117,13 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
       Array.from(list.children).forEach(row=>{
         const c=row.children;
         if(!c||c.length<5) return;
-        const sym=c[0].innerText.split('\n')[0].replace(/[^w$]/g,'').replace('$','').toLowerCase().trim();
+        // Strip emojis/scores from token name
+        const sym=c[0].innerText.split('\n')[0].replace(/[^a-zA-Z0-9$]/g,'').replace('$','').toLowerCase();
         const calledMC=parseMC(c[1].innerText);
         const currentMC=parseMC(c[2].innerText);
         const entry=log.find(e=>{
           if(!e.sym) return false;
-          const es=e.sym.replace('$','').toLowerCase().trim();
+          const es=e.sym.replace('$','').toLowerCase();
           return sym===es||(sym.length>2&&es.includes(sym))||(es.length>2&&sym.includes(es));
         });
         if(entry){
@@ -3138,23 +3140,34 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
           else if(m>0){c[4].style.color='#ff6666';c[4].textContent=m.toFixed(2)+'x';}
           else{c[4].style.color='#555';c[4].textContent='--';}
         }else{
-          c[2].textContent='--';c[2].style.cssText='text-align:center;color:#555';
-          c[3].textContent=currentMC?fmtMC(currentMC):'--';c[3].style.cssText='text-align:center;color:#8b949e';
-          c[4].textContent='--';c[4].style.cssText='text-align:center;color:#555';
+          c[2].textContent='--'; c[2].style.cssText='text-align:center;color:#555';
+          c[3].textContent=currentMC?fmtMC(currentMC):'--'; c[3].style.cssText='text-align:center;color:#8b949e';
+          c[4].textContent='--'; c[4].style.cssText='text-align:center;color:#555';
         }
       });
       if(logChg) saveLog(log);
-    }finally{_busy=false;}
+    }finally{
+      // Always reconnect
+      if(obs&&watchTarget) obs.observe(watchTarget,OBS_CFG);
+    }
   }
-  const obs=new MutationObserver(()=>{if(!_busy) rewriteTable();});
-  obs.observe(document.getElementById('pnlPanel')||document.body,{childList:true,subtree:true});
+
+  watchTarget=document.getElementById('pnlPanel')||document.body;
+  obs=new MutationObserver(rewriteTable);
+  obs.observe(watchTarget,OBS_CFG);
+
   const _r=window.refreshPnlPrices;
-  if(typeof _r==='function') window.refreshPnlPrices=async function(...a){const res=await _r.apply(this,a);setTimeout(rewriteTable,400);return res;};
+  if(typeof _r==='function') window.refreshPnlPrices=async function(...a){
+    const res=await _r.apply(this,a); setTimeout(rewriteTable,400); return res;
+  };
   const _l=window.logCalls;
-  if(typeof _l==='function') window.logCalls=function(...a){_l.apply(this,a);setTimeout(initATH,150);};
+  if(typeof _l==='function') window.logCalls=function(...a){
+    _l.apply(this,a); setTimeout(initATH,150);
+  };
+
   initATH();
   setTimeout(rewriteTable,900);
-  console.log('[NEET] ATH Tracker v4 loaded');
+  console.log('[NEET] ATH Tracker v5 loaded');
 })();
 </script>
 </html>
