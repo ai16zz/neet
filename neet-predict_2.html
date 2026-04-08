@@ -3066,130 +3066,123 @@ const SOLANA_RPCS=['https://solana-rpc.publicnode.com','https://api.mainnet-beta
 window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastSentAt=0,cdTimer=null;const $=id=>document.getElementById(id);const setStatus=(m,t='')=>{const e=$('neet-status');e.style.display='block';e.className='neet-status '+t;e.textContent=m;};function openGate(){if(wallet&&xHandle&&neetBalance>=NEET_MIN_HOLD){openRoom();return;}$('neet-gate').classList.add('show');}function closeGate(){$('neet-gate').classList.remove('show');}function openRoom(){$('neet-room').classList.add('show');$('neet-me-label').textContent=xHandle+'  ·  '+wallet.slice(0,4)+'…'+wallet.slice(-4)+'  ·  '+neetBalance.toLocaleString()+' NEET';initSupabase();}function closeRoom(){$('neet-room').classList.remove('show');}async function connectWallet(){try{if(!window.solana||!window.solana.isPhantom){setStatus('Phantom wallet not found. Install it from phantom.app','err');return;}const resp=await window.solana.connect();wallet=resp.publicKey.toString();$('neet-wallet-btn').textContent=wallet.slice(0,4)+'…'+wallet.slice(-4)+'  ✓';$('neet-wallet-info').textContent='checking $NEET balance…';await fetchNeetBalance();validate();}catch(e){setStatus('Wallet connect failed: '+e.message,'err');}}async function fetchNeetBalance(){const body={jsonrpc:'2.0',id:1,method:'getTokenAccountsByOwner',params:[wallet,{mint:NEET_MINT},{encoding:'jsonParsed'}]};let lastErr='';for(const rpc of SOLANA_RPCS){try{const r=await fetch(rpc,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok){lastErr='HTTP '+r.status+' from '+rpc.replace('https://','');continue;}const j=await r.json();if(j.error){lastErr=(j.error.message||'rpc error')+' ('+rpc.replace('https://','')+')';continue;}let total=0;((j.result&&j.result.value)||[]).forEach(a=>{const u=a.account&&a.account.data&&a.account.data.parsed&&a.account.data.parsed.info&&a.account.data.parsed.info.tokenAmount&&a.account.data.parsed.info.tokenAmount.uiAmount;if(u)total+=u;});neetBalance=total;$('neet-wallet-info').textContent='holds '+total.toLocaleString()+' $NEET';return;}catch(e){lastErr=e.message;}}neetBalance=0;$('neet-wallet-info').textContent='balance check failed: '+lastErr;}function validate(){const x=$('neet-x-input').value.trim().replace(/^@/,'');const ok=wallet&&x.length>=2&&neetBalance>=NEET_MIN_HOLD;$('neet-enter-btn').disabled=!ok;if(wallet&&neetBalance<NEET_MIN_HOLD)setStatus('You hold '+neetBalance.toLocaleString()+' $NEET. Minimum required: '+NEET_MIN_HOLD.toLocaleString()+'.','err');else if(wallet&&neetBalance>=NEET_MIN_HOLD)setStatus('Verified holder. '+neetBalance.toLocaleString()+' $NEET ✓','ok');}function enterChat(){xHandle='@'+$('neet-x-input').value.trim().replace(/^@/,'');closeGate();openRoom();}function initSupabase(){if(supa)return;if(SUPABASE_URL.indexOf('YOUR-PROJECT')>=0){addLocal('system','⚠ Supabase not configured. Edit SUPABASE_URL/SUPABASE_ANON_KEY in the page source.');return;}supa=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);supa.from('messages').select('*').eq('channel','trenches').order('created_at',{ascending:true}).limit(50).then(({data,error})=>{if(error){addLocal('system','load error: '+error.message);return;}(data||[]).forEach(renderMsg);scrollBottom();});supa.channel('trenches-rt').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:'channel=eq.trenches'},p=>{renderMsg(p.new);scrollBottom();}).subscribe();}function renderMsg(m){const d=document.createElement('div');d.className='neet-msg';const t=new Date(m.created_at||Date.now());const time=t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});d.innerHTML='<span class="u">'+esc(m.handle)+'</span><span class="t">'+time+'</span><span class="b">'+esc(m.body)+'</span>';$('neet-msgs').appendChild(d);}function addLocal(h,b){renderMsg({handle:h,body:b,created_at:new Date().toISOString()});scrollBottom();}function scrollBottom(){const m=$('neet-msgs');m.scrollTop=m.scrollHeight;}function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}async function send(){if(window.__neetSending)return;window.__neetSending=true;try{const input=$('neet-input');const text=input.value.trim();if(!text)return;if(!supa){addLocal('system','chat backend not configured.');return;}const now=Date.now();if(now-lastSentAt<RATE_LIMIT_MS)return;await fetchNeetBalance();if(neetBalance<NEET_MIN_HOLD){addLocal('system','you no longer hold '+NEET_MIN_HOLD+' $NEET. access revoked.');$('neet-input').disabled=true;$('neet-send').disabled=true;return;}const{error}=await supa.from('messages').insert({channel:'trenches',handle:xHandle,wallet,body:text});if(error){if(/rate_limit/i.test(error.message||'')){input.value='';lastSentAt=now;startCooldown();}else{addLocal('system','send failed: '+error.message);}return;}input.value='';lastSentAt=now;startCooldown();}finally{window.__neetSending=false;}}function startCooldown(){clearInterval(cdTimer);$('neet-send').disabled=true;cdTimer=setInterval(()=>{const left=Math.ceil((RATE_LIMIT_MS-(Date.now()-lastSentAt))/1000);if(left<=0){clearInterval(cdTimer);$('neet-cd').textContent='';$('neet-send').disabled=false;}else{$('neet-cd').textContent='cooldown — '+left+'s';}},250);}document.addEventListener('input',e=>{if(e.target&&e.target.id==='neet-x-input')validate();});return{openGate,closeGate,connectWallet,enterChat,openRoom,closeRoom,send};})();
 </script>
 <!-- /NEET TRENCHES CHAT -->
-<script id="peak-pnl-patch">
-/* NEET PREDICT – Peak PNL Tracker v2
-   Records the highest MC each called coin ever reached,
-   even after it dumps. Backfills history via DexScreener OHLCV. */
+<script id="neet-ath-tracker">
+/* NEET – ATH Market Cap Tracker
+   Stores the highest MC each coin ever hit since being called.
+   Shows: CALLED MC | ATH MC | CURRENT MC  */
 (function(){
   function parseMC(s){
-    if(!s)return 0;s=String(s).replace(/[$,]/g,'').trim();
+    if(!s)return 0;
+    s=String(s).replace(/[$,]/g,'').trim();
     if(s.endsWith('K'))return parseFloat(s)*1e3;
     if(s.endsWith('M'))return parseFloat(s)*1e6;
     if(s.endsWith('B'))return parseFloat(s)*1e9;
     return parseFloat(s)||0;
   }
+  function fmtMC(n){
+    if(!n||n<=0)return '-';
+    if(n>=1e9)return '$'+(n/1e9).toFixed(1)+'B';
+    if(n>=1e6)return '$'+(n/1e6).toFixed(1)+'M';
+    if(n>=1e3)return '$'+(n/1e3).toFixed(0)+'K';
+    return '$'+Math.round(n);
+  }
   function getLog(){try{return JSON.parse(localStorage.getItem('neet_calls_log')||'[]');}catch(e){return[];}}
-  function saveLog(log){try{localStorage.setItem('neet_calls_log',JSON.stringify(log));}catch(e){}}
+  function saveLog(l){try{localStorage.setItem('neet_calls_log',JSON.stringify(l));}catch(e){}}
 
-  // Init – give every entry a peakMC if missing
-  function initPeaks(){
+  // Ensure every entry has an athMC field
+  function initATH(){
     const log=getLog();let ch=false;
-    log.forEach(e=>{if(!e.peakMC){e.peakMC=e.mc||e.calledMC||0;ch=true;}});
+    log.forEach(e=>{if(!e.athMC){e.athMC=e.mc||e.calledMC||0;ch=true;}});
     if(ch)saveLog(log);
   }
 
-  // Backfill historical peaks from DexScreener OHLCV candles
-  async function fetchPeak(pair,callTs,calledMC){
-    try{
-      const from=Math.floor(callTs/1000),to=Math.floor(Date.now()/1000);
-      const r=await fetch('https://io.dexscreener.com/dex/chart/amm/v3/solana/'+pair+'?res=60&from='+from+'&to='+to);
-      const d=await r.json();
-      const bars=d.bars||d.data||[];
-      if(!bars.length)return 0;
-      const open0=bars[0].o||bars[0].open||1;
-      let maxH=0;bars.forEach(b=>{const h=b.h||b.high||0;if(h>maxH)maxH=h;});
-      return calledMC*(maxH/open0);
-    }catch(e){return 0;}
-  }
-  async function backfill(){
-    const log=getLog();let ch=false;
-    for(const e of log){
-      if(!e.pair)continue;
-      // Only backfill entries where peak==called (never updated)
-      if(Math.abs((e.peakMC||0)-(e.calledMC||0))<(e.calledMC||1)*0.05){
-        const pk=await fetchPeak(e.pair,e.ts,e.calledMC);
-        if(pk>e.peakMC){e.peakMC=pk;ch=true;}
-      }
-    }
-    if(ch)saveLog(log);
-  }
-
-  // Update peaks by reading current MCs from the rendered PNL table
-  function updateFromDOM(){
+  // After each render, read current MCs from DOM and update ATH if higher
+  function updateATH(){
     const list=document.getElementById('pnlList');if(!list)return;
     const log=getLog();let ch=false;
     Array.from(list.children).slice(1).forEach(row=>{
       const c=row.children;if(!c||c.length<3)return;
       const sym=c[0].innerText.split('\n')[0].replace(/[🔥⚡🌕]/g,'').trim();
-      const cur=parseMC(c[2].innerText.trim());if(!cur)return;
-      const e=log.find(x=>sym.includes(x.sym)||sym.includes('$'+x.sym));
-      if(e&&cur>(e.peakMC||0)){e.peakMC=cur;ch=true;}
+      // Current MC is now at index 3 (after we insert ATH at index 2)
+      // Use the original index 2 before injection, detect via data attr
+      const curEl=row.dataset.athInj ? c[3] : c[2];
+      const cur=parseMC(curEl?.innerText?.trim());if(!cur)return;
+      const e=log.find(x=>sym.includes(x.sym)||sym.replace('$','')===x.sym?.replace('$',''));
+      if(e&&cur>(e.athMC||0)){e.athMC=cur;ch=true;}
     });
     if(ch)saveLog(log);
   }
 
-  // Inject the PEAK PNL column into the PNL tracker table
-  function injectCol(){
+  // Inject ATH MC column between CALLED MC and CURRENT MC
+  function injectATH(){
     const list=document.getElementById('pnlList');
-    if(!list||list.dataset.pkInj)return;
+    if(!list||list.dataset.athInj)return;
     const log=getLog();
     const rows=Array.from(list.children);if(rows.length<2)return;
-    // Header
+
+    // Header row — insert ATH MC header after CALLED MC (index 1)
     const hdr=rows[0];
-    if(!hdr.querySelector('.pk-hdr')){
-      const h=document.createElement('div');h.className='pk-hdr';
-      h.style.cssText='color:#8b949e;font-size:11px;font-weight:600;text-align:center;padding:4px 10px;min-width:90px;letter-spacing:.5px';
-      h.textContent='PEAK PNL';
-      hdr.insertBefore(h,hdr.children[hdr.children.length-1]);
+    if(!hdr.querySelector('.ath-hdr')){
+      const h=document.createElement('div');
+      h.className='ath-hdr';
+      h.style.cssText='color:#8b949e;font-size:11px;font-weight:600;text-align:center;padding:4px 8px;min-width:100px;letter-spacing:.5px;white-space:nowrap';
+      h.textContent='ATH MC';
+      // Insert after index 1 (CALLED MC)
+      hdr.insertBefore(h, hdr.children[2]);
     }
-    // Data rows
+
+    // Data rows — insert ATH MC cell after CALLED MC cell
     rows.slice(1).forEach(row=>{
-      if(row.querySelector('.pk-cell'))return;
-      const c=row.children;if(!c||c.length<5)return;
+      if(row.querySelector('.ath-cell'))return;
+      const c=row.children;if(!c||c.length<4)return;
       const sym=c[0].innerText.split('\n')[0].trim();
+      const e=log.find(x=>sym.includes(x.sym)||sym.replace('$','')===x.sym?.replace('$',''));
+      const ath=e?(e.athMC||0):0;
       const calledMC=parseMC(c[1].innerText.trim());
-      const e=log.find(x=>sym.includes(x.sym)||sym.includes('$'+x.sym));
-      const pk=e?(e.peakMC||0):0;
-      const mult=(pk&&calledMC)?(pk/calledMC):0;
-      const cell=document.createElement('div');cell.className='pk-cell';
-      cell.style.cssText='text-align:center;padding:4px 10px;min-width:90px;font-size:12px;font-weight:700;line-height:1.3';
-      if(mult>=2){
+      const cell=document.createElement('div');
+      cell.className='ath-cell';
+      cell.style.cssText='text-align:center;padding:4px 8px;min-width:100px;font-size:12px;font-weight:700;white-space:nowrap';
+      if(ath>0&&calledMC>0&&ath>calledMC*1.1){
+        // Coin ran — show ATH in green with multiplier hint
+        const mult=(ath/calledMC);
         cell.style.color='#00ff88';
-        cell.innerHTML=mult.toFixed(2)+'x<br><span style="font-size:10px;font-weight:400;color:#00cc66">+'+(((mult-1)*100).toFixed(0))+'%</span>';
-      }else if(mult>=1.2){
-        cell.style.color='#ffd700';
-        cell.innerHTML=mult.toFixed(2)+'x<br><span style="font-size:10px;font-weight:400;color:#ccaa00">+'+(((mult-1)*100).toFixed(0))+'%</span>';
-      }else if(mult>0){cell.style.color='#ff6666';cell.textContent=mult.toFixed(2)+'x';}
-      else{cell.style.color='#444';cell.textContent='—';}
-      row.insertBefore(cell,c[c.length-1]);
+        cell.innerHTML=fmtMC(ath)+'<br><span style="font-size:9px;font-weight:400;color:#00cc66">('+mult.toFixed(1)+'x peak)</span>';
+      }else if(ath>0){
+        cell.style.color='#8b949e';
+        cell.textContent=fmtMC(ath);
+      }else{
+        cell.style.color='#444';cell.textContent='—';
+      }
+      // Insert after CALLED MC (index 1)
+      row.insertBefore(cell, c[2]);
+      row.dataset.athInj='1';
     });
-    list.dataset.pkInj='1';
+    list.dataset.athInj='1';
   }
 
-  // Re-inject after every re-render
+  // Watch pnlPanel for re-renders and re-inject
   new MutationObserver(()=>{
-    const l=document.getElementById('pnlList');if(l)delete l.dataset.pkInj;
-    updateFromDOM();injectCol();
+    const l=document.getElementById('pnlList');
+    if(l){delete l.dataset.athInj;Array.from(l.children).forEach(r=>delete r.dataset.athInj);}
+    updateATH();injectATH();
   }).observe(document.getElementById('pnlPanel')||document.body,{childList:true,subtree:true});
 
-  // Wrap refreshPnlPrices
+  // Wrap refreshPnlPrices to update ATH after each price refresh
   const _r=window.refreshPnlPrices;
   if(typeof _r==='function')window.refreshPnlPrices=async function(...a){
     const res=await _r.apply(this,a);
-    setTimeout(()=>{updateFromDOM();injectCol();},400);return res;
+    setTimeout(()=>{updateATH();injectATH();},400);return res;
   };
-  // Wrap logCalls so new entries get peakMC set immediately
+  // Wrap logCalls so new entries start with athMC set
   const _l=window.logCalls;
   if(typeof _l==='function')window.logCalls=function(...a){
-    _l.apply(this,a);setTimeout(initPeaks,120);
+    _l.apply(this,a);setTimeout(initATH,150);
   };
 
-  // Boot
-  initPeaks();
-  updateFromDOM();
-  setTimeout(injectCol,700);
-  setTimeout(backfill,4000); // quiet background backfill of historical peaks
-  console.log('[NEET] Peak PNL v2 loaded ✓');
+  initATH();
+  updateATH();
+  setTimeout(injectATH,700);
+  console.log('[NEET] ATH MC tracker loaded ✓');
 })();
 </script>
 </html>
