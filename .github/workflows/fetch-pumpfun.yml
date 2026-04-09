@@ -163,9 +163,138 @@ jobs:
           print(f"Done: {len(token_stats)} tokens, {len(merged_creators)} creators, {len(grads_uniq)} grads", flush=True)
           PYEOF
 
+      - name: Early Telegram alert on new pump.fun grads
+        env:
+          TG_TOKEN:  ${{ secrets.TG_TOKEN }}
+          TG_CHATID: ${{ secrets.TG_CHATID }}
+        run: |
+          python3 << 'PYEOF'
+          import json, os, urllib.request, urllib.error, time, sys
+
+          TOKEN = os.environ.get('TG_TOKEN','').strip()
+          CHAT  = os.environ.get('TG_CHATID','').strip()
+          if not TOKEN or not CHAT:
+              print('[EARLY] TG_TOKEN/TG_CHATID missing — skipping alerts', flush=True)
+              sys.exit(0)
+
+          try:
+              grads = json.load(open('pumpfun-grads.json')).get('data', [])
+          except Exception as e:
+              print('[EARLY] could not read pumpfun-grads.json:', e, flush=True)
+              sys.exit(0)
+
+          os.makedirs('scanner', exist_ok=True)
+          state_path = 'scanner/pumpfun-seen.json'
+          first_run = not os.path.exists(state_path)
+          seen = set()
+          if not first_run:
+              try:
+                  seen = set(json.load(open(state_path)).get('seen', []))
+              except Exception:
+                  seen = set()
+
+          if first_run:
+              seen = {g.get('mint','') for g in grads if g.get('mint')}
+              json.dump({'seen': sorted(seen)}, open(state_path,'w'))
+              print(f'[EARLY] first run — seeded {len(seen)} grads, no alerts sent', flush=True)
+              sys.exit(0)
+
+          new_tokens = [g for g in grads if g.get('mint') and g['mint'] not in seen]
+          print(f'[EARLY] grads: {len(grads)} | seen: {len(seen)} | new this run: {len(new_tokens)}', flush=True)
+
+          def http_get(url, timeout=12):
+              try:
+                  req = urllib.request.Request(url, headers={'User-Agent':'neet-early/1.0'})
+                  with urllib.request.urlopen(req, timeout=timeout) as r:
+                      return json.loads(r.read().decode())
+              except Exception as e:
+                  print('[EARLY] http_get failed:', url, e, flush=True)
+                  return None
+
+          def send_tg(msg):
+              url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
+              body = json.dumps({'chat_id': CHAT, 'text': msg, 'parse_mode':'HTML', 'disable_web_page_preview': False}).encode()
+              for attempt in (1,2):
+                  try:
+                      req = urllib.request.Request(url, data=body, headers={'Content-Type':'application/json'})
+                      with urllib.request.urlopen(req, timeout=15) as r:
+                          resp = json.loads(r.read().decode())
+                          if resp.get('ok'):
+                              print(f'[EARLY][TG] sent ok (attempt {attempt})', flush=True)
+                              return True
+                          print(f'[EARLY][TG] not ok attempt {attempt}: {resp}', flush=True)
+                  except urllib.error.HTTPError as e:
+                      txt = e.read().decode(errors='ignore')
+                      print(f'[EARLY][TG FAIL attempt {attempt}] HTTP {e.code}: {txt}', flush=True)
+                      if e.code == 429:
+                          try:
+                              ra = int(json.loads(txt).get('parameters',{}).get('retry_after',2))
+                          except Exception:
+                              ra = 2
+                          time.sleep(min(ra+1, 10))
+                          continue
+                      if e.code == 401:
+                          return False
+                  except Exception as e:
+                      print(f'[EARLY][TG FAIL attempt {attempt}] {e}', flush=True)
+                  time.sleep(1)
+              return False
+
+          def fmt_usd(v):
+              try:
+                  v = float(v)
+                  if v >= 1e6: return f"${v/1e6:.1f}M"
+                  if v >= 1e3: return f"${v/1e3:.0f}K"
+                  return f"${v:.0f}"
+              except Exception:
+                  return "$?"
+
+          sent = 0
+          cap = 10  # max alerts per run to avoid 429 spam
+          for g in new_tokens[:cap]:
+              mint = g['mint']
+              sym  = (g.get('symbol') or '?').replace('<','').replace('>','')
+              name = (g.get('name') or '').replace('<','').replace('>','')
+              mc_hint = g.get('usd_market_cap') or 0
+
+              dx = http_get(f'https://api.dexscreener.com/latest/dex/tokens/{mint}')
+              pair = None
+              if dx and dx.get('pairs'):
+                  pairs = [p for p in dx['pairs'] if p.get('chainId')=='solana']
+                  pairs.sort(key=lambda p: float((p.get('liquidity') or {}).get('usd') or 0), reverse=True)
+                  pair = pairs[0] if pairs else None
+
+              if not pair:
+                  print(f'[EARLY] no dex data for {sym} {mint[:8]} — marking seen', flush=True)
+                  seen.add(mint); continue
+
+              liq = float((pair.get('liquidity') or {}).get('usd') or 0)
+              vol = float((pair.get('volume') or {}).get('h24') or 0)
+              mc  = float(pair.get('marketCap') or pair.get('fdv') or mc_hint or 0)
+              url = pair.get('url') or f'https://dexscreener.com/solana/{mint}'
+
+              if liq < 5000 or mc < 5000:
+                  print(f'[EARLY] below-threshold {sym}: liq={liq:.0f} mc={mc:.0f} — marking seen', flush=True)
+                  seen.add(mint); continue
+
+              msg = (f"🚨 <b>EARLY ${sym}</b> (pump.fun grad)\n"
+                     f"MC: {fmt_usd(mc)}\n"
+                     f"Liq: {fmt_usd(liq)} | Vol: {fmt_usd(vol)}\n"
+                     f"{url}")
+              if send_tg(msg):
+                  sent += 1
+                  seen.add(mint)
+              else:
+                  print(f'[EARLY] send failed for {sym} — leaving unseen for retry', flush=True)
+              time.sleep(0.4)
+
+          json.dump({'seen': sorted(seen)}, open(state_path,'w))
+          print(f'[EARLY] done. new: {len(new_tokens)} | sent: {sent}', flush=True)
+          PYEOF
+
       - name: Commit and push
         run: |
           git config user.email "nansen-bot@github.com"
           git config user.name "Nansen Data Bot"
-          git add neet-dev-stats.json pumpfun-grads.json
-          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update pumpfun dev stats [skip ci]" && git push)
+          git add neet-dev-stats.json pumpfun-grads.json scanner/pumpfun-seen.json
+          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update pumpfun dev stats + early alerts [skip ci]" && git push)
