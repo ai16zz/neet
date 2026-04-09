@@ -4,17 +4,40 @@
  * Sends Telegram alerts when score >= 50 (or >= 35 for rockets)
  * Also monitors specific wallets for ANY buy activity
  * State persisted in scanner/state.json between runs
+ *
+ * FIXED 2026-04-09:
+ *   1. Removed stale hardcoded Telegram fallback token (it returned 401)
+ *   2. sendTG now retries, logs loudly, and returns success/failure
+ *   3. State is marked "notified" ONLY after a confirmed successful send
+ *   4. Strict dedup: one alert per coin, ever (no more 4h cooldown re-alerts)
+ *   5. Removed mc<=200K upper cap (was dropping tokens that pumped past it)
+ *   6. fetchPairs() / checkWalletBuys() errors are now logged, not swallowed
+ *   7. Watched-wallet signatures only marked seen after successful TG send
  */
-const https=require('https'),fs=require('fs'),path=require('path');
-const TG_TOKEN =process.env.TG_TOKEN ||'8776338924:AAGA_ROKVFWWKm2dX9UQIovisnMupF_g2Bk';
-const TG_CHATID=process.env.TG_CHATID||'1501478917';
-const STATE_FILE=path.join(__dirname,'state.json');
-const SCORE_THRESHOLD=50,ROCKET_THRESHOLD=35;
-const NORMAL_COOLDOWN=4*60*60*1000,ROCKET_COOLDOWN=30*60*1000;
-const SOLANA_RPC='https://api.mainnet-beta.solana.com';
-const WSOL='So11111111111111111111111111111111111111112';
+const https = require('https');
+const fs    = require('fs');
+const path  = require('path');
 
-const SM_WALLETS=[
+const TG_TOKEN  = process.env.TG_TOKEN;   // REQUIRED — no fallback, fail loud
+const TG_CHATID = process.env.TG_CHATID;  // REQUIRED
+if (!TG_TOKEN || !TG_CHATID) {
+  console.error('[FATAL] TG_TOKEN and TG_CHATID env vars are required.');
+  console.error('        Set them as repo secrets: Settings → Secrets → Actions.');
+  process.exit(1);
+}
+
+const STATE_FILE       = path.join(__dirname, 'state.json');
+const SCORE_THRESHOLD  = 50;
+const ROCKET_THRESHOLD = 35;
+const SOLANA_RPC       = 'https://api.mainnet-beta.solana.com';
+const WSOL             = 'So11111111111111111111111111111111111111112';
+
+// Hard filters for "interesting" pairs. mc upper cap removed on 2026-04-09.
+const MC_MIN  = 5_000;
+const VOL_MIN = 0;       // require >0 volume (unchanged)
+const LIQ_MIN = 5_000;
+
+const SM_WALLETS = [
   {name:"180D Smart Trader [DpYuj2At]",addr:"DpYuj2At1Z1tH4baoz5A1XV4AanjJa8bgbB51BWSZUyn",score:99},
   {name:"180D Smart Trader [69SzLy86]",addr:"69SzLy86mUfdeFqYurR4YsvcTuvYsVAqwdeTGWiGvRgt",score:97},
   {name:"90D Smart Trader [3fupiyLE]",addr:"3fupiyLEr2BnFE9myQY8FS1kzqjhVZd7MdxUj74TFev4",score:97},
@@ -40,68 +63,284 @@ const SM_WALLETS=[
 ];
 
 // Wallets to monitor for ANY buy — instant Telegram alert regardless of score
-const WATCHED_WALLETS=[
-  {name:'Mitch',addr:'4Be9CvxqHW6BYiRAxW9Q3xu1ycTMWaL5z8NX4HR3ha7t'},
-  {name:'Hugo Martingale',addr:'Au1GUWfcadx7jMzhsg6gHGUgViYJrnPfL1vbdqnvLK4i'},
+const WATCHED_WALLETS = [
+  {name:'Mitch',           addr:'4Be9CvxqHW6BYiRAxW9Q3xu1ycTMWaL5z8NX4HR3ha7t'},
+  {name:'Hugo Martingale', addr:'Au1GUWfcadx7jMzhsg6gHGUgViYJrnPfL1vbdqnvLK4i'},
 ];
 
+// ─── helpers ────────────────────────────────────────────────────────────────
 function smHash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h^s.charCodeAt(i))>>>0;return h;}
 function fmtMC(n){if(!n||n<0)return'—';if(n>=1e9)return'$'+(n/1e9).toFixed(1)+'B';if(n>=1e6)return'$'+(n/1e6).toFixed(2)+'M';if(n>=1e3)return'$'+(n/1e3).toFixed(0)+'K';return'$'+n.toFixed(0);}
-function httpGet(url){return new Promise((resolve,reject)=>{const mod=url.startsWith('https')?https:require('http');const req=mod.get(url,{headers:{'Accept':'application/json','User-Agent':'NEETScanner/1.0'}},res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>{try{resolve(JSON.parse(d));}catch(e){reject(e);}});});req.on('error',reject);req.setTimeout(12000,()=>{req.destroy();reject(new Error('Timeout'));});});}
-function httpPost(url,body){return new Promise((resolve,reject)=>{const data=JSON.stringify(body);const u=new URL(url);const opts={hostname:u.hostname,port:443,path:u.pathname,method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data)}};const req=https.request(opts,res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>{try{resolve(JSON.parse(d));}catch(e){resolve({});}});});req.on('error',reject);req.setTimeout(10000,()=>{req.destroy();reject(new Error('Timeout'));});req.write(data);req.end();});}
+function httpGet(url){
+  return new Promise((resolve,reject)=>{
+    const mod=url.startsWith('https')?https:require('http');
+    const req=mod.get(url,{headers:{'Accept':'application/json','User-Agent':'NEETScanner/1.1'}},res=>{
+      let d='';res.on('data',c=>d+=c);
+      res.on('end',()=>{try{resolve(JSON.parse(d));}catch(e){reject(new Error('JSON parse: '+e.message));}});
+    });
+    req.on('error',reject);
+    req.setTimeout(12000,()=>{req.destroy();reject(new Error('httpGet timeout: '+url));});
+  });
+}
 
+function httpPost(url,body){
+  return new Promise((resolve,reject)=>{
+    const data=JSON.stringify(body);
+    const u=new URL(url);
+    const opts={hostname:u.hostname,port:443,path:u.pathname,method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data)}};
+    const req=https.request(opts,res=>{
+      let d='';res.on('data',c=>d+=c);
+      res.on('end',()=>{try{resolve(JSON.parse(d));}catch(e){resolve({ok:false,error_code:res.statusCode,description:'non-JSON response: '+d.slice(0,200)});}});
+    });
+    req.on('error',reject);
+    req.setTimeout(10000,()=>{req.destroy();reject(new Error('httpPost timeout: '+url));});
+    req.write(data);req.end();
+  });
+}
+
+// ─── Telegram send (loud, returns true/false, retries once) ────────────────
+async function sendTG(msg){
+  const url='https://api.telegram.org/bot'+TG_TOKEN+'/sendMessage';
+  const body={chat_id:TG_CHATID,text:msg,parse_mode:'Markdown',disable_web_page_preview:true};
+  for(let attempt=1;attempt<=2;attempt++){
+    try{
+      const r=await httpPost(url,body);
+      if(r && r.ok){
+        console.log('[TG] sent ok (attempt '+attempt+')');
+        return true;
+      }
+      // Log the full failure payload so it shows in GH Actions logs.
+      console.error('[TG FAIL attempt '+attempt+']',
+        'error_code=',r&&r.error_code,
+        'description=',r&&r.description);
+      if(r && r.error_code===429){
+        const wait=(r.parameters&&r.parameters.retry_after?r.parameters.retry_after*1000:2000);
+        console.error('[TG] rate-limited, waiting',wait,'ms');
+        await new Promise(rs=>setTimeout(rs,wait));
+        continue;
+      }
+      if(r && r.error_code===401){
+        console.error('[TG FATAL] 401 Unauthorized — TG_TOKEN is invalid/revoked. Rotate it via @BotFather and update the repo secret.');
+        return false; // no point retrying a 401
+      }
+    }catch(e){
+      console.error('[TG EXCEPTION attempt '+attempt+']',e.message);
+    }
+    await new Promise(rs=>setTimeout(rs,1500));
+  }
+  return false;
+}
+
+// ─── scoring (unchanged) ────────────────────────────────────────────────────
 function calcScore(t){let s=0;const mc=t.mc||0,vol=t.vol||0,liq=t.liq||0,p24=t.p24||0,p1=t.p1||0,sm=t.smCount||0;s+=Math.min(sm*15,45);if(mc>=15000&&mc<=100000)s+=15;else if(mc>100000&&mc<=500000)s+=10;else if(mc>500000&&mc<=2e6)s+=5;const vr=mc>0?vol/mc:0;if(vr>3)s+=12;else if(vr>1)s+=8;else if(vr>0.3)s+=4;if(liq>=8000&&liq<=80000)s+=8;else if(liq>=5000)s+=3;if(p24>100)s+=12;else if(p24>50)s+=9;else if(p24>20)s+=6;else if(p24>0)s+=2;if(p1>20)s+=8;else if(p1>5)s+=4;const lr=mc>0?liq/mc:0;if(liq<5000)s-=20;else if(liq<10000)s-=10;if(lr<0.03&&mc>20000)s-=35;else if(liq<15000&&p24<-30)s-=30;else if(liq<30000&&p24<-40)s-=20;if(p1<-50)s-=30;if(liq<15000&&(p24<-25||mc<25000))s-=40;else if(liq<30000&&p24<-35)s-=25;return Math.min(Math.max(Math.round(s),0),100);}
 function classify(t){const sm=t.smCount||0,mc=t.mc||0,p24=t.p24||0,p1=t.p1||0;if(sm===0&&p24<-60)return'dead';if(mc<500000&&sm>=1&&p24>-20)return'early';if(sm>=2&&p1>=0)return'accumulating';if(p24>30||p1>8)return'hot';if(p24<-30&&sm<2)return'distributing';return'hot';}
 function assignSM(score,addr){if(score<20)return[];addr=addr||'x';const h1=smHash(addr),h2=smHash(addr+'seed');if((h1%100)>=score)return[];const maxN=Math.min(4,Math.floor(score/20));const n=Math.max(1,(h2%maxN)+1);const ws=[...SM_WALLETS];for(let i=ws.length-1;i>0;i--){const j=smHash(addr+i)%(i+1);[ws[i],ws[j]]=[ws[j],ws[i]];}return ws.slice(0,n).map(w=>w.name);}
 
-async function fetchPairs(){try{const p=await httpGet('https://api.dexscreener.com/token-profiles/latest/v1');const arr=Array.isArray(p)?p:(p.pairs||[]);const sol=arr.filter(x=>(x.chainId||x.chain)==='solana');if(sol.length){const addrs=sol.map(x=>x.tokenAddress).filter(Boolean);const chunks=[];for(let i=0;i<addrs.length;i+=30)chunks.push(addrs.slice(i,i+30));let pairs=[];for(const c of chunks){try{const d=await httpGet('https://api.dexscreener.com/latest/dex/tokens/'+c.join(','));pairs=pairs.concat(d.pairs||[]);await new Promise(r=>setTimeout(r,300));}catch(e){}}return pairs.filter(p=>p.chainId==='solana');}}catch(e){}try{const d=await httpGet('https://api.dexscreener.com/latest/dex/search?q=solana&chainId=solana');return(d.pairs||[]).filter(p=>p.chainId==='solana');}catch(e){return[];}}
-function processPairs(pairs){return pairs.slice(0,60).map(p=>{const mc=parseFloat(p.fdv||p.marketCap||0),vol=parseFloat((p.volume||{}).h24||0),liq=parseFloat((p.liquidity||{}).usd||0),p24=parseFloat((p.priceChange||{}).h24||0),p1=parseFloat((p.priceChange||{}).h1||0),bt=p.baseToken||{},lbl=p.labels||[];const t={name:bt.name||'Unknown',sym:bt.symbol||'?',pair:p.pairAddress||'',addr:bt.address||'',mc,vol,liq,p24,p1};t.smNames=assignSM(calcScore({...t,smCount:0}),t.addr||t.pair||'');t.smCount=t.smNames.length;t.score=calcScore(t);t.cls=classify(t);return t;}).filter(t=>t.mc>=5000&&t.mc<=200000&&t.vol>0&&t.liq>=5000);}
-async function sendTG(msg){try{const r=await httpPost('https://api.telegram.org/bot'+TG_TOKEN+'/sendMessage',{chat_id:TG_CHATID,text:msg,parse_mode:'Markdown',disable_web_page_preview:true});if(r.ok)console.log('[TG] sent');else console.warn('[TG]',r.description);}catch(e){console.error('[TG]',e.message);}}
-function buildMsg(t,isNew){const sym='$'+(t.sym||'???'),badge=isNew?'🆕 NEW':'📡 SIGNAL',ci={early:'⚡',hot:'🔥',accumulating:'▲',distributing:'▼',dead:'☠'}[t.cls]||'',rocket=t._rocket?' 🚀+'+Math.round((t._mcVel||0)*100)+'% MC/scan':'',sm=(t.smNames||[]).slice(0,3).join(', ')||'—',url=t.pair?'https://dexscreener.com/solana/'+t.pair:'#';return badge+' *'+sym+'*\nMC: '+fmtMC(t.mc)+' | Score: '+t.score+' '+ci+rocket+'\nLiq: '+fmtMC(t.liq)+' | Vol: '+fmtMC(t.vol)+'\nSM: '+sm+'\n'+url;}
-function loadState(){try{return JSON.parse(fs.readFileSync(STATE_FILE,'utf8'));}catch(e){return{notifiedAt:{},mcPrev:{},seenKeys:[],seenSigs:{}};}}
-function saveState(s){const cut=Date.now()-48*3600*1000;Object.keys(s.notifiedAt).forEach(k=>{if(s.notifiedAt[k]<cut)delete s.notifiedAt[k];});if(s.seenKeys.length>2000)s.seenKeys=s.seenKeys.slice(-1000);fs.writeFileSync(STATE_FILE,JSON.stringify(s,null,2));}
+// ─── DexScreener fetch (errors are now LOGGED) ─────────────────────────────
+async function fetchPairs(){
+  let pairs=[];
+  try{
+    const p=await httpGet('https://api.dexscreener.com/token-profiles/latest/v1');
+    const arr=Array.isArray(p)?p:(p.pairs||[]);
+    const sol=arr.filter(x=>(x.chainId||x.chain)==='solana');
+    if(sol.length){
+      const addrs=sol.map(x=>x.tokenAddress).filter(Boolean);
+      const chunks=[];
+      for(let i=0;i<addrs.length;i+=30)chunks.push(addrs.slice(i,i+30));
+      for(const c of chunks){
+        try{
+          const d=await httpGet('https://api.dexscreener.com/latest/dex/tokens/'+c.join(','));
+          pairs=pairs.concat(d.pairs||[]);
+        }catch(e){console.error('[FETCH] token batch error:',e.message);}
+        await new Promise(r=>setTimeout(r,300));
+      }
+      pairs=pairs.filter(p=>p.chainId==='solana');
+    }
+  }catch(e){
+    console.error('[FETCH] token-profiles error:',e.message);
+  }
+  // Supplement with the search endpoint so we don't miss anything if profiles endpoint is empty
+  try{
+    const d=await httpGet('https://api.dexscreener.com/latest/dex/search?q=solana&chainId=solana');
+    const extra=(d.pairs||[]).filter(p=>p.chainId==='solana');
+    // merge unique by pairAddress
+    const seen=new Set(pairs.map(p=>p.pairAddress));
+    for(const p of extra){if(!seen.has(p.pairAddress)){pairs.push(p);seen.add(p.pairAddress);}}
+  }catch(e){
+    console.error('[FETCH] search error:',e.message);
+  }
+  console.log('[FETCH] total pairs:',pairs.length);
+  return pairs;
+}
 
-// Monitor WATCHED_WALLETS for any token buy on Solana — fires instant TG alert
+// ─── process pairs into candidates (200K upper cap REMOVED) ─────────────────
+function processPairs(pairs){
+  return pairs.slice(0,120).map(p=>{
+    const mc=parseFloat(p.fdv||p.marketCap||0);
+    const vol=parseFloat((p.volume||{}).h24||0);
+    const liq=parseFloat((p.liquidity||{}).usd||0);
+    const p24=parseFloat((p.priceChange||{}).h24||0);
+    const p1 =parseFloat((p.priceChange||{}).h1 ||0);
+    const bt=p.baseToken||{};
+    const t={name:bt.name||'Unknown',sym:bt.symbol||'?',pair:p.pairAddress||'',addr:bt.address||'',mc,vol,liq,p24,p1};
+    t.smNames=assignSM(calcScore({...t,smCount:0}),t.addr||t.pair||'');
+    t.smCount=t.smNames.length;
+    t.score=calcScore(t);
+    t.cls=classify(t);
+    return t;
+  }).filter(t=>t.mc>=MC_MIN && t.vol>VOL_MIN && t.liq>=LIQ_MIN);
+}
+
+function buildMsg(t){
+  const sym='$'+(t.sym||'???');
+  const badge='🆕 NEW';
+  const ci={early:'⚡',hot:'🔥',accumulating:'▲',distributing:'▼',dead:'☠'}[t.cls]||'';
+  const rocket=t._rocket?' 🚀+'+Math.round((t._mcVel||0)*100)+'% MC/scan':'';
+  const sm=(t.smNames||[]).slice(0,3).join(', ')||'—';
+  const url=t.pair?'https://dexscreener.com/solana/'+t.pair:'#';
+  return badge+' *'+sym+'*\nMC: '+fmtMC(t.mc)+' | Score: '+t.score+' '+ci+rocket+
+         '\nLiq: '+fmtMC(t.liq)+' | Vol: '+fmtMC(t.vol)+'\nSM: '+sm+'\n'+url;
+}
+
+// ─── state ───────────────────────────────────────────────────────────────
+function loadState(){
+  try{
+    const s=JSON.parse(fs.readFileSync(STATE_FILE,'utf8'));
+    s.notifiedAt = s.notifiedAt || {};
+    s.mcPrev    = s.mcPrev    || {};
+    s.seenKeys  = s.seenKeys  || [];
+    s.seenSigs  = s.seenSigs  || {};
+    return s;
+  }catch(e){
+    return {notifiedAt:{},mcPrev:{},seenKeys:[],seenSigs:{}};
+  }
+}
+function saveState(s){
+  // seenKeys is the PERMANENT dedup set — do NOT prune it.
+  // Only prune mcPrev so the file doesn't grow unbounded.
+  const mcKeys=Object.keys(s.mcPrev);
+  if(mcKeys.length>3000){
+    // keep the last 1500 by insertion order
+    const keep=mcKeys.slice(-1500);
+    const newMC={};for(const k of keep)newMC[k]=s.mcPrev[k];
+    s.mcPrev=newMC;
+  }
+  if(s.seenKeys.length>20000)s.seenKeys=s.seenKeys.slice(-15000); // ultra-safety cap
+  fs.writeFileSync(STATE_FILE,JSON.stringify(s,null,2));
+}
+
+// ─── watched-wallet buys (errors now LOGGED, sig marked only on TG success) ─
 async function checkWalletBuys(state){
-  if(!state.seenSigs)state.seenSigs={};
   for(const wallet of WATCHED_WALLETS){
     try{
       const sigResp=await httpPost(SOLANA_RPC,{jsonrpc:'2.0',id:1,method:'getSignaturesForAddress',params:[wallet.addr,{limit:6,commitment:'confirmed'}]});
-      if(!sigResp.result||!sigResp.result.length)continue;
+      if(!sigResp.result||!sigResp.result.length){continue;}
       if(!state.seenSigs[wallet.addr])state.seenSigs[wallet.addr]=[];
       for(const s of sigResp.result){
         if(s.err)continue;
         if(state.seenSigs[wallet.addr].includes(s.signature))continue;
-        state.seenSigs[wallet.addr].push(s.signature);
+
         const txResp=await httpPost(SOLANA_RPC,{jsonrpc:'2.0',id:1,method:'getTransaction',params:[s.signature,{encoding:'jsonParsed',commitment:'confirmed',maxSupportedTransactionVersion:0}]});
-        if(!txResp.result||!txResp.result.meta)continue;
+        if(!txResp.result||!txResp.result.meta){
+          // unknown → mark seen anyway so we don't re-process forever
+          state.seenSigs[wallet.addr].push(s.signature);
+          continue;
+        }
         const pre=txResp.result.meta.preTokenBalances||[];
         const post=txResp.result.meta.postTokenBalances||[];
+        let buyDetected=false;
         for(const pb of post){
           if(pb.owner!==wallet.addr)continue;
           if(pb.mint===WSOL)continue;
           const preEntry=pre.find(p=>p.mint===pb.mint&&p.owner===wallet.addr);
-          const preAmt=preEntry?parseFloat(preEntry.uiTokenAmount&&preEntry.uiTokenAmount.uiAmount||0):0;
-          const postAmt=parseFloat(pb.uiTokenAmount&&pb.uiTokenAmount.uiAmount||0);
+          const preAmt=preEntry?parseFloat((preEntry.uiTokenAmount&&preEntry.uiTokenAmount.uiAmount)||0):0;
+          const postAmt=parseFloat((pb.uiTokenAmount&&pb.uiTokenAmount.uiAmount)||0);
           if(postAmt>preAmt){
             const gained=postAmt-preAmt;
             const token=pb.mint;
             const msg='🚨 *'+wallet.name+'* just bought!\n\nToken: `'+token+'`\nAmount: '+gained.toLocaleString(undefined,{maximumFractionDigits:2})+' tokens\n[View on DexScreener](https://dexscreener.com/solana/'+token+')';
             console.log('[WALLET BUY]',wallet.name,'->',token);
-            await sendTG(msg);
+            const sent=await sendTG(msg);
+            if(sent){
+              state.seenSigs[wallet.addr].push(s.signature);
+            }else{
+              console.error('[WALLET BUY] TG send FAILED for',wallet.name,token,'— will retry next scan');
+            }
+            buyDetected=true;
             break;
           }
         }
+        if(!buyDetected){
+          // non-buy tx (sell, transfer, etc.) — mark seen to avoid reprocessing
+          state.seenSigs[wallet.addr].push(s.signature);
+        }
         await new Promise(r=>setTimeout(r,300));
       }
-      state.seenSigs[wallet.addr]=state.seenSigs[wallet.addr].slice(-100);
+      state.seenSigs[wallet.addr]=state.seenSigs[wallet.addr].slice(-200);
     }catch(e){
-      console.error('[WALLET_BUY]',wallet.name,e.message);
+      console.error('[WALLET_BUY]',wallet.name,'error:',e.message);
     }
   }
 }
 
-async function main(){console.log('=== NEET Scanner',new Date().toISOString(),'===');const state=loadState();
+// ─── main ──────────────────────────────────────────────────────────────────
+async function main(){
+  console.log('=== NEET Scanner',new Date().toISOString(),'===');
+  const state=loadState();
+  console.log('[STATE] seenKeys size:',state.seenKeys.length);
+
   await checkWalletBuys(state);
-  const pairs=await fetchPairs();if(!pairs.length){console.log('No pairs');saveState(state);return;}const tokens=processPairs(pairs);console.log('Tokens:',tokens.length);let n=0;for(const t of tokens){const k=t.addr||t.pair||t.sym;if(!k)continue;if(t.p1<-50||t.p24<-70)continue;if(state.mcPrev[k]&&state.mcPrev[k]>0&&t.mc>0){t._mcVel=(t.mc-state.mcPrev[k])/state.mcPrev[k];if(t._mcVel>=0.4){t._rocket=true;t.score=Math.min(100,t.score+15);}}state.mcPrev[k]=t.mc;const isRocket=!!t._rocket,thr=isRocket?ROCKET_THRESHOLD:SCORE_THRESHOLD,cd=isRocket?ROCKET_COOLDOWN:NORMAL_COOLDOWN;if(t.score>=thr){const last=state.notifiedAt[k]||0,isNew=!state.seenKeys.includes(k);if(Date.now()-last>cd){state.notifiedAt[k]=Date.now();if(isNew)state.seenKeys.push(k);await sendTG(buildMsg(t,isNew));n++;await new Promise(r=>setTimeout(r,500));}}}saveState(state);console.log('Done. Notified:',n);}
-main().catch(e=>{console.error(e);process.exit(1);});
+
+  const pairs=await fetchPairs();
+  if(!pairs.length){
+    console.warn('[MAIN] 0 pairs returned from DexScreener — upstream outage?');
+    saveState(state);
+    return;
+  }
+  const tokens=processPairs(pairs);
+  console.log('[MAIN] candidate tokens after filter:',tokens.length);
+
+  const seenSet=new Set(state.seenKeys);
+  let sent=0, alreadySeen=0, belowThr=0, crashFilter=0;
+
+  for(const t of tokens){
+    const k=t.addr||t.pair||t.sym;
+    if(!k)continue;
+
+    // crash filter
+    if(t.p1<-50||t.p24<-70){crashFilter++;continue;}
+
+    // rocket detection via MC velocity
+    if(state.mcPrev[k] && state.mcPrev[k]>0 && t.mc>0){
+      t._mcVel=(t.mc-state.mcPrev[k])/state.mcPrev[k];
+      if(t._mcVel>=0.4){t._rocket=true;t.score=Math.min(100,t.score+15);}
+    }
+    state.mcPrev[k]=t.mc;
+
+    const thr=t._rocket?ROCKET_THRESHOLD:SCORE_THRESHOLD;
+    if(t.score<thr){belowThr++;continue;}
+
+    // ══ STRICT DEDUP: one alert per coin, ever ══
+    if(seenSet.has(k)){
+      alreadySeen++;
+      continue;
+    }
+
+    // attempt send — only mark seen on success
+    const ok=await sendTG(buildMsg(t));
+    if(ok){
+      seenSet.add(k);
+      state.seenKeys.push(k);
+      state.notifiedAt[k]=Date.now();
+      sent++;
+      await new Promise(r=>setTimeout(r,500)); // TG rate limit cushion
+    }else{
+      console.error('[MAIN] send failed for',t.sym,'('+k+') — will retry next scan');
+    }
+  }
+
+  saveState(state);
+  console.log('[MAIN] done. sent:',sent,'| already-seen:',alreadySeen,'| below-threshold:',belowThr,'| crash-filtered:',crashFilter);
+}
+
+main().catch(e=>{console.error('[FATAL]',e);process.exit(1);});
