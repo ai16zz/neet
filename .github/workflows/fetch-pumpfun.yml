@@ -288,7 +288,7 @@ jobs:
                   print(f'[EARLY] send failed for {sym} — leaving unseen for retry', flush=True)
               time.sleep(0.4)
 
-          json.dump({'seen': sorted(seen)}, open(state_path,'w))
+          json.dump({'seen': sorted(seen)}, open(state_path,'w'))
           print(f'[EARLY] done. new: {len(new_tokens)} | sent: {sent}', flush=True)
           PYEOF
 
