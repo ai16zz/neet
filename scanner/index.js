@@ -5,7 +5,7 @@
  * Also monitors specific wallets for ANY buy activity
  * State persisted in scanner/state.json between runs
  *
- * FIXED 2026-04-09:
+ * UPDATED 2026-04-09:
  *   1. Removed stale hardcoded Telegram fallback token (it returned 401)
  *   2. sendTG now retries, logs loudly, and returns success/failure
  *   3. State is marked "notified" ONLY after a confirmed successful send
@@ -13,6 +13,13 @@
  *   5. Removed mc<=200K upper cap (was dropping tokens that pumped past it)
  *   6. fetchPairs() / checkWalletBuys() errors are now logged, not swallowed
  *   7. Watched-wallet signatures only marked seen after successful TG send
+ *
+ * UPDATED 2026-04-10:
+ *   8. Added token-boosts/latest/v1 + pumpfun-grads.json as data sources
+ *      so alerts fire as soon as tokens appear, not just when profiles update
+ *   9. Age filter: skip pairs with pairCreatedAt > 48h ago
+ *  10. Holder filter: skip if any single wallet holds > 8% of total supply
+ *  11. MC upper cap restored: skip if MC >= $1M
  */
 const https = require('https');
 const fs    = require('fs');
@@ -32,10 +39,13 @@ const ROCKET_THRESHOLD = 35;
 const SOLANA_RPC       = 'https://api.mainnet-beta.solana.com';
 const WSOL             = 'So11111111111111111111111111111111111111112';
 
-// Hard filters for "interesting" pairs. mc upper cap removed on 2026-04-09.
-const MC_MIN  = 5_000;
-const VOL_MIN = 0;       // require >0 volume (unchanged)
-const LIQ_MIN = 5_000;
+// Hard filters
+const MC_MIN          = 5_000;
+const MC_MAX          = 1_000_000;   // skip coins already over $1M
+const VOL_MIN         = 0;
+const LIQ_MIN         = 5_000;
+const MAX_AGE_MS      = 48 * 3600 * 1000;  // 48 hours
+const MAX_TOP_HOLDER  = 0.08;               // 8% max single holder
 
 const SM_WALLETS = [
   {name:"180D Smart Trader [DpYuj2At]",addr:"DpYuj2At1Z1tH4baoz5A1XV4AanjJa8bgbB51BWSZUyn",score:99},
@@ -74,7 +84,7 @@ function fmtMC(n){if(!n||n<0)return'—';if(n>=1e9)return'$'+(n/1e9).toFixed(1)+
 function httpGet(url){
   return new Promise((resolve,reject)=>{
     const mod=url.startsWith('https')?https:require('http');
-    const req=mod.get(url,{headers:{'Accept':'application/json','User-Agent':'NEETScanner/1.1'}},res=>{
+    const req=mod.get(url,{headers:{'Accept':'application/json','User-Agent':'NEETScanner/1.2'}},res=>{
       let d='';res.on('data',c=>d+=c);
       res.on('end',()=>{try{resolve(JSON.parse(d));}catch(e){reject(new Error('JSON parse: '+e.message));}});
     });
@@ -109,7 +119,6 @@ async function sendTG(msg){
         console.log('[TG] sent ok (attempt '+attempt+')');
         return true;
       }
-      // Log the full failure payload so it shows in GH Actions logs.
       console.error('[TG FAIL attempt '+attempt+']',
         'error_code=',r&&r.error_code,
         'description=',r&&r.description);
@@ -121,7 +130,7 @@ async function sendTG(msg){
       }
       if(r && r.error_code===401){
         console.error('[TG FATAL] 401 Unauthorized — TG_TOKEN is invalid/revoked. Rotate it via @BotFather and update the repo secret.');
-        return false; // no point retrying a 401
+        return false;
       }
     }catch(e){
       console.error('[TG EXCEPTION attempt '+attempt+']',e.message);
@@ -131,64 +140,117 @@ async function sendTG(msg){
   return false;
 }
 
-// ─── scoring (unchanged) ────────────────────────────────────────────────────
+// ─── scoring ────────────────────────────────────────────────────────────────
 function calcScore(t){let s=0;const mc=t.mc||0,vol=t.vol||0,liq=t.liq||0,p24=t.p24||0,p1=t.p1||0,sm=t.smCount||0;s+=Math.min(sm*15,45);if(mc>=15000&&mc<=100000)s+=15;else if(mc>100000&&mc<=500000)s+=10;else if(mc>500000&&mc<=2e6)s+=5;const vr=mc>0?vol/mc:0;if(vr>3)s+=12;else if(vr>1)s+=8;else if(vr>0.3)s+=4;if(liq>=8000&&liq<=80000)s+=8;else if(liq>=5000)s+=3;if(p24>100)s+=12;else if(p24>50)s+=9;else if(p24>20)s+=6;else if(p24>0)s+=2;if(p1>20)s+=8;else if(p1>5)s+=4;const lr=mc>0?liq/mc:0;if(liq<5000)s-=20;else if(liq<10000)s-=10;if(lr<0.03&&mc>20000)s-=35;else if(liq<15000&&p24<-30)s-=30;else if(liq<30000&&p24<-40)s-=20;if(p1<-50)s-=30;if(liq<15000&&(p24<-25||mc<25000))s-=40;else if(liq<30000&&p24<-35)s-=25;return Math.min(Math.max(Math.round(s),0),100);}
 function classify(t){const sm=t.smCount||0,mc=t.mc||0,p24=t.p24||0,p1=t.p1||0;if(sm===0&&p24<-60)return'dead';if(mc<500000&&sm>=1&&p24>-20)return'early';if(sm>=2&&p1>=0)return'accumulating';if(p24>30||p1>8)return'hot';if(p24<-30&&sm<2)return'distributing';return'hot';}
 function assignSM(score,addr){if(score<20)return[];addr=addr||'x';const h1=smHash(addr),h2=smHash(addr+'seed');if((h1%100)>=score)return[];const maxN=Math.min(4,Math.floor(score/20));const n=Math.max(1,(h2%maxN)+1);const ws=[...SM_WALLETS];for(let i=ws.length-1;i>0;i--){const j=smHash(addr+i)%(i+1);[ws[i],ws[j]]=[ws[j],ws[i]];}return ws.slice(0,n).map(w=>w.name);}
 
-// ─── DexScreener fetch (errors are now LOGGED) ─────────────────────────────
+// ─── holder concentration check ─────────────────────────────────────────────
+async function passesHolderFilter(mint){
+  try{
+    const [supplyResp,largestResp]=await Promise.all([
+      httpPost(SOLANA_RPC,{jsonrpc:'2.0',id:1,method:'getTokenSupply',params:[mint]}),
+      httpPost(SOLANA_RPC,{jsonrpc:'2.0',id:2,method:'getTokenLargestAccounts',params:[mint]})
+    ]);
+    const totalAmt=supplyResp.result&&supplyResp.result.value&&parseFloat(supplyResp.result.value.uiAmount||0);
+    if(!totalAmt||totalAmt===0)return true; // can't verify, allow
+    const accounts=(largestResp.result&&largestResp.result.value)||[];
+    if(!accounts.length)return true;
+    const topAmt=parseFloat(accounts[0].uiAmount||0);
+    const pct=topAmt/totalAmt;
+    console.log('[HOLDER]',mint.slice(0,8),'top holder:',+(pct*100).toFixed(1)+'%');
+    return pct<=MAX_TOP_HOLDER;
+  }catch(e){
+    console.error('[HOLDER] check failed for',mint.slice(0,8),':',e.message);
+    return true; // on RPC error, don't block the alert
+  }
+}
+
+// ─── DexScreener fetch — 3 sources merged ──────────────────────────────────
 async function fetchPairs(){
+  const seen=new Set();
   let pairs=[];
+
+  async function addTokenBatch(addrs){
+    const chunks=[];
+    for(let i=0;i<addrs.length;i+=30)chunks.push(addrs.slice(i,i+30));
+    for(const c of chunks){
+      try{
+        const d=await httpGet('https://api.dexscreener.com/latest/dex/tokens/'+c.join(','));
+        for(const p of (d.pairs||[])){
+          if(p.chainId==='solana'&&!seen.has(p.pairAddress)){
+            pairs.push(p);seen.add(p.pairAddress);
+          }
+        }
+      }catch(e){console.error('[FETCH] batch error:',e.message);}
+      await new Promise(r=>setTimeout(r,300));
+    }
+  }
+
+  // Source 1: token-boosts/latest — updates whenever someone buys a boost (most real-time)
+  try{
+    const b=await httpGet('https://api.dexscreener.com/token-boosts/latest/v1');
+    const arr=Array.isArray(b)?b:(b.pairs||[]);
+    const addrs=arr.filter(x=>(x.chainId||x.chain)==='solana').map(x=>x.tokenAddress).filter(Boolean);
+    console.log('[FETCH] boosts latest:',addrs.length,'tokens');
+    if(addrs.length)await addTokenBatch(addrs);
+  }catch(e){console.error('[FETCH] token-boosts error:',e.message);}
+
+  // Source 2: token-profiles/latest — updates when profiles are activated
   try{
     const p=await httpGet('https://api.dexscreener.com/token-profiles/latest/v1');
     const arr=Array.isArray(p)?p:(p.pairs||[]);
-    const sol=arr.filter(x=>(x.chainId||x.chain)==='solana');
-    if(sol.length){
-      const addrs=sol.map(x=>x.tokenAddress).filter(Boolean);
-      const chunks=[];
-      for(let i=0;i<addrs.length;i+=30)chunks.push(addrs.slice(i,i+30));
-      for(const c of chunks){
-        try{
-          const d=await httpGet('https://api.dexscreener.com/latest/dex/tokens/'+c.join(','));
-          pairs=pairs.concat(d.pairs||[]);
-        }catch(e){console.error('[FETCH] token batch error:',e.message);}
-        await new Promise(r=>setTimeout(r,300));
-      }
-      pairs=pairs.filter(p=>p.chainId==='solana');
+    const addrs=arr.filter(x=>(x.chainId||x.chain)==='solana').map(x=>x.tokenAddress).filter(Boolean);
+    console.log('[FETCH] profiles latest:',addrs.length,'tokens');
+    if(addrs.length)await addTokenBatch(addrs);
+  }catch(e){console.error('[FETCH] token-profiles error:',e.message);}
+
+  // Source 3: pump.fun grads from our own file (updated every 15 min by fetch-pumpfun.yml)
+  try{
+    const gradsFile=path.join(__dirname,'../pumpfun-grads.json');
+    if(fs.existsSync(gradsFile)){
+      const grads=JSON.parse(fs.readFileSync(gradsFile,'utf8'));
+      const addrs=(grads.data||[]).map(g=>g.mint).filter(Boolean);
+      console.log('[FETCH] pumpfun grads:',addrs.length,'tokens');
+      if(addrs.length)await addTokenBatch(addrs);
     }
-  }catch(e){
-    console.error('[FETCH] token-profiles error:',e.message);
-  }
-  // Supplement with the search endpoint so we don't miss anything if profiles endpoint is empty
+  }catch(e){console.error('[FETCH] pumpfun-grads error:',e.message);}
+
+  // Source 4: search supplement
   try{
     const d=await httpGet('https://api.dexscreener.com/latest/dex/search?q=solana&chainId=solana');
-    const extra=(d.pairs||[]).filter(p=>p.chainId==='solana');
-    // merge unique by pairAddress
-    const seen=new Set(pairs.map(p=>p.pairAddress));
-    for(const p of extra){if(!seen.has(p.pairAddress)){pairs.push(p);seen.add(p.pairAddress);}}
-  }catch(e){
-    console.error('[FETCH] search error:',e.message);
-  }
-  console.log('[FETCH] total pairs:',pairs.length);
+    for(const p of (d.pairs||[])){
+      if(p.chainId==='solana'&&!seen.has(p.pairAddress)){pairs.push(p);seen.add(p.pairAddress);}
+    }
+  }catch(e){console.error('[FETCH] search error:',e.message);}
+
+  console.log('[FETCH] total unique pairs:',pairs.length);
   return pairs;
 }
 
-// ─── process pairs into candidates (200K upper cap REMOVED) ─────────────────
+// ─── process pairs into scored candidates ───────────────────────────────────
 function processPairs(pairs){
-  return pairs.slice(0,120).map(p=>{
+  const now=Date.now();
+  return pairs.map(p=>{
     const mc=parseFloat(p.fdv||p.marketCap||0);
     const vol=parseFloat((p.volume||{}).h24||0);
     const liq=parseFloat((p.liquidity||{}).usd||0);
     const p24=parseFloat((p.priceChange||{}).h24||0);
     const p1 =parseFloat((p.priceChange||{}).h1 ||0);
     const bt=p.baseToken||{};
-    const t={name:bt.name||'Unknown',sym:bt.symbol||'?',pair:p.pairAddress||'',addr:bt.address||'',mc,vol,liq,p24,p1};
+    const pairCreatedAt=p.pairCreatedAt?parseInt(p.pairCreatedAt):0;
+    const t={name:bt.name||'Unknown',sym:bt.symbol||'?',pair:p.pairAddress||'',addr:bt.address||'',mc,vol,liq,p24,p1,pairCreatedAt};
     t.smNames=assignSM(calcScore({...t,smCount:0}),t.addr||t.pair||'');
     t.smCount=t.smNames.length;
     t.score=calcScore(t);
     t.cls=classify(t);
     return t;
-  }).filter(t=>t.mc>=MC_MIN && t.vol>VOL_MIN && t.liq>=LIQ_MIN);
+  }).filter(t=>{
+    if(t.mc<MC_MIN||t.mc>=MC_MAX)return false;         // $5K–$1M only
+    if(t.vol<=VOL_MIN||t.liq<LIQ_MIN)return false;     // needs volume + liquidity
+    if(t.pairCreatedAt&&(now-t.pairCreatedAt)>MAX_AGE_MS)return false; // skip old pairs
+    return true;
+  });
 }
 
 function buildMsg(t){
@@ -216,20 +278,17 @@ function loadState(){
   }
 }
 function saveState(s){
-  // seenKeys is the PERMANENT dedup set — do NOT prune it.
-  // Only prune mcPrev so the file doesn't grow unbounded.
   const mcKeys=Object.keys(s.mcPrev);
   if(mcKeys.length>3000){
-    // keep the last 1500 by insertion order
     const keep=mcKeys.slice(-1500);
     const newMC={};for(const k of keep)newMC[k]=s.mcPrev[k];
     s.mcPrev=newMC;
   }
-  if(s.seenKeys.length>20000)s.seenKeys=s.seenKeys.slice(-15000); // ultra-safety cap
+  if(s.seenKeys.length>20000)s.seenKeys=s.seenKeys.slice(-15000);
   fs.writeFileSync(STATE_FILE,JSON.stringify(s,null,2));
 }
 
-// ─── watched-wallet buys (errors now LOGGED, sig marked only on TG success) ─
+// ─── watched-wallet buys ────────────────────────────────────────────────────
 async function checkWalletBuys(state){
   for(const wallet of WATCHED_WALLETS){
     try{
@@ -239,10 +298,8 @@ async function checkWalletBuys(state){
       for(const s of sigResp.result){
         if(s.err)continue;
         if(state.seenSigs[wallet.addr].includes(s.signature))continue;
-
         const txResp=await httpPost(SOLANA_RPC,{jsonrpc:'2.0',id:1,method:'getTransaction',params:[s.signature,{encoding:'jsonParsed',commitment:'confirmed',maxSupportedTransactionVersion:0}]});
         if(!txResp.result||!txResp.result.meta){
-          // unknown → mark seen anyway so we don't re-process forever
           state.seenSigs[wallet.addr].push(s.signature);
           continue;
         }
@@ -271,7 +328,6 @@ async function checkWalletBuys(state){
           }
         }
         if(!buyDetected){
-          // non-buy tx (sell, transfer, etc.) — mark seen to avoid reprocessing
           state.seenSigs[wallet.addr].push(s.signature);
         }
         await new Promise(r=>setTimeout(r,300));
@@ -293,7 +349,7 @@ async function main(){
 
   const pairs=await fetchPairs();
   if(!pairs.length){
-    console.warn('[MAIN] 0 pairs returned from DexScreener — upstream outage?');
+    console.warn('[MAIN] 0 pairs returned — upstream outage?');
     saveState(state);
     return;
   }
@@ -301,7 +357,7 @@ async function main(){
   console.log('[MAIN] candidate tokens after filter:',tokens.length);
 
   const seenSet=new Set(state.seenKeys);
-  let sent=0, alreadySeen=0, belowThr=0, crashFilter=0;
+  let sent=0, alreadySeen=0, belowThr=0, crashFilter=0, holderFiltered=0, ageFiltered=0;
 
   for(const t of tokens){
     const k=t.addr||t.pair||t.sym;
@@ -311,7 +367,7 @@ async function main(){
     if(t.p1<-50||t.p24<-70){crashFilter++;continue;}
 
     // rocket detection via MC velocity
-    if(state.mcPrev[k] && state.mcPrev[k]>0 && t.mc>0){
+    if(state.mcPrev[k]&&state.mcPrev[k]>0&&t.mc>0){
       t._mcVel=(t.mc-state.mcPrev[k])/state.mcPrev[k];
       if(t._mcVel>=0.4){t._rocket=true;t.score=Math.min(100,t.score+15);}
     }
@@ -321,8 +377,16 @@ async function main(){
     if(t.score<thr){belowThr++;continue;}
 
     // ══ STRICT DEDUP: one alert per coin, ever ══
-    if(seenSet.has(k)){
-      alreadySeen++;
+    if(seenSet.has(k)){alreadySeen++;continue;}
+
+    // holder concentration check (only runs for coins that passed score filter)
+    const holderOk=await passesHolderFilter(t.addr||'');
+    if(!holderOk){
+      console.log('[HOLDER] skip',t.sym,'— top holder >8%');
+      holderFiltered++;
+      // mark seen so we don't re-check every scan
+      seenSet.add(k);
+      state.seenKeys.push(k);
       continue;
     }
 
@@ -333,14 +397,14 @@ async function main(){
       state.seenKeys.push(k);
       state.notifiedAt[k]=Date.now();
       sent++;
-      await new Promise(r=>setTimeout(r,500)); // TG rate limit cushion
+      await new Promise(r=>setTimeout(r,500));
     }else{
       console.error('[MAIN] send failed for',t.sym,'('+k+') — will retry next scan');
     }
   }
 
   saveState(state);
-  console.log('[MAIN] done. sent:',sent,'| already-seen:',alreadySeen,'| below-threshold:',belowThr,'| crash-filtered:',crashFilter);
+  console.log('[MAIN] done. sent:',sent,'| seen:',alreadySeen,'| below-thr:',belowThr,'| crash:',crashFilter,'| holder-filtered:',holderFiltered);
 }
 
 main().catch(e=>{console.error('[FATAL]',e);process.exit(1);});
