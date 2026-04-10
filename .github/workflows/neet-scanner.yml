@@ -24,15 +24,20 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Run NEET scanner
+      - name: Run NEET scanner (3x every ~75s)
         env:
-          TG_TOKEN:  ${{ secrets.TG_TOKEN }}
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHATID: ${{ secrets.TG_CHATID }}
-        run: node scanner/index.js
+        run: |
+          for i in 1 2 3; do
+            echo "--- Scanner loop $i / 3 ---"
+            node scanner/index.js
+            if [ "$i" -lt 3 ]; then sleep 75; fi
+          done
 
       - name: Commit updated state
         run: |
-          git config user.name  "NEET Scanner Bot"
+          git config user.name "NEET Scanner Bot"
           git config user.email "scanner@neet.bot"
           git add scanner/state.json
           git diff --cached --quiet || git commit -m "chore: scanner state update [skip ci]"
