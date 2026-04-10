@@ -205,24 +205,44 @@ async function fetchPairs(){
     if(addrs.length)await addTokenBatch(addrs);
   }catch(e){console.error('[FETCH] token-profiles error:',e.message);}
 
-  // Source 3: pump.fun grads from our own file (updated every 15 min by fetch-pumpfun.yml)
+  // Source 3a: pump.fun grads file (updated every 15 min, used as a warm cache)
   try{
     const gradsFile=path.join(__dirname,'../pumpfun-grads.json');
     if(fs.existsSync(gradsFile)){
       const grads=JSON.parse(fs.readFileSync(gradsFile,'utf8'));
       const addrs=(grads.data||[]).map(g=>g.mint).filter(Boolean);
-      console.log('[FETCH] pumpfun grads:',addrs.length,'tokens');
+      console.log('[FETCH] pumpfun grads (file):',addrs.length,'tokens');
       if(addrs.length)await addTokenBatch(addrs);
     }
-  }catch(e){console.error('[FETCH] pumpfun-grads error:',e.message);}
+  }catch(e){console.error('[FETCH] pumpfun-grads file error:',e.message);}
 
-  // Source 4: search supplement
+  // Source 3b: pump.fun graduation API direct — fetches live graduates every scan
+  // This catches coins that graduated AFTER the last pumpfun-grads.json file update
   try{
-    const d=await httpGet('https://api.dexscreener.com/latest/dex/search?q=solana&chainId=solana');
-    for(const p of (d.pairs||[])){
-      if(p.chainId==='solana'&&!seen.has(p.pairAddress)){pairs.push(p);seen.add(p.pairAddress);}
+    const PF='https://frontend-api-v3.pump.fun';
+    const PF_UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    const liveAddrs=[];
+    for(const offset of [0,50]){
+      try{
+        const d=await httpGet(`${PF}/coins?offset=${offset}&limit=50&sort=last_trade_timestamp&order=DESC&includeNsfw=false&complete=true`);
+        const coins=Array.isArray(d)?d:(d.coins||d.data||[]);
+        for(const c of coins){if(c.mint)liveAddrs.push(c.mint);}
+      }catch(e){console.error('[FETCH] pumpfun live offset',offset,'error:',e.message);}
+      await new Promise(r=>setTimeout(r,400));
     }
-  }catch(e){console.error('[FETCH] search error:',e.message);}
+    const unique=[...new Set(liveAddrs)];
+    console.log('[FETCH] pumpfun grads (live API):',unique.length,'tokens');
+    if(unique.length)await addTokenBatch(unique);
+  }catch(e){console.error('[FETCH] pumpfun-live error:',e.message);}
+
+  // Source 4: DexScreener active boosts (different set from latest)
+  try{
+    const b=await httpGet('https://api.dexscreener.com/token-boosts/active/v1');
+    const arr=Array.isArray(b)?b:(b.pairs||[]);
+    const addrs=arr.filter(x=>(x.chainId||x.chain)==='solana').map(x=>x.tokenAddress).filter(Boolean);
+    console.log('[FETCH] boosts active:',addrs.length,'tokens');
+    if(addrs.length)await addTokenBatch(addrs);
+  }catch(e){console.error('[FETCH] boosts-active error:',e.message);}
 
   console.log('[FETCH] total unique pairs:',pairs.length);
   return pairs;
