@@ -1,1 +1,1 @@
-{"error": "Unknown field", "message": "Field 'trader_addresses' is not recognized. Please check the API documentation for valid request fields.", "last_updated": "2026-04-10T19:57:58.996980"}
+{"error": "Insufficient credits", "detail": "Insufficient credits remaining to call this endpoint.", "last_updated": "2026-04-10T20:51:46.424151"}
