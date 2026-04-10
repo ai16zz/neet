@@ -1,40 +1,29 @@
 name: NEET 24/7 Scanner
-
 on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
-
 permissions:
   contents: write
-
 jobs:
   scan:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-
+    timeout-minutes: 6
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Run NEET scanner (3x every ~75s)
+      - name: Run NEET scanner (30s wallet checks, 90s full scan)
         env:
           TG_TOKEN: ${{ secrets.TG_TOKEN }}
           TG_CHATID: ${{ secrets.TG_CHATID }}
         run: |
-          for i in 1 2 3; do
-            echo "--- Scanner loop $i / 3 ---"
-            node scanner/index.js
-            if [ "$i" -lt 3 ]; then sleep 75; fi
-          done
-
+          node scanner/index.js
       - name: Commit updated state
         continue-on-error: true
         run: |
