@@ -3493,9 +3493,66 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
     }
   };
 
-    /* ── STEP 3: ENTER ───────────────────────────────────────── */
-  window.vfyEnter = function(){
+    /* ── STEP 3: ENTER (with strict 1-to-1 Twitter↔wallet check) */
+  window.vfyEnter = async function(){
     if(!_wallet||!_twitter) return;
+    const btn=document.getElementById('vfy-btn-enter');
+    if(btn){ btn.textContent='Checking…'; btn.disabled=true; }
+    setStatus('vfy-st-twitter','','');
+
+    /* ── 1-to-1 ENFORCEMENT ─────────────────────────────────── */
+    try{
+      const _supa=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+      const handle=_twitter.handle.toLowerCase();
+
+      // Check: is this Twitter handle already registered to a DIFFERENT wallet?
+      const{data:existing,error:selErr}=await _supa
+        .from('verified_users')
+        .select('wallet')
+        .eq('twitter_handle',handle)
+        .maybeSingle();
+
+      if(selErr&&selErr.code!=='PGRST116'){
+        // Table might not exist yet — warn but let them through
+        console.warn('[NEET] verified_users lookup failed:',selErr.message,
+          '— run the Supabase setup SQL to enable strict enforcement.');
+      } else if(existing&&existing.wallet&&existing.wallet!==_wallet){
+        // Hard block: handle is taken by another wallet
+        const masked=existing.wallet.slice(0,4)+'…'+existing.wallet.slice(-4);
+        setStatus('vfy-st-twitter',
+          `✗ @${_twitter.handle} is already linked to wallet ${masked}. `+
+          `Each X account can only enter with one wallet.`,'err');
+        if(btn){ btn.textContent='✓  ENTER #trenches'; btn.disabled=false; }
+        return;
+      } else {
+        // OK — upsert this wallet↔twitter pairing (creates or updates)
+        const{error:upsErr}=await _supa.from('verified_users').upsert({
+          wallet:_wallet,
+          twitter_handle:handle,
+          twitter_name:_twitter.name||_twitter.handle,
+          twitter_pfp:_twitter.pfp||'',
+          twitter_id:_twitter.id||'',
+          balance:_balance||0,
+          updated_at:new Date().toISOString()
+        },{onConflict:'wallet'});
+        if(upsErr){
+          // Unique constraint on twitter_handle fired — someone beat them to it
+          if(upsErr.code==='23505'||/unique/i.test(upsErr.message||'')){
+            setStatus('vfy-st-twitter',
+              `✗ @${_twitter.handle} is already registered to another wallet.`,'err');
+            if(btn){ btn.textContent='✓  ENTER #trenches'; btn.disabled=false; }
+            return;
+          }
+          console.warn('[NEET] upsert warning:',upsErr.message);
+        }
+      }
+    }catch(e){
+      // Non-blocking: if Supabase check fails entirely, let them through
+      // (server-side enforcement via DB constraints still applies)
+      console.warn('[NEET] 1-to-1 check error:',e.message);
+    }
+    /* ── END 1-to-1 ENFORCEMENT ─────────────────────────────── */
+
     saveSession({ wallet:_wallet, balance:_balance, twitter_handle:_twitter.handle,
       twitter_name:_twitter.name, twitter_pfp:_twitter.pfp, twitter_id:_twitter.id });
     const gateEl=document.getElementById('neet-gate');
@@ -3512,7 +3569,7 @@ window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastS
           return;
         }
       }
-    }catch(e){ console.error('[NEET] open chat failed', e); }
+    }catch(e){ console.error('[NEET] open chat failed',e); }
     if(typeof window.openChat==='function') window.openChat();
     else if(typeof window.toggleChat==='function') window.toggleChat();
   };
