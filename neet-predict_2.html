@@ -262,7 +262,7 @@ footer a:hover{color:var(--green);}
     <button class="ntab" id="scanTab" onclick="switchToScan()">&#x1F50D; SCAN</button>
   </div>
   <div class="wallet-wrap" id="walletWrap">
-    <button class="wbtn" id="wb" onclick="toggleWallet()"><span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span></button>
+    <button class="wbtn" id="wb" onclick="toggleWallet(event)"><span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span></button>
     <div class="wdropdown" id="wdropdown">
       <div class="wdropdown-addr" id="wdropdown-addr">not connected</div>
       <div class="wdropdown-item" onclick="copyWalletAddr()">⎘&nbsp; Copy Address</div>
@@ -433,8 +433,8 @@ async function connectWallet(){
     const r=await p.connect();
     wpk=r.publicKey.toString();
     const sh=wpk.slice(0,4)+'...'+wpk.slice(-4);
-    ael.textContent=sh;ael.style.color='var(--green)';
-    btn.textContent='CONNECTED ✓';btn.classList.add('connected');
+    btn.innerHTML='<span class="wdot" id="nc" style="background:var(--green)"></span><span id="wa" style="color:var(--green)">'+sh+'</span>';
+    btn.classList.add('connected');
     fetchBal();updBtn();rendPos();
   }catch(e){btn.textContent='CONNECT WALLET';if(e.code!==4001)console.error(e);}
 }
@@ -458,7 +458,8 @@ function disconnectWallet(){
 function copyWalletAddr(){
   if(wpk){navigator.clipboard.writeText(wpk).catch(()=>{});_closeWalletDropdown();}
 }
-function toggleWallet(){
+function toggleWallet(e){
+  if(e)e.stopPropagation();
   if(wpk){
     const dd=document.getElementById('wdropdown');
     if(dd){
@@ -1097,10 +1098,9 @@ setInterval(fetchPx,3000);
     if(p?.isConnected && p.publicKey) {
       wpk = p.publicKey.toString();
       const sh = wpk.slice(0,4)+'...'+wpk.slice(-4);
-      document.getElementById('wa').textContent=sh;
-      document.getElementById('wa').style.color='var(--green)';
-      document.getElementById('wb').textContent='CONNECTED ✓';
-      document.getElementById('wb').classList.add('connected');
+      const _wb=document.getElementById('wb');
+      _wb.innerHTML='<span class="wdot" id="nc" style="background:var(--green)"></span><span id="wa" style="color:var(--green)">'+sh+'</span>';
+      _wb.classList.add('connected');
       fetchBal(); updBtn();
     }
     await syncRound();
