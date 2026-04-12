@@ -29,9 +29,17 @@ header{position:sticky;top:0;z-index:200;background:rgba(5,6,10,.9);backdrop-fil
 .mktab,.ntab{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--t2);background:transparent;border:none;padding:6px 13px;border-radius:7px;cursor:pointer;transition:all .18s;white-space:nowrap;}
 .mktab:hover,.ntab:hover{color:var(--text);background:var(--card2);}
 .mktab.active,.ntab.active{color:#000;background:var(--green);font-weight:700;}
+.wallet-wrap{position:relative;flex-shrink:0;}
 .wbtn{display:flex;align-items:center;gap:7px;background:var(--card2);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:8px 15px;border-radius:var(--r);cursor:pointer;transition:all .2s;flex-shrink:0;}
 .wbtn:hover{border-color:var(--green);color:var(--green);}
 .wbtn.connected{border-color:var(--green);}
+.wdropdown{display:none;position:absolute;top:calc(100% + 6px);right:0;min-width:200px;background:#0d1117;border:1px solid var(--border2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.6);z-index:9999;overflow:hidden;animation:fi .15s ease;}
+.wdropdown.open{display:block;}
+.wdropdown-addr{padding:10px 14px;font-family:var(--mono);font-size:10px;color:var(--t2);border-bottom:1px solid var(--border);letter-spacing:.05em;}
+.wdropdown-item{display:flex;align-items:center;gap:8px;padding:10px 14px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;cursor:pointer;transition:background .15s;color:var(--text);}
+.wdropdown-item:hover{background:var(--card2);}
+.wdropdown-item.disconnect{color:#ff6b6b;}
+.wdropdown-item.disconnect:hover{background:rgba(255,59,92,.08);}
 .wdot{width:6px;height:6px;border-radius:50%;background:var(--t3);transition:background .3s;}
 .wbtn.connected .wdot{background:var(--green);}
 .page{display:none;width:100%;position:relative;z-index:1;animation:fi .22s ease;}
@@ -253,7 +261,14 @@ footer a:hover{color:var(--green);}
     <button class="ntab" id="padTab" onclick="switchToPad()">&#x1F680; LAUNCH</button>
     <button class="ntab" id="scanTab" onclick="switchToScan()">&#x1F50D; SCAN</button>
   </div>
-  <button class="wbtn" id="wb" onclick="toggleWallet()"><span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span></button>
+  <div class="wallet-wrap" id="walletWrap">
+    <button class="wbtn" id="wb" onclick="toggleWallet()"><span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span></button>
+    <div class="wdropdown" id="wdropdown">
+      <div class="wdropdown-addr" id="wdropdown-addr">not connected</div>
+      <div class="wdropdown-item" onclick="copyWalletAddr()">⎘&nbsp; Copy Address</div>
+      <div class="wdropdown-item disconnect" onclick="disconnectWallet()">⏻&nbsp; Disconnect</div>
+    </div>
+  </div>
 </header>
 <div class="page active" id="pg">
   <div class="predict-wrap">
@@ -423,13 +438,15 @@ async function connectWallet(){
     fetchBal();updBtn();rendPos();
   }catch(e){btn.textContent='CONNECT WALLET';if(e.code!==4001)console.error(e);}
 }
+function _closeWalletDropdown(){document.getElementById('wdropdown')?.classList.remove('open');}
 function disconnectWallet(){
+  _closeWalletDropdown();
   const btn=document.getElementById('wb'),ael=document.getElementById('wa');
   const p=getProv();
   try{if(p&&p.disconnect)p.disconnect();}catch(e){}
   wpk=null;
   if(ael){ael.textContent='CONNECT WALLET';ael.style.color='';}
-  if(btn){btn.textContent='';btn.classList.remove('connected');
+  if(btn){btn.classList.remove('connected');
     btn.innerHTML='<span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span>';}
   document.getElementById('wb2').textContent='';
   const pbtn=document.getElementById('pbtn');
@@ -438,15 +455,29 @@ function disconnectWallet(){
   const bal=document.getElementById('balance');if(bal)bal.textContent='— SOL';
   const pos=document.getElementById('positions');if(pos)pos.innerHTML='<p style="color:var(--t2);font-size:11px">connect wallet<br>to see positions</p>';
 }
+function copyWalletAddr(){
+  if(wpk){navigator.clipboard.writeText(wpk).catch(()=>{});_closeWalletDropdown();}
+}
 function toggleWallet(){
   if(wpk){
-    if(confirm('Disconnect wallet '+wpk.slice(0,4)+'...'+wpk.slice(-4)+'?')){
-      disconnectWallet();
+    const dd=document.getElementById('wdropdown');
+    if(dd){
+      if(dd.classList.contains('open')){dd.classList.remove('open');}
+      else{
+        const addr=document.getElementById('wdropdown-addr');
+        if(addr)addr.textContent=wpk.slice(0,4)+'...'+wpk.slice(-4);
+        dd.classList.add('open');
+      }
     }
   } else {
     connectWallet();
   }
 }
+// close dropdown when clicking outside
+document.addEventListener('click',function(e){
+  const wrap=document.getElementById('walletWrap');
+  if(wrap&&!wrap.contains(e.target))_closeWalletDropdown();
+});
 async function fetchBal(){
   if(!wpk)return;
   try{
