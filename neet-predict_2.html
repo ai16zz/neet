@@ -253,7 +253,7 @@ footer a:hover{color:var(--green);}
     <button class="ntab" id="padTab" onclick="switchToPad()">&#x1F680; LAUNCH</button>
     <button class="ntab" id="scanTab" onclick="switchToScan()">&#x1F50D; SCAN</button>
   </div>
-  <button class="wbtn" id="wb" onclick="connectWallet()"><span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span></button>
+  <button class="wbtn" id="wb" onclick="toggleWallet()"><span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span></button>
 </header>
 <div class="page active" id="pg">
   <div class="predict-wrap">
@@ -422,6 +422,30 @@ async function connectWallet(){
     btn.textContent='CONNECTED ✓';btn.classList.add('connected');
     fetchBal();updBtn();rendPos();
   }catch(e){btn.textContent='CONNECT WALLET';if(e.code!==4001)console.error(e);}
+}
+function disconnectWallet(){
+  const btn=document.getElementById('wb'),ael=document.getElementById('wa');
+  const p=getProv();
+  try{if(p&&p.disconnect)p.disconnect();}catch(e){}
+  wpk=null;
+  if(ael){ael.textContent='CONNECT WALLET';ael.style.color='';}
+  if(btn){btn.textContent='';btn.classList.remove('connected');
+    btn.innerHTML='<span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span>';}
+  document.getElementById('wb2').textContent='';
+  const pbtn=document.getElementById('pbtn');
+  if(pbtn){pbtn.textContent='CONNECT WALLET FIRST';pbtn.disabled=true;pbtn.className='subbtn';}
+  const st=document.getElementById('status');if(st)st.textContent='not connected';
+  const bal=document.getElementById('balance');if(bal)bal.textContent='— SOL';
+  const pos=document.getElementById('positions');if(pos)pos.innerHTML='<p style="color:var(--t2);font-size:11px">connect wallet<br>to see positions</p>';
+}
+function toggleWallet(){
+  if(wpk){
+    if(confirm('Disconnect wallet '+wpk.slice(0,4)+'...'+wpk.slice(-4)+'?')){
+      disconnectWallet();
+    }
+  } else {
+    connectWallet();
+  }
 }
 async function fetchBal(){
   if(!wpk)return;
