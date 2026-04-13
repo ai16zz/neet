@@ -261,6 +261,7 @@ footer a:hover{color:var(--green);}
     <button class="ntab" id="cartelTab" onclick="switchToCartel()">CARTEL</button>
     <button class="ntab" id="padTab" onclick="switchToPad()">&#x1F680; LAUNCH</button>
     <button class="ntab" id="scanTab" onclick="switchToScan()">&#x1F50D; SCAN</button>
+    <button class="ntab" id="buyTab" onclick="switchToBuy()">&#x1F4B8; BUY</button>
   </div>
   <div class="wallet-wrap" id="walletWrap">
     <button class="wbtn" id="wb" onclick="toggleWallet(event)"><span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span></button>
@@ -1254,7 +1255,7 @@ function _showSection(name){
   // hide all sections
   var pg=document.querySelector('.page');
   if(pg){pg.style.display=name==='predict'?'':'none';}
-  ['cartelSection','padSection','scanSection'].forEach(function(id){
+  ['cartelSection','padSection','scanSection','buySection'].forEach(function(id){
     var el=document.getElementById(id);
     if(el){el.classList.remove('visible');el.style.display='none';}
   });
@@ -2951,6 +2952,12 @@ function switchToScan(){
   _showSection('scan');
   document.getElementById('scanTab')?.classList.add('active');
 }
+function switchToBuy(){
+  _showSection('buy');
+  document.getElementById('buyTab')?.classList.add('active');
+  initJupiterTerminal();
+  fetchBuyStats();
+}
 </script>
 
 <script>
@@ -3719,5 +3726,173 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
   setTimeout(gateChatVisibility, 800);
   console.log('[NEET] Verify system loaded — MIN_NEET='+MIN_NEET);
 })();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     BUY $NEET SECTION
+════════════════════════════════════════════════════════════ -->
+<style>
+#buySection { display:none; position:relative; z-index:1; }
+#buySection.visible { display:block; animation:fi .22s ease; }
+.buy-wrap { max-width:540px; margin:0 auto; padding:40px 24px 60px; }
+.buy-hdr { text-align:center; margin-bottom:28px; }
+.buy-hdr h1 {
+  font-family:var(--dsp); font-size:52px; letter-spacing:.08em;
+  background:linear-gradient(135deg,#00ff87 0%,#7fffd4 50%,#00bfff 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  filter:drop-shadow(0 0 12px rgba(0,255,135,.35)); margin-bottom:6px;
+}
+.buy-hdr p { font-family:var(--mono); font-size:10px; color:var(--t2); letter-spacing:.18em; }
+.buy-stats-bar {
+  display:grid; grid-template-columns:1fr 1px 1fr 1px 1fr;
+  background:var(--border); border:1px solid var(--border);
+  border-radius:var(--r); overflow:hidden; margin-bottom:22px;
+}
+.buy-stat { background:var(--bg2); padding:14px 16px; text-align:center; }
+.buy-stat-divider { background:var(--border); }
+.buy-stat-lbl { font-family:var(--mono); font-size:9px; letter-spacing:.17em; color:var(--t3); text-transform:uppercase; margin-bottom:5px; }
+.buy-stat-val { font-family:var(--dsp); font-size:24px; letter-spacing:.04em; line-height:1; }
+.buy-stat-val.green { color:var(--green); text-shadow:0 0 16px rgba(0,255,135,.3); }
+.buy-stat-val.red { color:var(--red); }
+.buy-stat-val.neutral { color:var(--text); }
+.buy-terminal-wrap {
+  border:1px solid var(--border2); border-radius:12px; overflow:hidden;
+  background:var(--bg2); min-height:360px;
+}
+.buy-notice {
+  margin-top:16px; padding:11px 15px;
+  background:rgba(0,255,135,.05); border:1px solid rgba(0,255,135,.12);
+  border-radius:var(--r); font-family:var(--mono); font-size:10px;
+  color:rgba(0,255,135,.6); letter-spacing:.04em; line-height:1.8;
+}
+.buy-links { display:flex; gap:10px; margin-top:14px; }
+.buy-link {
+  flex:1; text-align:center; padding:10px; border:1px solid var(--border2);
+  border-radius:var(--r); font-family:var(--mono); font-size:10px;
+  letter-spacing:.1em; color:var(--t2); text-decoration:none;
+  background:var(--card); transition:all .18s;
+}
+.buy-link:hover { border-color:rgba(0,255,135,.35); color:var(--green); background:rgba(0,255,135,.05); }
+</style>
+
+<div id="buySection">
+  <div class="buy-wrap">
+    <div class="buy-hdr">
+      <h1>BUY $NEET</h1>
+      <p>SWAP SOL → NEET · BEST PRICE VIA JUPITER ROUTING</p>
+    </div>
+
+    <!-- Live stats bar -->
+    <div class="buy-stats-bar">
+      <div class="buy-stat">
+        <div class="buy-stat-lbl">PRICE</div>
+        <div class="buy-stat-val green" id="buy-stat-price">—</div>
+      </div>
+      <div class="buy-stat-divider"></div>
+      <div class="buy-stat">
+        <div class="buy-stat-lbl">24H</div>
+        <div class="buy-stat-val neutral" id="buy-stat-change">—</div>
+      </div>
+      <div class="buy-stat-divider"></div>
+      <div class="buy-stat">
+        <div class="buy-stat-lbl">MCAP</div>
+        <div class="buy-stat-val neutral" id="buy-stat-mcap">—</div>
+      </div>
+    </div>
+
+    <!-- Jupiter Terminal mounts here -->
+    <div class="buy-terminal-wrap">
+      <div id="integrated-terminal"></div>
+    </div>
+
+    <div class="buy-notice">
+      ⚡ Swaps routed through Jupiter — best price across all Solana DEXs.<br>
+      Connect your Phantom wallet above to trade.
+    </div>
+
+    <div class="buy-links">
+      <a class="buy-link" href="https://dexscreener.com/solana/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump" target="_blank">📊 DEXSCREENER</a>
+      <a class="buy-link" href="https://birdeye.so/token/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump?chain=solana" target="_blank">🐦 BIRDEYE</a>
+      <a class="buy-link" href="https://jup.ag/swap/SOL-Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump" target="_blank">🌐 JUP.AG</a>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══ BUY TAB — Jupiter Terminal + Live Stats ═══ */
+var _jupLoaded = false;
+var _jupInited = false;
+
+function loadJupScript(cb) {
+  if (_jupLoaded) { cb(); return; }
+  var s = document.createElement('script');
+  s.src = 'https://terminal.jup.ag/main-v4.js';
+  s.setAttribute('data-preload', '');
+  s.onload = function() { _jupLoaded = true; cb(); };
+  s.onerror = function() { console.warn('[BUY] Jupiter Terminal failed to load'); };
+  document.head.appendChild(s);
+}
+
+function initJupiterTerminal() {
+  if (_jupInited) return;
+  loadJupScript(function() {
+    if (!window.Jupiter) { console.warn('[BUY] window.Jupiter not available'); return; }
+    window.Jupiter.init({
+      displayMode: 'integrated',
+      integratedTargetId: 'integrated-terminal',
+      endpoint: 'https://api.mainnet-beta.solana.com',
+      defaultExplorer: 'Solscan',
+      formProps: {
+        initialInputMint: 'So11111111111111111111111111111111111111112', // SOL
+        initialOutputMint: 'Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump', // NEET
+        fixedOutputMint: true,
+      },
+      /* ── PLATFORM FEE ── your cut on every swap ── */
+      platformFeeAndAccounts: {
+        referralAccount: '42Wjt3WbW9beVdX2CKdr6b7A7X8hqeXPSJFfM7qxPars',
+        feeBps: 100, // 1% — change to 50 for 0.5%, 200 for 2%, etc.
+      },
+      /* ─────────────────────────────────────────────────────────────── */
+    });
+    _jupInited = true;
+  });
+}
+
+async function fetchBuyStats() {
+  try {
+    var r = await fetch('https://api.dexscreener.com/latest/dex/tokens/' + (window.NEET_CA || 'Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump'));
+    var d = await r.json();
+    var pairs = d.pairs || [];
+    if (!pairs.length) return;
+    // pick highest liquidity pair
+    var pair = pairs.sort(function(a,b){ return (b.liquidity?.usd||0)-(a.liquidity?.usd||0); })[0];
+    var price = parseFloat(pair.priceUsd || 0);
+    var chg   = parseFloat((pair.priceChange || {}).h24 || 0);
+    var mc    = pair.marketCap || pair.fdv || 0;
+
+    var priceEl  = document.getElementById('buy-stat-price');
+    var changeEl = document.getElementById('buy-stat-change');
+    var mcapEl   = document.getElementById('buy-stat-mcap');
+
+    if (priceEl) {
+      priceEl.textContent = price < 0.001
+        ? '$' + price.toExponential(2)
+        : '$' + price.toFixed(price < 0.01 ? 6 : price < 1 ? 4 : 2);
+    }
+    if (changeEl) {
+      changeEl.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%';
+      changeEl.className = 'buy-stat-val ' + (chg >= 0 ? 'green' : 'red');
+    }
+    if (mcapEl) {
+      mcapEl.textContent = mc >= 1e6
+        ? '$' + (mc / 1e6).toFixed(1) + 'M'
+        : mc >= 1e3
+        ? '$' + (mc / 1e3).toFixed(0) + 'K'
+        : '$' + mc.toFixed(0);
+    }
+  } catch(e) {
+    console.warn('[BUY] stats fetch error', e);
+  }
+}
 </script>
 </html>
