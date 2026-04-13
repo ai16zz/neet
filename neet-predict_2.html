@@ -16,7 +16,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
 .o1{width:700px;height:700px;background:rgba(0,255,135,.07);top:-h200px;left:-200px;}
 .o2{width:500px;height:500px;background:rgba(255,59,92,.06);bottom:-150px;right:-100px;}
 .o3{width:350px;height:350px;background:rgba(77,138,255,.05);top:40%;left:55%;}
-.ticker{position:relative;z-index:50;background:rgba(0,255,135,.05);border-bottom:1px solid rgba(0,255,135,.12);padding:7px 0;overflow:hidden;white-space:nowrap;}
+.ticker{position:relative;z-index:50;background:rgba(0,255,135,.05);border-bottom:1px sholid rgba(0,255,135,.12);padding:7px 0;overflow:hidden;white-space:nowrap;}
 .ticker-t{display:inline-flex;animation:tick 32s linear infinite;}
 .ti{display:inline-flex;align-items:center;gap:18px;padding:0 32px;font-family:var(--mono);font-size:10px;letter-spacing:.13em;color:rgba(0,255,135,.5);}
 .ti b{color:var(--green);}.ts{color:rgba(0,255,135,.2);}h
@@ -3698,22 +3698,11 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
     }
   }
 
-  /* ── CHAT GATE: block non-verified users from viewing ─────── */
+  /* ── CHAT GATE: public — no verification required to view ─── */
   function gateChatVisibility(){
     const session=loadSession();
-    // Find the chat container
-    const chatContainers=['#neet-chat','.neet-chat','#chat-section','#cartelSection'].map(s=>document.querySelector(s)).filter(Boolean);
-    chatContainers.forEach(container=>{
-      if(session){ applyVerifiedSession(session); return; }
-      // Not verified — add overlay
-      if(document.getElementById('neet-chat-gate')) return;
-      container.style.position='relative';
-      const overlay=document.createElement('div');
-      overlay.id='neet-chat-gate'; overlay.className='chat-gate-overlay';
-      overlay.innerHTML=`<p>🔒 Only verified holders can<br>view #trenches messages.<br><br>Connect wallet + X to enter.</p>
-        <button class="gate-unlock-btn" onclick="openNeetGate()">GET VERIFIED →</button>`;
-      container.appendChild(overlay);
-    });
+    if(session){ applyVerifiedSession(session); }
+    // #trenches is public — no overlay for non-verified users
   }
 
   window.openNeetGate = function(){
