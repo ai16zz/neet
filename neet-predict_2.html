@@ -339,7 +339,7 @@ footer a:hover{color:var(--green);}
           <div class="sumr"><span class="k">Est. payout</span><span class="v g" id="ppo">—</span></div>
         </div>
         <div class="hint" style="margin-bottom:12px;">⚠ odds grow as opposing bets come in</div>
-        <button class="pbtn" id="pbtn" onclick="placeBet()" disabled>CONNECT WALLET FIRST</button>
+        <button class="pbtn" id="pbtn" onclick="placeBet()" disabled style="display:none">CONNECT WALLET FIRST</button>
       </div>
       <div class="wstrip">
         <div class="wi"><div class="k">STATUS</div><div class="v" id="st">not connected</div></div>
@@ -430,6 +430,8 @@ function _walletUISync(){
     btn.innerHTML='<span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span>';
     btn.classList.remove('connected');
   }
+  const _pb=document.getElementById('pbtn');
+  if(_pb)_pb.style.display=wpk?'':'none';
 }
 async function connectWallet(){
   if(location.protocol==='file:'){alert('Must be on https://');return;}
@@ -733,7 +735,7 @@ function updPay(){
   updBtn();
 }
 function updBtn(){
-  const btn=document.getElementById('sb'),amt=parseFloat(document.getElementById('ba').value)||0;
+  const btn=document.getElementById('pbtn'),amt=parseFloat(document.getElementById('ba').value)||0;
   if(!wpk){btn.textContent='CONNECT WALLET FIRST';btn.className='subbtn';return;}
   if(phase!=='open'){btn.textContent='BETS CLOSED';btn.className='subbtn';return;}
   if(!seld){btn.textContent='SELECT UP OR DOWN';btn.className='subbtn';return;}
