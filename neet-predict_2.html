@@ -736,10 +736,9 @@ function updPay(){
 }
 function updBtn(){
   const btn=document.getElementById('pbtn'),amt=parseFloat(document.getElementById('ba').value)||0;
-  if(!wpk){btn.textContent='CONNECT WALLET FIRST';btn.className='subbtn';return;}
-  if(phase!=='open'){btn.textContent='BETS CLOSED';btn.className='subbtn';return;}
-  if(!seld){btn.textContent='SELECT UP OR DOWN';btn.className='subbtn';return;}
-  if(!amt||amt<MINB){btn.textContent=`MIN ${MINB} SOL`;btn.className='subbtn';return;}
+  if(!btn)return;
+  if(!wpk||phase!=='open'||!seld||!amt||amt<MINB){btn.style.display='none';return;}
+  btn.style.display='';
   btn.textContent=(seld==='up'?'▲':'▼')+' BET '+seld.toUpperCase()+' — '+amt.toFixed(3)+' SOL';
   btn.className='subbtn '+(seld==='up'?'gu':'gd');
 }
