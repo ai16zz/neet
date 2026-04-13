@@ -3734,56 +3734,103 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 <style>
 #buySection { display:none; position:relative; z-index:1; }
 #buySection.visible { display:block; animation:fi .22s ease; }
-.buy-wrap { max-width:540px; margin:0 auto; padding:40px 24px 60px; }
-.buy-hdr { text-align:center; margin-bottom:28px; }
+.buy-wrap { max-width:480px; margin:0 auto; padding:40px 24px 60px; }
+
+/* Header */
+.buy-hdr { text-align:center; margin-bottom:24px; }
 .buy-hdr h1 {
-  font-family:var(--dsp); font-size:52px; letter-spacing:.08em;
+  font-family:var(--dsp); font-size:48px; letter-spacing:.08em;
   background:linear-gradient(135deg,#00ff87 0%,#7fffd4 50%,#00bfff 100%);
   -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
-  filter:drop-shadow(0 0 12px rgba(0,255,135,.35)); margin-bottom:6px;
+  filter:drop-shadow(0 0 12px rgba(0,255,135,.35)); margin-bottom:4px;
 }
-.buy-hdr p { font-family:var(--mono); font-size:10px; color:var(--t2); letter-spacing:.18em; }
+.buy-hdr p { font-family:var(--mono); font-size:9px; color:var(--t2); letter-spacing:.2em; }
+
+/* Stats bar */
 .buy-stats-bar {
   display:grid; grid-template-columns:1fr 1px 1fr 1px 1fr;
   background:var(--border); border:1px solid var(--border);
-  border-radius:var(--r); overflow:hidden; margin-bottom:22px;
+  border-radius:var(--r); overflow:hidden; margin-bottom:18px;
 }
-.buy-stat { background:var(--bg2); padding:14px 16px; text-align:center; }
+.buy-stat { background:var(--bg2); padding:12px 14px; text-align:center; }
 .buy-stat-divider { background:var(--border); }
-.buy-stat-lbl { font-family:var(--mono); font-size:9px; letter-spacing:.17em; color:var(--t3); text-transform:uppercase; margin-bottom:5px; }
-.buy-stat-val { font-family:var(--dsp); font-size:24px; letter-spacing:.04em; line-height:1; }
-.buy-stat-val.green { color:var(--green); text-shadow:0 0 16px rgba(0,255,135,.3); }
+.buy-stat-lbl { font-family:var(--mono); font-size:8px; letter-spacing:.17em; color:var(--t3); text-transform:uppercase; margin-bottom:4px; }
+.buy-stat-val { font-family:var(--dsp); font-size:22px; letter-spacing:.04em; line-height:1; }
+.buy-stat-val.green { color:var(--green); text-shadow:0 0 14px rgba(0,255,135,.3); }
 .buy-stat-val.red { color:var(--red); }
 .buy-stat-val.neutral { color:var(--text); }
-.buy-terminal-wrap {
-  border:1px solid var(--border2); border-radius:12px; overflow:hidden;
-  background:var(--bg2); min-height:360px;
+
+/* Terminal container — clips the Jupiter header & footer */
+.buy-terminal-outer {
+  position:relative; border:1px solid var(--border2); border-radius:12px;
+  overflow:hidden; background:#131720;
 }
-.buy-notice {
-  margin-top:16px; padding:11px 15px;
-  background:rgba(0,255,135,.05); border:1px solid rgba(0,255,135,.12);
-  border-radius:var(--r); font-family:var(--mono); font-size:10px;
-  color:rgba(0,255,135,.6); letter-spacing:.04em; line-height:1.8;
+/* Custom NEET header bar that sits on top of Jupiter's header */
+.buy-terminal-topbar {
+  position:relative; z-index:10;
+  background:linear-gradient(90deg,rgba(0,255,135,.08),rgba(0,0,0,0));
+  border-bottom:1px solid rgba(0,255,135,.12);
+  padding:11px 16px; display:flex; align-items:center; justify-content:space-between;
 }
-/* Hide Jupiter branding inside the terminal widget */
-#integrated-terminal [class*="powered"],
-#integrated-terminal [class*="Powered"],
-#integrated-terminal footer,
-#integrated-terminal [class*="footer"],
-#integrated-terminal [class*="Footer"],
-#integrated-terminal a[href*="jup.ag"],
-#integrated-terminal svg ~ span,
-#integrated-terminal [class*="brand"],
-#integrated-terminal [class*="Brand"] { display:none !important; }
-#integrated-terminal [class*="poweredBy"],
-#integrated-terminal [class*="PoweredBy"] { display:none !important; }
+.buy-terminal-topbar .bt-title {
+  font-family:var(--mono); font-size:10px; letter-spacing:.18em;
+  color:var(--green); text-transform:uppercase;
+  display:flex; align-items:center; gap:8px;
+}
+.bt-dot { width:6px; height:6px; border-radius:50%; background:var(--green);
+  animation:bl 1.4s ease infinite; }
+.buy-terminal-topbar .bt-ca {
+  font-family:var(--mono); font-size:8px; color:var(--t3); letter-spacing:.05em;
+}
+/* The actual Jupiter Terminal div */
+#integrated-terminal { position:relative; z-index:1; }
+
+/* ── Aggressive branding removal ── */
+/* Cover Jupiter's own header (logo + "Jupiter" text) with an overlay */
+.buy-jup-header-cover {
+  position:absolute; top:0; left:0; right:0; height:52px;
+  background:#131720; z-index:5; pointer-events:none;
+}
+/* Cover "Powered by Jupiter" footer */
+.buy-jup-footer-cover {
+  position:absolute; bottom:0; left:0; right:0; height:36px;
+  background:#131720; z-index:5; pointer-events:none;
+}
+
+/* Force green on the Connect Wallet / Buy button inside terminal */
+#integrated-terminal button[class*="bg-"]:not([class*="transparent"]):not([class*="none"]):last-of-type,
+#integrated-terminal button:not([disabled]):not([class*="ghost"]) {
+  /* will be overridden by JS for precision */
+}
+
+/* Buy/Sell direction button styling */
+#integrated-terminal button[class*="rounded-full"],
+#integrated-terminal [class*="swap-button"] {
+  background: rgba(0,255,135,.15) !important;
+  border-color: rgba(0,255,135,.3) !important;
+  color: var(--green) !important;
+}
+
+.buy-footer-bar {
+  margin-top:14px; padding:10px 14px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--r); display:flex; align-items:center; justify-content:space-between;
+}
+.buy-footer-bar .bfl { font-family:var(--mono); font-size:9px; color:var(--t3); letter-spacing:.1em; }
+.buy-footer-bar .bfr { display:flex; gap:6px; }
+.buy-badge {
+  font-family:var(--mono); font-size:8px; letter-spacing:.1em; color:var(--t3);
+  background:var(--card2); border:1px solid var(--border); border-radius:4px;
+  padding:3px 8px; text-decoration:none; transition:all .15s;
+}
+.buy-badge:hover { color:var(--green); border-color:rgba(0,255,135,.3); }
 </style>
 
 <div id="buySection">
   <div class="buy-wrap">
     <div class="buy-hdr">
       <h1>BUY $NEET</h1>
-      <p>SWAP SOL → NEET · BEST PRICE ROUTING</p>
+      <p>SWAP SOL → NEET</p>
     </div>
 
     <!-- Live stats bar -->
@@ -3804,42 +3851,89 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
       </div>
     </div>
 
-    <!-- Jupiter Terminal mounts here -->
-    <div class="buy-terminal-wrap">
+    <!-- Terminal with custom header/footer covers -->
+    <div class="buy-terminal-outer">
+      <!-- Custom NEET header — sits above the terminal -->
+      <div class="buy-terminal-topbar">
+        <span class="bt-title"><span class="bt-dot"></span>NEET SWAP</span>
+        <span class="bt-ca">Ce2g...pump</span>
+      </div>
+      <!-- Overlay covers Jupiter's own header logo -->
+      <div class="buy-jup-header-cover" id="jupHeaderCover"></div>
+      <!-- Terminal renders here -->
       <div id="integrated-terminal"></div>
+      <!-- Overlay covers "Powered by Jupiter" footer -->
+      <div class="buy-jup-footer-cover" id="jupFooterCover"></div>
     </div>
 
-    <div class="buy-notice">
-      ⚡ Best price routing across all Solana DEXs.<br>
-      Connect your Phantom wallet above to swap.
+    <!-- Minimal footer bar -->
+    <div class="buy-footer-bar">
+      <span class="bfl">⚡ BEST PRICE ROUTING · 1% FEE SUPPORTS $NEET</span>
+      <span class="bfr">
+        <a class="buy-badge" href="https://dexscreener.com/solana/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump" target="_blank">CHART</a>
+        <a class="buy-badge" href="https://solscan.io/token/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump" target="_blank">EXPLORER</a>
+      </span>
     </div>
   </div>
 </div>
 
 <script>
-/* ═══ BUY TAB — Jupiter Terminal + Live Stats ═══ */
-/* Strip Jupiter branding dynamically after terminal renders */
+/* ═══ BUY TAB — NEET Swap ═══ */
+
+/* ── MutationObserver: strip branding + style buttons ── */
 (function() {
-  var _obs = new MutationObserver(function() {
-    var terminal = document.getElementById('integrated-terminal');
-    if (!terminal) return;
-    // Hide "Powered by Jupiter" footer and any Jupiter logo links
-    terminal.querySelectorAll('a[href*="jup.ag"], a[href*="jupiter"]').forEach(function(el) {
-      var row = el.closest('div[class*="bottom"], div[class*="footer"], div[class*="powered"], div[class*="Powered"]') || el.parentElement;
-      if (row) row.style.display = 'none';
-    });
-    // Also catch text nodes containing "Powered by"
-    terminal.querySelectorAll('*').forEach(function(el) {
-      if (el.children.length === 0 && el.textContent.includes('Powered by')) {
-        var p = el.closest('div') || el.parentElement;
-        if (p) p.style.display = 'none';
+  function patchTerminal() {
+    var t = document.getElementById('integrated-terminal');
+    if (!t) return;
+
+    /* 1. Hide "Powered by Jupiter" + Jupiter logo header */
+    t.querySelectorAll('*').forEach(function(el) {
+      if (!el.children.length) {
+        var txt = el.textContent.trim();
+        if (txt === 'Powered by' || txt === 'Jupiter' || txt.includes('Powered by Jupiter')) {
+          var wrap = el.closest('div') || el.parentElement;
+          if (wrap) wrap.style.cssText = 'display:none!important';
+        }
       }
     });
-  });
-  document.addEventListener('DOMContentLoaded', function() {
-    var terminal = document.getElementById('integrated-terminal');
-    if (terminal) _obs.observe(terminal, {childList:true, subtree:true});
-  });
+    t.querySelectorAll('a[href*="jup.ag"],a[href*="jupiter.ag"],a[href*="jup.io"]').forEach(function(el) {
+      var wrap = el.parentElement;
+      if (wrap) wrap.style.cssText = 'display:none!important';
+    });
+
+    /* 2. Style the main action button green */
+    var btns = t.querySelectorAll('button');
+    btns.forEach(function(btn) {
+      var txt = btn.textContent.trim();
+      if (txt === 'Connect Wallet' || txt === 'Swap' || txt === 'Buy') {
+        btn.style.cssText = 'background:#00ff87!important;color:#000!important;font-weight:700!important;border:none!important;border-radius:8px!important;font-family:"Space Mono",monospace!important;letter-spacing:.08em!important;text-transform:uppercase!important;';
+      }
+      /* Buy/sell swap direction button */
+      if (btn.querySelector('svg') && !txt) {
+        btn.style.cssText = 'background:rgba(0,255,135,.12)!important;border:1px solid rgba(0,255,135,.25)!important;border-radius:50%!important;';
+      }
+    });
+
+    /* 3. Style input token rows to match dark theme */
+    t.querySelectorAll('input[type="text"],input[type="number"]').forEach(function(inp) {
+      inp.style.cssText = 'color:#dde4f5!important;font-family:"Space Mono",monospace!important;background:transparent!important;';
+    });
+  }
+
+  var _obs = new MutationObserver(patchTerminal);
+  function startObs() {
+    var t = document.getElementById('integrated-terminal');
+    if (t) { _obs.observe(t, {childList:true, subtree:true, attributes:true}); patchTerminal(); }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startObs);
+  } else { startObs(); }
+  /* Re-run every 800ms for the first 10s to catch late renders */
+  var _patchCount = 0;
+  var _patchTimer = setInterval(function() {
+    patchTerminal();
+    if (++_patchCount > 12) clearInterval(_patchTimer);
+  }, 800);
 })();
 var _jupLoaded = false;
 var _jupInited = false;
