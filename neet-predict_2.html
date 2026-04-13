@@ -2364,7 +2364,7 @@ async function refreshPnlPrices(){
   renderPnlTracker();
 }
 // -- TELEGRAM NOTIFICATIONS --------------------------------
-function _tgCfg(){const dflt={token:'8776338924:AAHTynZ9hS6vkkeBelTtErAFefha4dUhMHY',chatId:'1501478917'};try{const c=JSON.parse(localStorage.getItem('neet_tg')||'{}');return{token:c.token||dflt.token,chatId:c.chatId||dflt.chatId};}catch(e){return dflt;}}
+function _tgCfg(){const dflt={token:'',chatId:''};/* Configure via the Telegram setup UI — never hardcode tokens in source */try{const c=JSON.parse(localStorage.getItem('neet_tg')||'{}');return{token:c.token||dflt.token,chatId:c.chatId||dflt.chatId};}catch(e){return dflt;}}
 async function sendTelegram(msg){
   const c=_tgCfg();
   if(!c.token||!c.chatId)return;
