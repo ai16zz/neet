@@ -3765,21 +3765,25 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
   border-radius:var(--r); font-family:var(--mono); font-size:10px;
   color:rgba(0,255,135,.6); letter-spacing:.04em; line-height:1.8;
 }
-.buy-links { display:flex; gap:10px; margin-top:14px; }
-.buy-link {
-  flex:1; text-align:center; padding:10px; border:1px solid var(--border2);
-  border-radius:var(--r); font-family:var(--mono); font-size:10px;
-  letter-spacing:.1em; color:var(--t2); text-decoration:none;
-  background:var(--card); transition:all .18s;
-}
-.buy-link:hover { border-color:rgba(0,255,135,.35); color:var(--green); background:rgba(0,255,135,.05); }
+/* Hide Jupiter branding inside the terminal widget */
+#integrated-terminal [class*="powered"],
+#integrated-terminal [class*="Powered"],
+#integrated-terminal footer,
+#integrated-terminal [class*="footer"],
+#integrated-terminal [class*="Footer"],
+#integrated-terminal a[href*="jup.ag"],
+#integrated-terminal svg ~ span,
+#integrated-terminal [class*="brand"],
+#integrated-terminal [class*="Brand"] { display:none !important; }
+#integrated-terminal [class*="poweredBy"],
+#integrated-terminal [class*="PoweredBy"] { display:none !important; }
 </style>
 
 <div id="buySection">
   <div class="buy-wrap">
     <div class="buy-hdr">
       <h1>BUY $NEET</h1>
-      <p>SWAP SOL → NEET · BEST PRICE VIA JUPITER ROUTING</p>
+      <p>SWAP SOL → NEET · BEST PRICE ROUTING</p>
     </div>
 
     <!-- Live stats bar -->
@@ -3806,20 +3810,37 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
     </div>
 
     <div class="buy-notice">
-      ⚡ Swaps routed through Jupiter — best price across all Solana DEXs.<br>
-      Connect your Phantom wallet above to trade.
-    </div>
-
-    <div class="buy-links">
-      <a class="buy-link" href="https://dexscreener.com/solana/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump" target="_blank">📊 DEXSCREENER</a>
-      <a class="buy-link" href="https://birdeye.so/token/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump?chain=solana" target="_blank">🐦 BIRDEYE</a>
-      <a class="buy-link" href="https://jup.ag/swap/SOL-Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump" target="_blank">🌐 JUP.AG</a>
+      ⚡ Best price routing across all Solana DEXs.<br>
+      Connect your Phantom wallet above to swap.
     </div>
   </div>
 </div>
 
 <script>
 /* ═══ BUY TAB — Jupiter Terminal + Live Stats ═══ */
+/* Strip Jupiter branding dynamically after terminal renders */
+(function() {
+  var _obs = new MutationObserver(function() {
+    var terminal = document.getElementById('integrated-terminal');
+    if (!terminal) return;
+    // Hide "Powered by Jupiter" footer and any Jupiter logo links
+    terminal.querySelectorAll('a[href*="jup.ag"], a[href*="jupiter"]').forEach(function(el) {
+      var row = el.closest('div[class*="bottom"], div[class*="footer"], div[class*="powered"], div[class*="Powered"]') || el.parentElement;
+      if (row) row.style.display = 'none';
+    });
+    // Also catch text nodes containing "Powered by"
+    terminal.querySelectorAll('*').forEach(function(el) {
+      if (el.children.length === 0 && el.textContent.includes('Powered by')) {
+        var p = el.closest('div') || el.parentElement;
+        if (p) p.style.display = 'none';
+      }
+    });
+  });
+  document.addEventListener('DOMContentLoaded', function() {
+    var terminal = document.getElementById('integrated-terminal');
+    if (terminal) _obs.observe(terminal, {childList:true, subtree:true});
+  });
+})();
 var _jupLoaded = false;
 var _jupInited = false;
 
