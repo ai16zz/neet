@@ -418,8 +418,20 @@ function getProv(){
   if(window.solana)return window.solana;
   return null;
 }
+/* single source of truth for wallet button state */
+function _walletUISync(){
+  const btn=document.getElementById('wb');
+  if(!btn)return;
+  if(wpk){
+    const sh=wpk.slice(0,4)+'...'+wpk.slice(-4);
+    btn.innerHTML='<span class="wdot" id="nc" style="background:var(--green)"></span><span id="wa" style="color:var(--green)">'+sh+'</span>';
+    btn.classList.add('connected');
+  }else{
+    btn.innerHTML='<span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span>';
+    btn.classList.remove('connected');
+  }
+}
 async function connectWallet(){
-  const btn=document.getElementById('wb'),ael=document.getElementById('wa');
   if(location.protocol==='file:'){alert('Must be on https://');return;}
   let p=getProv();
   if(!p){for(let i=0;i<12;i++){await new Promise(r=>setTimeout(r,250));p=getProv();if(p)break;}}
@@ -428,26 +440,22 @@ async function connectWallet(){
       window.open('https://phantom.app/download','_blank');
     return;
   }
-  btn.textContent='CONNECTING...';
+  const _b=document.getElementById('wb');
+  if(_b)_b.innerHTML='<span class="wdot" id="nc"></span><span id="wa">CONNECTING...</span>';
   try{
     const r=await p.connect();
     wpk=r.publicKey.toString();
-    const sh=wpk.slice(0,4)+'...'+wpk.slice(-4);
-    btn.innerHTML='<span class="wdot" id="nc" style="background:var(--green)"></span><span id="wa" style="color:var(--green)">'+sh+'</span>';
-    btn.classList.add('connected');
+    _walletUISync();
     fetchBal();updBtn();rendPos();
-  }catch(e){btn.textContent='CONNECT WALLET';if(e.code!==4001)console.error(e);}
+  }catch(e){if(e.code!==4001)console.error(e);_walletUISync();}
 }
 function _closeWalletDropdown(){document.getElementById('wdropdown')?.classList.remove('open');}
 function disconnectWallet(){
   _closeWalletDropdown();
-  const btn=document.getElementById('wb'),ael=document.getElementById('wa');
   const p=getProv();
   try{if(p&&p.disconnect)p.disconnect();}catch(e){}
   wpk=null;
-  if(ael){ael.textContent='CONNECT WALLET';ael.style.color='';}
-  if(btn){btn.classList.remove('connected');
-    btn.innerHTML='<span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span>';}
+  _walletUISync();
   document.getElementById('wb2').textContent='';
   const pbtn=document.getElementById('pbtn');
   if(pbtn){pbtn.textContent='CONNECT WALLET FIRST';pbtn.disabled=true;pbtn.className='subbtn';}
@@ -1097,10 +1105,7 @@ setInterval(fetchPx,3000);
     const p = getProv();
     if(p?.isConnected && p.publicKey) {
       wpk = p.publicKey.toString();
-      const sh = wpk.slice(0,4)+'...'+wpk.slice(-4);
-      const _wb=document.getElementById('wb');
-      _wb.innerHTML='<span class="wdot" id="nc" style="background:var(--green)"></span><span id="wa" style="color:var(--green)">'+sh+'</span>';
-      _wb.classList.add('connected');
+      _walletUISync();
       fetchBal(); updBtn();
     }
     await syncRound();
