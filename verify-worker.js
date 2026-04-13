@@ -4,7 +4,8 @@
  *  1. Go to https://dash.cloudflare.com → Workers & Pages → Create Worker
  *  2. Paste this file, click Deploy
  *  3. Settings → Variables → add Secret:
- *       TWITTER_CLIENT_SECRET = lIxaiWEag4j72H_QmgfiiO3u0Z3MqyrayYUgpBFNEJS47wOT3K
+ *       TWITTER_CLIENT_SECRET = <paste-your-secret-in-Cloudflare-dashboard-only>
+ *  ⚠️  NEVER paste the actual secret here — use Cloudflare's secret manager only.
  *  4. Note your worker URL (e.g. https://neet-verify.<subdomain>.workers.dev)
  *  5. callback.html already has BACKEND_URL set to:
  *       https://neet-verify.cardanowhalealert.workers.dev/api/verify-twitter
