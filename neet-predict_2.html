@@ -3760,12 +3760,12 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 .buy-stat-val.red { color:var(--red); }
 .buy-stat-val.neutral { color:var(--text); }
 
-/* Terminal container — clips the Jupiter header & footer */
+/* Terminal container */
 .buy-terminal-outer {
   position:relative; border:1px solid var(--border2); border-radius:12px;
   overflow:hidden; background:#131720;
 }
-/* Custom NEET header bar that sits on top of Jupiter's header */
+/* Custom NEET header bar */
 .buy-terminal-topbar {
   position:relative; z-index:10;
   background:linear-gradient(90deg,rgba(0,255,135,.08),rgba(0,0,0,0));
@@ -3785,17 +3785,13 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 /* The actual Jupiter Terminal div */
 #integrated-terminal { position:relative; z-index:1; }
 
-/* ── Aggressive branding removal ── */
-/* Cover Jupiter's own header (logo + "Jupiter" text) with an overlay */
-.buy-jup-header-cover {
-  position:absolute; top:0; left:0; right:0; height:52px;
-  background:#131720; z-index:5; pointer-events:none;
-}
-/* Cover "Powered by Jupiter" footer */
-.buy-jup-footer-cover {
-  position:absolute; bottom:0; left:0; right:0; height:36px;
-  background:#131720; z-index:5; pointer-events:none;
-}
+/* ── CSS-level branding removal ── */
+/* Hide any link to jup.ag and its parent wrapper */
+#integrated-terminal a[href*="jup.ag"],
+#integrated-terminal a[href*="jupiter.ag"],
+#integrated-terminal a[href*="jup.io"] { display:none!important; }
+/* Hide Jupiter's "Powered by" footer row */
+#integrated-terminal [class*="justify-center"][class*="py"] { display:none!important; }
 
 /* Force green on the Connect Wallet / Buy button inside terminal */
 #integrated-terminal button[class*="bg-"]:not([class*="transparent"]):not([class*="none"]):last-of-type,
@@ -3851,19 +3847,15 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
       </div>
     </div>
 
-    <!-- Terminal with custom header/footer covers -->
+    <!-- Terminal -->
     <div class="buy-terminal-outer">
-      <!-- Custom NEET header — sits above the terminal -->
+      <!-- Custom NEET header bar -->
       <div class="buy-terminal-topbar">
         <span class="bt-title"><span class="bt-dot"></span>NEET SWAP</span>
         <span class="bt-ca">Ce2g...pump</span>
       </div>
-      <!-- Overlay covers Jupiter's own header logo -->
-      <div class="buy-jup-header-cover" id="jupHeaderCover"></div>
-      <!-- Terminal renders here -->
+      <!-- Jupiter Terminal renders here — branding removed via JS/CSS -->
       <div id="integrated-terminal"></div>
-      <!-- Overlay covers "Powered by Jupiter" footer -->
-      <div class="buy-jup-footer-cover" id="jupFooterCover"></div>
     </div>
 
     <!-- Minimal footer bar -->
@@ -3886,13 +3878,41 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
     var t = document.getElementById('integrated-terminal');
     if (!t) return;
 
-    /* 1. Hide "Powered by Jupiter" + Jupiter logo header */
+    /* 1. Hunt down Jupiter's header bar (logo + "Jupiter" name)
+          Jupiter Terminal renders: #integrated-terminal > div > div > div:first-child (the header)
+          We walk up to 5 levels deep looking for a small div that has both an SVG and "Jupiter" text */
+    function hideJupiterHeader(el, depth) {
+      if (!el || depth > 5) return;
+      var children = Array.prototype.slice.call(el.children);
+      for (var i = 0; i < children.length; i++) {
+        var child = children[i];
+        var h = child.offsetHeight;
+        var hasJupText = child.textContent.indexOf('Jupiter') >= 0;
+        var hasSvg = !!child.querySelector('svg');
+        /* A header bar: small height, has logo svg AND Jupiter text */
+        if (hasJupText && hasSvg && h > 0 && h < 80) {
+          child.style.cssText = 'display:none!important';
+          return;
+        }
+      }
+      /* Go one level deeper into the first child */
+      if (children.length) hideJupiterHeader(children[0], depth + 1);
+    }
+    hideJupiterHeader(t, 0);
+
+    /* 2. Hide "Powered by Jupiter" footer — text-node search */
     t.querySelectorAll('*').forEach(function(el) {
-      if (!el.children.length) {
-        var txt = el.textContent.trim();
-        if (txt === 'Powered by' || txt === 'Jupiter' || txt.includes('Powered by Jupiter')) {
-          var wrap = el.closest('div') || el.parentElement;
-          if (wrap) wrap.style.cssText = 'display:none!important';
+      var txt = el.textContent.trim();
+      if (!el.children.length && (
+          txt === 'Powered by' || txt === 'Jupiter' ||
+          txt.includes('Powered by Jupiter') || txt.includes('Powered by'))) {
+        /* Walk up to find the flex row container */
+        var p = el.parentElement;
+        while (p && p !== t) {
+          if (p.children.length <= 4 && p.offsetHeight < 50) {
+            p.style.cssText = 'display:none!important'; break;
+          }
+          p = p.parentElement;
         }
       }
     });
@@ -3901,7 +3921,7 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
       if (wrap) wrap.style.cssText = 'display:none!important';
     });
 
-    /* 2. Style the main action button green */
+    /* 3. Style the main action button green */
     var btns = t.querySelectorAll('button');
     btns.forEach(function(btn) {
       var txt = btn.textContent.trim();
@@ -3914,7 +3934,7 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
       }
     });
 
-    /* 3. Style input token rows to match dark theme */
+    /* 4. Style input token rows to match dark theme */
     t.querySelectorAll('input[type="text"],input[type="number"]').forEach(function(inp) {
       inp.style.cssText = 'color:#dde4f5!important;font-family:"Space Mono",monospace!important;background:transparent!important;';
     });
