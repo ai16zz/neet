@@ -3815,6 +3815,13 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 #integrated-terminal [class*="footer"],
 #integrated-terminal [class*="Footer"] { display:none!important; }
 
+/* ── Direct first/last child nukes for Jupiter header + footer ── */
+/* Jupiter Terminal v4 structure:
+   #integrated-terminal > div > div > div:first-child  = header (Jupiter logo + name)
+   #integrated-terminal > div > div > div:last-child   = "Powered by Jupiter" footer    */
+#integrated-terminal > div > div > div:first-child { display:none!important; }
+#integrated-terminal > div > div > div:last-child  { display:none!important; }
+
 /* Force container backgrounds to our dark theme */
 #integrated-terminal > div {
   background:#08090f !important;
@@ -4014,29 +4021,36 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
       if (inner) inner.style.cssText = 'background:#08090f!important;';
     }
 
-    /* 1. Hide Jupiter header (SVG logo + "Jupiter" text, small height) */
+    /* 1. Hide Jupiter header (SVG logo + "Jupiter" text)
+       No offsetHeight check — section may be display:none on first run */
     (function hideHeader(el, depth) {
       if (!el || depth > 6) return;
       var kids = Array.prototype.slice.call(el.children);
       for (var i = 0; i < kids.length; i++) {
         var c = kids[i];
-        var h = c.offsetHeight;
-        if (c.textContent.indexOf('Jupiter') >= 0 && c.querySelector('svg') && h > 0 && h < 80) {
+        var hasJup = c.textContent.indexOf('Jupiter') >= 0;
+        var hasSvg = !!c.querySelector('svg');
+        var shortContent = c.textContent.trim().length < 200; // avoid hiding the whole app
+        if (hasJup && hasSvg && shortContent) {
           c.style.cssText = 'display:none!important'; return;
         }
       }
       if (kids.length) hideHeader(kids[0], depth + 1);
     })(t, 0);
 
-    /* 2. Nuclear "Powered by" footer removal — text node walk */
+    /* 2. Nuclear "Powered by" footer removal — text node walk
+       No offsetHeight check — works even when parent is display:none */
     t.querySelectorAll('*').forEach(function(el) {
       if (el.children.length > 0) return;
       var txt = (el.textContent || '').trim();
       if (txt === 'Powered by' || txt === 'Jupiter' ||
           txt.indexOf('Powered by Jupiter') >= 0 || txt.indexOf('Powered by') >= 0) {
+        // Hide the leaf node itself
+        el.style.cssText = 'display:none!important';
+        // Walk up and hide the first small container (the footer row)
         var p = el.parentElement; var n = 0;
-        while (p && p !== t && n++ < 7) {
-          if (p.offsetHeight < 60 && p.children.length <= 5) {
+        while (p && p !== t && n++ < 8) {
+          if (p.children.length <= 6) {
             p.style.cssText = 'display:none!important'; break;
           }
           p = p.parentElement;
