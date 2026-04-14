@@ -261,6 +261,7 @@ footer a:hover{color:var(--green);}
     <button class="ntab" id="cartelTab" onclick="switchToCartel()">CARTEL</button>
     <button class="ntab" id="padTab" onclick="switchToPad()">&#x1F680; LAUNCH</button>
     <button class="ntab" id="scanTab" onclick="switchToScan()">&#x1F50D; SCAN</button>
+    <button class="ntab" id="buyTab" onclick="switchToBuy()">&#x1F4B8; BUY</button>
   </div>
   <div class="wallet-wrap" id="walletWrap">
     <button class="wbtn" id="wb" onclick="toggleWallet(event)"><span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span></button>
@@ -1254,7 +1255,7 @@ function _showSection(name){
   // hide all sections
   var pg=document.querySelector('.page');
   if(pg){pg.style.display=name==='predict'?'':'none';}
-  ['cartelSection','padSection','scanSection'].forEach(function(id){
+  ['cartelSection','padSection','scanSection','buySection'].forEach(function(id){
     var el=document.getElementById(id);
     if(el){el.classList.remove('visible');el.style.display='none';}
   });
@@ -2879,6 +2880,12 @@ function switchToScan(){
   _showSection('scan');
   document.getElementById('scanTab')?.classList.add('active');
 }
+function switchToBuy(){
+  _showSection('buy');
+  document.getElementById('buyTab')?.classList.add('active');
+  initJupiterTerminal();
+  fetchBuyStats();
+}
 </script>
 
 <script>
@@ -3616,4 +3623,180 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
   console.log('[NEET] Verify system loaded — MIN_NEET='+MIN_NEET);
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     BUY $NEET SECTION
+════════════════════════════════════════════════════════════ -->
+<style>
+#buySection{display:none;min-height:100vh;background:var(--bg,#05060a);padding:0 0 60px;}
+#buySection.visible{display:block;}
+
+.buy-wrap{max-width:520px;margin:0 auto;padding:32px 16px 0;}
+
+/* Header */
+.buy-hdr{text-align:center;margin-bottom:28px;}
+.buy-hdr h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(42px,10vw,72px);color:#00ff87;
+  text-shadow:0 0 24px rgba(0,255,135,.55),0 0 60px rgba(0,255,135,.25);
+  letter-spacing:3px;margin:0 0 6px;}
+.buy-hdr p{font-family:'Space Mono',monospace;font-size:12px;color:#556;letter-spacing:3px;text-transform:uppercase;margin:0;}
+
+/* Stats bar */
+.buy-stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(0,255,135,.1);
+  border:1px solid rgba(0,255,135,.15);border-radius:10px;overflow:hidden;margin-bottom:20px;}
+.buy-stat{background:rgba(5,6,10,.9);padding:12px 8px;text-align:center;}
+.buy-stat-label{font-family:'Space Mono',monospace;font-size:9px;color:#445;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+.buy-stat-val{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:#00ff87;}
+.buy-stat-val.neg{color:#ff4466;}
+.buy-stat-val.pos{color:#00ff87;}
+
+/* Terminal container */
+.buy-terminal-outer{border-radius:14px;overflow:hidden;border:1px solid rgba(0,255,135,.18);
+  box-shadow:0 0 40px rgba(0,255,135,.08),0 8px 32px rgba(0,0,0,.6);
+  background:#0a0d14;position:relative;}
+
+/* Topbar (NEET SWAP label + contract) */
+.buy-terminal-topbar{display:flex;justify-content:space-between;align-items:center;
+  padding:10px 14px;background:rgba(0,255,135,.06);border-bottom:1px solid rgba(0,255,135,.1);}
+.buy-topbar-label{font-family:'Space Mono',monospace;font-size:11px;color:#00ff87;
+  letter-spacing:2px;display:flex;align-items:center;gap:6px;}
+.buy-topbar-label::before{content:'';width:7px;height:7px;border-radius:50%;
+  background:#00ff87;box-shadow:0 0 6px #00ff87;animation:buy-pulse 2s infinite;}
+@keyframes buy-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.buy-topbar-ca{font-family:'Space Mono',monospace;font-size:10px;color:#445;cursor:pointer;
+  transition:color .2s;}
+.buy-topbar-ca:hover{color:#00ff87;}
+
+/* Jupiter terminal iframe area */
+#integrated-terminal{width:100%;min-height:420px;background:#0a0d14;}
+
+/* Footer bar */
+.buy-footer-bar{display:flex;justify-content:space-between;align-items:center;
+  padding:10px 14px;background:rgba(0,0,0,.4);border-top:1px solid rgba(0,255,135,.08);}
+.buy-badge{font-family:'Space Mono',monospace;font-size:9px;color:#334;letter-spacing:1px;text-transform:uppercase;}
+.buy-badge span{color:#00ff87;}
+.buy-footer-links{display:flex;gap:8px;}
+.buy-footer-btn{font-family:'Space Mono',monospace;font-size:9px;padding:5px 10px;
+  border-radius:5px;border:1px solid rgba(0,255,135,.25);background:rgba(0,255,135,.06);
+  color:#00ff87;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s;text-decoration:none;}
+.buy-footer-btn:hover{background:rgba(0,255,135,.15);border-color:#00ff87;}
+</style>
+
+<div id="buySection">
+  <div class="buy-wrap">
+    <div class="buy-hdr">
+      <h1>BUY $NEET</h1>
+      <p>Swap SOL → NEET</p>
+    </div>
+
+    <div class="buy-stats-bar">
+      <div class="buy-stat">
+        <div class="buy-stat-label">Price</div>
+        <div class="buy-stat-val" id="buyPrice">—</div>
+      </div>
+      <div class="buy-stat">
+        <div class="buy-stat-label">24H</div>
+        <div class="buy-stat-val" id="buy24h">—</div>
+      </div>
+      <div class="buy-stat">
+        <div class="buy-stat-label">MCap</div>
+        <div class="buy-stat-val" id="buyMcap">—</div>
+      </div>
+    </div>
+
+    <div class="buy-terminal-outer">
+      <div class="buy-terminal-topbar">
+        <span class="buy-topbar-label">NEET SWAP</span>
+        <span class="buy-topbar-ca" onclick="navigator.clipboard?.writeText('Ce2gBhmvqDMxEfuBuBa3MN1dCdXhSFeHFuDbFNHpump')" title="Copy contract">Ce2g...pump</span>
+      </div>
+      <div id="integrated-terminal"></div>
+      <div class="buy-footer-bar">
+        <span class="buy-badge">&#x26A1; Best price routing &middot; <span>1% fee supports $NEET</span></span>
+        <div class="buy-footer-links">
+          <a class="buy-footer-btn" href="https://dexscreener.com/solana/Ce2gBhmvqDMxEfuBuBa3MN1dCdXhSFeHFuDbFNHpump" target="_blank">Chart</a>
+          <a class="buy-footer-btn" href="https://solscan.io/token/Ce2gBhmvqDMxEfuBuBa3MN1dCdXhSFeHFuDbFNHpump" target="_blank">Explorer</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── JUPITER TERMINAL ───────────────────────────────────────
+const NEET_MINT = 'Ce2gBhmvqDMxEfuBuBa3MN1dCdXhSFeHFuDbFNHpump';
+let _jupLoaded = false;
+let _jupInited = false;
+
+function loadJupScript(cb){
+  if(_jupLoaded){cb&&cb();return;}
+  const s=document.createElement('script');
+  s.src='https://terminal.jup.ag/main-v4.js';
+  s.setAttribute('data-preload','');
+  s.onload=function(){_jupLoaded=true;cb&&cb();};
+  s.onerror=function(){console.warn('[BUY] Jupiter script failed to load');};
+  document.head.appendChild(s);
+}
+
+function initJupiterTerminal(){
+  if(_jupInited) return;
+  loadJupScript(function(){
+    if(!window.Jupiter){
+      setTimeout(initJupiterTerminal, 500);
+      return;
+    }
+    try{
+      window.Jupiter.init({
+        displayMode: 'integrated',
+        integratedTargetId: 'integrated-terminal',
+        endpoint: 'https://mainnet.helius-rpc.com/?api-key=demo',
+        defaultExplorer: 'Solscan',
+        formProps: {
+          initialInputMint: 'So11111111111111111111111111111111111111112',
+          initialOutputMint: NEET_MINT,
+          initialSlippageBps: 100,
+        },
+        platformFeeAndAccounts: {
+          referralAccount: undefined,
+          feeBps: 100,
+        },
+      });
+      _jupInited = true;
+    } catch(e){
+      console.warn('[BUY] Jupiter.init error:', e);
+    }
+  });
+}
+
+async function fetchBuyStats(){
+  try{
+    const r = await fetch('https://api.dexscreener.com/latest/dex/tokens/'+NEET_MINT);
+    const d = await r.json();
+    const pair = (d.pairs||[]).sort((a,b)=>(b.liquidity?.usd||0)-(a.liquidity?.usd||0))[0];
+    if(!pair) return;
+
+    const price = parseFloat(pair.priceUsd||0);
+    const ch24 = parseFloat(pair.priceChange?.h24||0);
+    const mcap = pair.marketCap || pair.fdv || 0;
+
+    const priceEl = document.getElementById('buyPrice');
+    const ch24El  = document.getElementById('buy24h');
+    const mcapEl  = document.getElementById('buyMcap');
+
+    if(priceEl) priceEl.textContent = price < 0.01
+      ? '$'+price.toFixed(6)
+      : '$'+price.toFixed(4);
+
+    if(ch24El){
+      ch24El.textContent = (ch24>=0?'+':'')+ch24.toFixed(1)+'%';
+      ch24El.className = 'buy-stat-val '+(ch24>=0?'pos':'neg');
+    }
+    if(mcapEl){
+      mcapEl.textContent = mcap>=1e9 ? '$'+(mcap/1e9).toFixed(1)+'B'
+        : mcap>=1e6 ? '$'+(mcap/1e6).toFixed(1)+'M'
+        : mcap>=1e3 ? '$'+(mcap/1e3).toFixed(0)+'K'
+        : '$'+mcap.toFixed(0);
+    }
+  } catch(e){ console.warn('[BUY] fetchBuyStats error', e); }
+}
+</script>
+
 </html>
