@@ -2881,20 +2881,10 @@ function switchToScan(){
   document.getElementById('scanTab')?.classList.add('active');
 }
 function switchToBuy(){
-  _showSection('buy');
-  document.getElementById('buyTab')?.classList.add('active');
-  initJupiterTerminal();
-  fetchBuyStats();
-}
-</script>
-
-<script>
-// NEET PAD — pump.fun Token Launcher via PumpPortal API
-if(typeof window.st!=='function'){
-  window.st=function(type,msg){
-    var el=document.getElementById('padSt');
-    if(el){el.textContent=msg;el.style.color=type==='error'?'#ff4444':type==='info'?'#f0c040':'#44ff88';}
-    console.log('[padSt]['+type+']',msg);
+    _showSection('buy');
+    document.getElementById('buyTab')?.classList.add('active');
+    initCustomSwap();
+    fetchBuyStats();
   };
 }
 
@@ -3679,6 +3669,35 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
   border-radius:5px;border:1px solid rgba(0,255,135,.25);background:rgba(0,255,135,.06);
   color:#00ff87;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .2s;text-decoration:none;}
 .buy-footer-btn:hover{background:rgba(0,255,135,.15);border-color:#00ff87;}
+
+/* ─── Custom Swap Widget ─── */
+.cswap-outer{background:var(--card);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;max-width:400px;margin:0 auto;}
+.cswap-topbar{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:rgba(0,255,135,.04);border-bottom:1px solid var(--border);}
+.cswap-lbl-head{font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:.1em;}
+.cswap-ca{font-family:var(--mono);font-size:10px;color:var(--t2);}
+.cswap-body{padding:12px;}
+.cswap-panel{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+.cswap-row1{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.cswap-lbl{font-size:12px;color:var(--t2);}
+.cswap-bal{font-size:11px;color:var(--t3);font-family:var(--mono);}
+.cswap-row2{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.cswap-token{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;}
+.cswap-amt-wrap{flex:1;text-align:right;min-width:0;}
+.cswap-input{background:transparent;border:none;outline:none;font-size:22px;font-weight:700;color:var(--text);text-align:right;width:100%;font-family:var(--sans);}
+.cswap-input::placeholder{color:var(--t3);}
+.cswap-out{font-size:22px;font-weight:700;color:var(--text);}
+.cswap-usd{font-size:11px;color:var(--t2);margin-top:2px;min-height:14px;}
+.cswap-flip-wrap{display:flex;justify-content:center;padding:4px 0;}
+.cswap-flip{background:var(--card2);border:1px solid var(--border2);border-radius:50%;width:30px;height:30px;color:var(--t2);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all .18s;}
+.cswap-flip:hover{background:rgba(0,255,135,.08);border-color:var(--green);color:var(--green);}
+.cswap-info{min-height:24px;font-size:11px;color:var(--t2);padding:6px 2px;text-align:center;font-family:var(--mono);}
+.cswap-cta{width:100%;padding:14px;background:rgba(0,255,135,.06);border:1px solid rgba(0,255,135,.2);border-radius:10px;color:var(--t2);font-size:13px;font-weight:700;letter-spacing:.08em;cursor:pointer;transition:all .2s;font-family:var(--sans);margin-top:6px;text-transform:uppercase;}
+.cswap-cta:hover:not(:disabled){background:rgba(0,255,135,.12);border-color:rgba(0,255,135,.4);color:var(--text);}
+.cswap-cta.ready{background:rgba(0,255,135,.1);border-color:rgba(0,255,135,.45);color:#a8ffd8;}
+.cswap-cta:disabled{opacity:.45;cursor:not-allowed;}
+.cswap-footer{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-top:1px solid var(--border);font-size:10px;color:var(--t3);font-family:var(--mono);}
+.cswap-footer-btn{background:rgba(0,255,135,.05);border:1px solid var(--border2);color:var(--t2);padding:4px 10px;border-radius:5px;font-size:10px;font-family:var(--mono);cursor:pointer;text-decoration:none;letter-spacing:.05em;margin-left:6px;transition:all .15s;}
+.cswap-footer-btn:hover{color:var(--green);border-color:rgba(0,255,135,.3);}
 </style>
 
 <div id="buySection">
@@ -3703,17 +3722,36 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
       </div>
     </div>
 
-    <div class="buy-terminal-outer">
-      <div class="buy-terminal-topbar">
-        <span class="buy-topbar-label">NEET SWAP</span>
-        <span class="buy-topbar-ca" onclick="navigator.clipboard?.writeText('Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump')" title="Copy contract">Ce2g...pump</span>
-      </div>
-      <div id="integrated-terminal"></div>
-      <div class="buy-footer-bar">
-        <span class="buy-badge">&#x26A1; Best price routing &middot; <span>1% fee supports $NEET</span></span>
-        <div class="buy-footer-links">
-          <a class="buy-footer-btn" href="https://dexscreener.com/solana/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump" target="_blank">Chart</a>
-          <a class="buy-footer-btn" href="https://solscan.io/token/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump" target="_blank">Explorer</a>
+    <div class="cswap-outer">
+        <div class="cswap-topbar">
+          <div><span style="color:var(--green)">&#9679;</span> <span class="cswap-lbl-head">NEET SWAP</span></div>
+          <span class="cswap-ca">Ce2g&#x2026;pump</span>
+        </div>
+        <div class="cswap-body">
+          <div class="cswap-panel">
+            <div class="cswap-row1"><span class="cswap-lbl">Selling</span><span class="cswap-bal" id="cs-sol-bal"></span></div>
+            <div class="cswap-row2">
+              <div class="cswap-token"><img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" width="22" height="22" style="border-radius:50%"><span>SOL</span></div>
+              <div class="cswap-amt-wrap"><input id="cs-in" type="number" class="cswap-input" placeholder="0.00" min="0" step="any" oninput="csQuote()"><div class="cswap-usd" id="cs-in-usd"></div></div>
+            </div>
+          </div>
+          <div class="cswap-flip-wrap"><button class="cswap-flip" title="swap direction">&#8645;</button></div>
+          <div class="cswap-panel">
+            <div class="cswap-row1"><span class="cswap-lbl">Buying</span><span class="cswap-bal" id="cs-neet-bal"></span></div>
+            <div class="cswap-row2">
+              <div class="cswap-token"><img src="https://dd.dexscreener.com/ds-data/tokens/solana/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump.png?size=lg&key=f3b4db" width="22" height="22" style="border-radius:50%" onerror="this.style.opacity='0.3'"><span>neet</span></div>
+              <div class="cswap-amt-wrap"><div class="cswap-out" id="cs-out">0.00</div><div class="cswap-usd" id="cs-out-usd"></div></div>
+            </div>
+          </div>
+          <div class="cswap-info" id="cs-info"></div>
+          <button class="cswap-cta" id="cs-btn" onclick="csAction()">Connect Wallet</button>
+        </div>
+        <div class="cswap-footer">
+          <span>&#9889; BEST PRICE ROUTING &middot; 1% FEE SUPPORTS $NEET</span>
+          <div>
+            <a class="cswap-footer-btn" href="https://dexscreener.com/solana/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump" target="_blank">CHART</a>
+            <a class="cswap-footer-btn" href="https://solscan.io/token/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump" target="_blank">EXPLORER</a>
+          </div>
         </div>
       </div>
     </div>
@@ -3721,141 +3759,151 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 </div>
 
 <script>
-// ── JUPITER TERMINAL (SDK integrated mode) ─────────────────
-// IIFE prevents const collision with other script blocks on the page
 (function(){
-  var _NEET = 'Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
-  var _SOL  = 'So11111111111111111111111111111111111111112';
-  var _scriptLoaded = false;
-  var _rendered = false;
+  var _SOL='So11111111111111111111111111111111111111112';
+  var _NEET='Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
+  var _DEC=6;
+  var _wallet=null,_quoteTimer=null,_lastQuote=null;
+  var _RPC='https://rpc.ankr.com/solana';
 
-  function _loadScript(cb){
-    if(_scriptLoaded){cb();return;}
-    var s=document.createElement('script');
-    s.src='https://terminal.jup.ag/main-v4.js';
-    s.setAttribute('data-preload','');
-    s.onload=function(){_scriptLoaded=true;cb();};
-    s.onerror=function(){console.warn('[BUY] failed to load Jupiter script');};
-    document.head.appendChild(s);
-  }
+  function _prov(){return window.phantom?.solana||window.solana||window.solflare||null;}
 
-  window.initJupiterTerminal = function(){
-    var el = document.getElementById('integrated-terminal');
-    if(!el) return;
-    // Already rendered and has content — skip
-    if(_rendered && el.children.length > 0) return;
-    _rendered = false;
-    _loadScript(function(){
-      if(!window.Jupiter){
-        setTimeout(window.initJupiterTerminal, 400);
-        return;
-      }
+  window.csAction=async function(){
+    var btn=document.getElementById('cs-btn');
+    if(!btn)return;
+    if(!_wallet){
+      var p=_prov();
+      if(!p){alert('No Solana wallet found. Install Phantom.');return;}
+      btn.textContent='Connecting...';
+      btn.disabled=true;
       try{
-        el.innerHTML = '';
-        window.Jupiter.init({
-          displayMode: 'integrated',
-          integratedTargetId: 'integrated-terminal',
-          endpoint: 'https://rpc.ankr.com/solana',
-          defaultExplorer: 'Solscan',
-          formProps: {
-            initialInputMint: _SOL,
-            initialOutputMint: _NEET,
-            initialSlippageBps: 100,
-            fixedInputMint: true,
-          },
-        });
-        _rendered = true;
-        // Walk shadow DOM to hide Jupiter branding by actual text content
-        function _patchBranding(){
-          try{
-            var cont=document.getElementById('integrated-terminal');
-            if(!cont) return false;
-            // Jupiter shadow DOM is inside #jupiter-terminal-instance > div
-            var inst=document.getElementById('jupiter-terminal-instance');
-            var shadowHost=inst?inst.querySelector('div'):cont.querySelector('div>div');
-            var sr=shadowHost?shadowHost.shadowRoot:null;
-            if(!sr) return false;
-            if(sr.querySelector('#neet-done')) return true;
-
-            // Confirmed structure: shadowRoot > div > div.flex > div.bg-black > div.bg-background
-            // panel.children[0] = main content (header is panel.children[0].children[0])
-            // panel.children[1] = Powered by Jupiter footer
-            var panel=sr.querySelector('[class*="bg-background"]');
-            if(!panel||panel.children.length<1) return false;
-
-            // Hide Jupiter header bar (logo + Jupiter label + buttons)
-            var header=panel.children[0]&&panel.children[0].children[0];
-            if(header) header.style.setProperty('display','none','important');
-
-            // Hide Powered by Jupiter footer
-            var footer=panel.children[1];
-            if(footer) footer.style.setProperty('display','none','important');
-
-            // Restyle Connect Wallet button
-            sr.querySelectorAll('button').forEach(function(btn){
-              if(btn.textContent.toLowerCase().indexOf('connect')>-1&&btn.offsetHeight>30){
-                btn.style.setProperty('background','rgba(0,255,135,0.06)','important');
-                btn.style.setProperty('border','1px solid rgba(0,255,135,0.18)','important');
-                btn.style.setProperty('color','#556','important');
-                btn.style.setProperty('border-radius','10px','important');
-              }
-            });
-
-            // Inject CSS for dark background
-            if(!sr.querySelector('#np')){
-              var s=document.createElement('style');s.id='np';
-              s.textContent='[class*="bg-black"],[class*="bg-background"]{background:#0d1117!important;}'+
-              ' button{background:rgba(0,255,135,0.05)!important;border:1px solid rgba(0,255,135,0.15)!important;color:#8899aa!important;border-radius:10px!important;}'+
-              ' button:hover{background:rgba(0,255,135,0.10)!important;border-color:rgba(0,255,135,0.3)!important;color:#ccd!important;}'+
-              ' input{background:transparent!important;color:#dde4f5!important;}'+
-              ' [class*="warning"]{background:rgba(255,200,0,0.05)!important;}'+
-              ' [class*="Error"],[class*="error"]{color:#ff6b8a!important;}';
-              sr.appendChild(s);
-            }
-
-            var done=document.createElement('div');
-            done.id='neet-done';done.style.display='none';
-            sr.appendChild(done);
-            return true;
-          }catch(e){return false;}
-        }
-        // Initial patch: poll until first render (300ms interval, 40 attempts)
-        var _pt=0,_pi=setInterval(function(){
-          _pt++;
-          if(_patchBranding()||_pt>40)clearInterval(_pi);
-        },300);
-        // Persistent watch: re-patch every 1.5s in case Jupiter re-renders (wallet connect etc)
-        setInterval(function(){
-          try{
-            var inst=document.getElementById('jupiter-terminal-instance');
-            var sh=inst?inst.querySelector('div'):null;
-            var sr=sh?sh.shadowRoot:null;
-            if(!sr)return;
-            var panel=sr.querySelector('[class*="bg-background"]');
-            if(!panel)return;
-            var hdr=panel.children[0]&&panel.children[0].children[0];
-            // If header is visible again (Jupiter re-rendered), re-apply patch
-            if(hdr&&hdr.style.display!=='none'){_patchBranding();}
-          }catch(e){}
-        },1500);
-      } catch(e){ console.warn('[BUY] Jupiter.init error:', e); }
-    });
+        var r=await p.connect();
+        _wallet=r.publicKey?.toString()||p.publicKey?.toString();
+        await _bals();
+        _btn();
+      }catch(e){console.warn(e);}
+      btn.disabled=false;
+      return;
+    }
+    if(!_lastQuote){window.csQuote();return;}
+    btn.textContent='Swapping...';
+    btn.disabled=true;
+    try{
+      var sr=await fetch('https://quote-api.jup.ag/v6/swap',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({quoteResponse:_lastQuote,userPublicKey:_wallet,wrapAndUnwrapSol:true,prioritizationFeeLamports:'auto'})
+      });
+      var sd=await sr.json();
+      if(!sd.swapTransaction)throw new Error(sd.error||'No tx');
+      var p2=_prov();
+      var tx=window.solanaWeb3.VersionedTransaction.deserialize(Uint8Array.from(atob(sd.swapTransaction),c=>c.charCodeAt(0)));
+      var signed=await p2.signTransaction(tx);
+      var conn=new window.solanaWeb3.Connection(_RPC,'confirmed');
+      var sig=await conn.sendRawTransaction(signed.serialize(),{skipPreflight:true,maxRetries:3});
+      btn.textContent='Confirming...';
+      await conn.confirmTransaction(sig,'confirmed');
+      btn.textContent='✓ Done!';
+      var info=document.getElementById('cs-info');
+      if(info)info.innerHTML='<a href="https://solscan.io/tx/'+sig+'" target="_blank" style="color:#00ff87">✓ View on Solscan</a>';
+      setTimeout(async function(){await _bals();_btn();btn.textContent='Swap';},4000);
+    }catch(e){
+      console.warn('[swap]',e);
+      var m=e.message||'Error';
+      if(m.includes('reject')||m.includes('cancel'))m='Rejected';
+      btn.textContent=m.length>22?m.substring(0,22)+'...':m;
+      setTimeout(function(){_btn();},3000);
+    }
+    btn.disabled=false;
   };
 
-  window.fetchBuyStats = async function(){
+  window.csQuote=function(){
+    clearTimeout(_quoteTimer);
+    _quoteTimer=setTimeout(async function(){
+      var inEl=document.getElementById('cs-in');
+      var outEl=document.getElementById('cs-out');
+      var infoEl=document.getElementById('cs-info');
+      var inUsd=document.getElementById('cs-in-usd');
+      var outUsd=document.getElementById('cs-out-usd');
+      var amt=parseFloat(inEl?.value||'0');
+      if(!amt||amt<=0){if(outEl)outEl.textContent='0.00';if(infoEl)infoEl.textContent='';_lastQuote=null;_btn();return;}
+      var lam=Math.round(amt*1e9);
+      if(infoEl)infoEl.textContent='Getting quote...';
+      try{
+        var r=await fetch('https://quote-api.jup.ag/v6/quote?inputMint='+_SOL+'&outputMint='+_NEET+'&amount='+lam+'&slippageBps=100');
+        var q=await r.json();
+        if(q.error||!q.outAmount){if(infoEl)infoEl.textContent=q.error||'No route found';_lastQuote=null;_btn();return;}
+        _lastQuote=q;
+        var out=parseInt(q.outAmount)/Math.pow(10,_DEC);
+        if(outEl)outEl.textContent=out>=1000?out.toLocaleString('en',{maximumFractionDigits:0}):out.toFixed(2);
+        var pi=parseFloat(q.priceImpactPct||0)*100;
+        var rate=(out/amt).toLocaleString('en',{maximumFractionDigits:0});
+        if(infoEl)infoEl.innerHTML='Rate: 1 SOL = '+rate+' NEET &nbsp;·&nbsp; Impact: <span style="color:'+(pi>1?'#ff3b5c':'#00ff87')+'">'+( pi<0.01?'<0.01':pi.toFixed(2))+'%</span>';
+        var sp=typeof window.cpx==='number'?window.cpx:0;
+        if(sp&&inUsd)inUsd.textContent='~$'+(amt*sp).toFixed(2);
+        if(outUsd)outUsd.textContent='';
+        _btn();
+      }catch(e){if(infoEl)infoEl.textContent='Quote error — try again';_lastQuote=null;_btn();}
+    },600);
+  };
+
+  async function _bals(){
+    if(!_wallet||!window.solanaWeb3)return;
     try{
-      var r = await fetch('https://api.dexscreener.com/latest/dex/tokens/'+_NEET);
-      var d = await r.json();
-      var pair = (d.pairs||[]).sort(function(a,b){return (b.liquidity?.usd||0)-(a.liquidity?.usd||0);})[0];
-      if(!pair) return;
-      var price = parseFloat(pair.priceUsd||0);
-      var ch24  = parseFloat(pair.priceChange?.h24||0);
-      var mcap  = pair.marketCap||pair.fdv||0;
+      var conn=new window.solanaWeb3.Connection(_RPC,'confirmed');
+      var pk=new window.solanaWeb3.PublicKey(_wallet);
+      var sb=await conn.getBalance(pk);
+      var se=document.getElementById('cs-sol-bal');
+      if(se)se.textContent=(sb/1e9).toFixed(4)+' SOL';
+      try{
+        var nm=new window.solanaWeb3.PublicKey(_NEET);
+        var ta=await conn.getParsedTokenAccountsByOwner(pk,{mint:nm});
+        var nb=ta.value[0]?.account.data.parsed.info.tokenAmount.uiAmount||0;
+        var ne=document.getElementById('cs-neet-bal');
+        if(ne)ne.textContent=nb.toLocaleString('en',{maximumFractionDigits:0})+' neet';
+      }catch(e){}
+    }catch(e){}
+  }
+
+  function _btn(){
+    var btn=document.getElementById('cs-btn');
+    if(!btn)return;
+    btn.disabled=false;
+    btn.className='cswap-cta'+(_wallet&&_lastQuote?' ready':''  );
+    if(!_wallet){btn.textContent='Connect Wallet';return;}
+    var inVal=document.getElementById('cs-in')?.value;
+    if(!inVal||parseFloat(inVal)<=0){btn.textContent='Enter amount';return;}
+    if(!_lastQuote){btn.textContent='Getting quote...';return;}
+    btn.textContent='Swap';
+  }
+
+  window.initCustomSwap=function(){
+    var p=_prov();
+    if(p?.publicKey&&p?.isConnected){
+      _wallet=p.publicKey.toString();
+      _bals();
+    }
+    if(p){
+      try{p.on('connect',function(pk){_wallet=pk.toString();_bals();_btn();});}catch(e){}
+      try{p.on('disconnect',function(){_wallet=null;var s=document.getElementById('cs-sol-bal');var n=document.getElementById('cs-neet-bal');if(s)s.textContent='';if(n)n.textContent='';_lastQuote=null;_btn();});}catch(e){}
+    }
+    _btn();
+  };
+
+  window.fetchBuyStats=async function(){
+    try{
+      var r=await fetch('https://api.dexscreener.com/latest/dex/tokens/'+_NEET);
+      var d=await r.json();
+      var pair=(d.pairs||[]).sort(function(a,b){return(b.liquidity?.usd||0)-(a.liquidity?.usd||0);})[0];
+      if(!pair)return;
+      var price=parseFloat(pair.priceUsd||0);
+      var ch24=parseFloat(pair.priceChange?.h24||0);
+      var mcap=pair.marketCap||pair.fdv||0;
       var p=document.getElementById('buyPrice'),c=document.getElementById('buy24h'),m=document.getElementById('buyMcap');
-      if(p) p.textContent = price<0.01?'$'+price.toFixed(6):'$'+price.toFixed(4);
+      if(p)p.textContent=price<0.01?'$'+price.toFixed(6):'$'+price.toFixed(4);
       if(c){c.textContent=(ch24>=0?'+':'')+ch24.toFixed(1)+'%';c.className='buy-stat-val '+(ch24>=0?'pos':'neg');}
-      if(m) m.textContent = mcap>=1e9?'$'+(mcap/1e9).toFixed(1)+'B':mcap>=1e6?'$'+(mcap/1e6).toFixed(1)+'M':mcap>=1e3?'$'+(mcap/1e3).toFixed(0)+'K':'$'+mcap.toFixed(0);
-    } catch(e){}
+      if(m)m.textContent=mcap>=1e9?'$'+(mcap/1e9).toFixed(1)+'B':mcap>=1e6?'$'+(mcap/1e6).toFixed(1)+'M':'$'+mcap.toFixed(0);
+    }catch(e){}
   };
 })();
 </script>
