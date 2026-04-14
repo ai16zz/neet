@@ -3732,44 +3732,56 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
      BUY $NEET SECTION
 ════════════════════════════════════════════════════════════ -->
 <style>
+/* ═══════════════════════════════════════════════
+   BUY / SWAP SECTION — NEET Native Design
+   ═══════════════════════════════════════════════ */
 #buySection { display:none; position:relative; z-index:1; }
 #buySection.visible { display:block; animation:fi .22s ease; }
-.buy-wrap { max-width:480px; margin:0 auto; padding:40px 24px 60px; }
+.buy-wrap { max-width:460px; margin:0 auto; padding:40px 24px 60px; }
 
-/* Header */
-.buy-hdr { text-align:center; margin-bottom:24px; }
-.buy-hdr h1 {
-  font-family:var(--dsp); font-size:48px; letter-spacing:.08em;
-  background:linear-gradient(135deg,#00ff87 0%,#7fffd4 50%,#00bfff 100%);
-  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
-  filter:drop-shadow(0 0 12px rgba(0,255,135,.35)); margin-bottom:4px;
+/* ── Header ── */
+.buy-hdr { text-align:center; margin-bottom:28px; position:relative; }
+.buy-hdr::before {
+  content:''; position:absolute; top:-16px; left:50%; transform:translateX(-50%);
+  width:180px; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,255,135,.35),transparent);
 }
-.buy-hdr p { font-family:var(--mono); font-size:9px; color:var(--t2); letter-spacing:.2em; }
+.buy-hdr h1 {
+  font-family:var(--dsp); font-size:52px; letter-spacing:.08em;
+  background:linear-gradient(135deg,#00ff87 0%,#7fffd4 55%,#00bfff 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  filter:drop-shadow(0 0 18px rgba(0,255,135,.4)); margin-bottom:6px;
+}
+.buy-hdr p { font-family:var(--mono); font-size:9px; color:var(--t2); letter-spacing:.25em; }
 
-/* Stats bar */
+/* ── Live stats bar ── */
 .buy-stats-bar {
   display:grid; grid-template-columns:1fr 1px 1fr 1px 1fr;
-  background:var(--border); border:1px solid var(--border);
-  border-radius:var(--r); overflow:hidden; margin-bottom:18px;
+  background:var(--border); border:1px solid var(--border2);
+  border-radius:var(--r); overflow:hidden; margin-bottom:20px;
 }
-.buy-stat { background:var(--bg2); padding:12px 14px; text-align:center; }
+.buy-stat { background:var(--bg2); padding:13px 14px; text-align:center; }
 .buy-stat-divider { background:var(--border); }
-.buy-stat-lbl { font-family:var(--mono); font-size:8px; letter-spacing:.17em; color:var(--t3); text-transform:uppercase; margin-bottom:4px; }
+.buy-stat-lbl { font-family:var(--mono); font-size:8px; letter-spacing:.17em; color:var(--t3); text-transform:uppercase; margin-bottom:5px; }
 .buy-stat-val { font-family:var(--dsp); font-size:22px; letter-spacing:.04em; line-height:1; }
 .buy-stat-val.green { color:var(--green); text-shadow:0 0 14px rgba(0,255,135,.3); }
 .buy-stat-val.red { color:var(--red); }
 .buy-stat-val.neutral { color:var(--text); }
 
-/* Terminal container */
+/* ── Terminal outer shell ── */
 .buy-terminal-outer {
-  position:relative; border:1px solid var(--border2); border-radius:12px;
-  overflow:hidden; background:#131720;
+  position:relative;
+  border:1px solid rgba(0,255,135,.18);
+  border-radius:14px; overflow:hidden;
+  background:#08090f;
+  box-shadow:0 0 50px rgba(0,255,135,.07), 0 0 0 1px rgba(0,255,135,.04) inset;
 }
-/* Custom NEET header bar */
+
+/* ── Custom NEET topbar (replaces Jupiter header) ── */
 .buy-terminal-topbar {
   position:relative; z-index:10;
-  background:linear-gradient(90deg,rgba(0,255,135,.08),rgba(0,0,0,0));
-  border-bottom:1px solid rgba(0,255,135,.12);
+  background:linear-gradient(90deg,rgba(0,255,135,.1) 0%,rgba(0,255,135,.03) 60%,transparent 100%);
+  border-bottom:1px solid rgba(0,255,135,.14);
   padding:11px 16px; display:flex; align-items:center; justify-content:space-between;
 }
 .buy-terminal-topbar .bt-title {
@@ -3777,36 +3789,130 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
   color:var(--green); text-transform:uppercase;
   display:flex; align-items:center; gap:8px;
 }
-.bt-dot { width:6px; height:6px; border-radius:50%; background:var(--green);
-  animation:bl 1.4s ease infinite; }
+.bt-dot {
+  width:6px; height:6px; border-radius:50%; background:var(--green);
+  animation:bl 1.4s ease infinite; box-shadow:0 0 6px rgba(0,255,135,.7);
+}
 .buy-terminal-topbar .bt-ca {
   font-family:var(--mono); font-size:8px; color:var(--t3); letter-spacing:.05em;
 }
-/* The actual Jupiter Terminal div */
+
+/* ── Jupiter Terminal target div ── */
 #integrated-terminal { position:relative; z-index:1; }
 
-/* ── CSS-level branding removal ── */
-/* Hide any link to jup.ag and its parent wrapper */
+/* ─────────────────────────────────────────────────────────
+   DEEP JUPITER OVERRIDE — Force NEET theme on all internals
+   ───────────────────────────────────────────────────────── */
+
+/* Kill ALL Jupiter branding links / text */
 #integrated-terminal a[href*="jup.ag"],
 #integrated-terminal a[href*="jupiter.ag"],
 #integrated-terminal a[href*="jup.io"] { display:none!important; }
-/* Hide Jupiter's "Powered by" footer row */
-#integrated-terminal [class*="justify-center"][class*="py"] { display:none!important; }
 
-/* Force green on the Connect Wallet / Buy button inside terminal */
-#integrated-terminal button[class*="bg-"]:not([class*="transparent"]):not([class*="none"]):last-of-type,
-#integrated-terminal button:not([disabled]):not([class*="ghost"]) {
-  /* will be overridden by JS for precision */
+/* Nuclear: hide "Powered by" footer row by Tailwind-pattern */
+#integrated-terminal [class*="justify-center"][class*="py"],
+#integrated-terminal [class*="justify-center"][class*="bottom"],
+#integrated-terminal [class*="footer"],
+#integrated-terminal [class*="Footer"] { display:none!important; }
+
+/* Force container backgrounds to our dark theme */
+#integrated-terminal > div {
+  background:#08090f !important;
+  border:none !important;
+  border-radius:0 !important;
+}
+#integrated-terminal > div > div {
+  background:#08090f !important;
 }
 
-/* Buy/Sell direction button styling */
-#integrated-terminal button[class*="rounded-full"],
-#integrated-terminal [class*="swap-button"] {
-  background: rgba(0,255,135,.15) !important;
-  border-color: rgba(0,255,135,.3) !important;
-  color: var(--green) !important;
+/* Token input panels (Selling / Buying boxes) */
+#integrated-terminal [class*="rounded-2xl"],
+#integrated-terminal [class*="rounded-xl"] {
+  background:rgba(255,255,255,.025) !important;
+  border-color:rgba(255,255,255,.07) !important;
 }
 
+/* Override any remaining white/light bg Tailwind classes */
+#integrated-terminal [class*="bg-white"],
+#integrated-terminal [class*="bg-gray-100"],
+#integrated-terminal [class*="bg-gray-50"] {
+  background:rgba(255,255,255,.03) !important;
+}
+#integrated-terminal [class*="bg-black"],
+#integrated-terminal [class*="bg-\[#"] {
+  background:#0a0d14 !important;
+}
+
+/* Text colors */
+#integrated-terminal [class*="text-white"] { color:#dde4f5 !important; }
+#integrated-terminal [class*="text-gray-400"],
+#integrated-terminal [class*="text-gray-500"] { color:#6b7799 !important; }
+
+/* Border colors */
+#integrated-terminal [class*="border-white\/"],
+#integrated-terminal [class*="border-gray"] { border-color:rgba(255,255,255,.08) !important; }
+
+/* Swap direction (arrow) button */
+#integrated-terminal button[class*="rounded-full"] {
+  background:rgba(0,255,135,.1) !important;
+  border:1px solid rgba(0,255,135,.28) !important;
+  color:var(--green) !important;
+}
+#integrated-terminal button[class*="rounded-full"]:hover {
+  background:rgba(0,255,135,.2) !important;
+  box-shadow:0 0 12px rgba(0,255,135,.2) !important;
+}
+
+/* Main CTA button — the big Connect Wallet / Swap button */
+#integrated-terminal button[class*="w-full"],
+#integrated-terminal button[class*="py-4"],
+#integrated-terminal button[class*="py-5"] {
+  background:#00ff87 !important;
+  color:#000 !important;
+  font-family:'Space Mono',monospace !important;
+  font-weight:700 !important;
+  letter-spacing:.1em !important;
+  text-transform:uppercase !important;
+  border:none !important;
+  border-radius:10px !important;
+  box-shadow:0 0 24px rgba(0,255,135,.28) !important;
+}
+#integrated-terminal button[class*="w-full"]:hover,
+#integrated-terminal button[class*="py-4"]:hover,
+#integrated-terminal button[class*="py-5"]:hover {
+  background:#00e87a !important;
+  box-shadow:0 0 32px rgba(0,255,135,.4) !important;
+}
+
+/* Token selector chips (SOL / NEET pill buttons) */
+#integrated-terminal button[class*="rounded-full"][class*="px"],
+#integrated-terminal button[class*="rounded-2xl"][class*="px"] {
+  background:rgba(255,255,255,.04) !important;
+  border:1px solid rgba(255,255,255,.09) !important;
+  color:#dde4f5 !important;
+}
+
+/* Number inputs */
+#integrated-terminal input,
+#integrated-terminal input[type="text"],
+#integrated-terminal input[type="number"] {
+  color:#dde4f5 !important;
+  font-family:'Space Mono',monospace !important;
+  background:transparent !important;
+  font-size:20px !important;
+}
+
+/* Dividers / hr */
+#integrated-terminal [class*="border-t"],
+#integrated-terminal hr { border-color:rgba(255,255,255,.06) !important; }
+
+/* Scrollbar inside terminal */
+#integrated-terminal * {
+  scrollbar-width:thin;
+  scrollbar-color:rgba(0,255,135,.2) transparent;
+}
+
+/* ── Footer bar ── */
 .buy-footer-bar {
   margin-top:14px; padding:10px 14px;
   background:var(--card); border:1px solid var(--border);
@@ -3824,6 +3930,8 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 
 <div id="buySection">
   <div class="buy-wrap">
+
+    <!-- Header -->
     <div class="buy-hdr">
       <h1>BUY $NEET</h1>
       <p>SWAP SOL → NEET</p>
@@ -3847,18 +3955,18 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
       </div>
     </div>
 
-    <!-- Terminal -->
+    <!-- Terminal shell -->
     <div class="buy-terminal-outer">
-      <!-- Custom NEET header bar -->
+      <!-- Custom NEET topbar — no "Jupiter" branding -->
       <div class="buy-terminal-topbar">
         <span class="bt-title"><span class="bt-dot"></span>NEET SWAP</span>
         <span class="bt-ca">Ce2g...pump</span>
       </div>
-      <!-- Jupiter Terminal renders here — branding removed via JS/CSS -->
+      <!-- Jupiter Terminal mounts here; all branding stripped via CSS + JS below -->
       <div id="integrated-terminal"></div>
     </div>
 
-    <!-- Minimal footer bar -->
+    <!-- Footer badges -->
     <div class="buy-footer-bar">
       <span class="bfl">⚡ BEST PRICE ROUTING · 1% FEE SUPPORTS $NEET</span>
       <span class="bfr">
@@ -3866,95 +3974,177 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
         <a class="buy-badge" href="https://solscan.io/token/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump" target="_blank">EXPLORER</a>
       </span>
     </div>
+
   </div>
 </div>
 
 <script>
-/* ═══ BUY TAB — NEET Swap ═══ */
-
-/* ── MutationObserver: strip branding + style buttons ── */
+/* ═══════════════════════════════════════════════
+   BUY TAB — NEET Swap
+   Strips Jupiter branding, forces NEET color theme
+   on every render cycle via MutationObserver.
+   ═══════════════════════════════════════════════ */
 (function() {
+
+  /* ── Inject a <style> inside the terminal for max override power ── */
+  function injectInnerStyles(container) {
+    if (container.querySelector('#neet-inner-styles')) return;
+    var s = document.createElement('style');
+    s.id = 'neet-inner-styles';
+    s.textContent =
+      /* Scrollbars */
+      '* { scrollbar-width:thin; scrollbar-color:rgba(0,255,135,.2) transparent; }' +
+      /* Base background reset */
+      'body,#root,[id],[class] { --tw-bg-opacity:1; }';
+    container.insertBefore(s, container.firstChild);
+  }
+
   function patchTerminal() {
     var t = document.getElementById('integrated-terminal');
-    if (!t) return;
+    if (!t || !t.firstElementChild) return;
 
-    /* 1. Hunt down Jupiter's header bar (logo + "Jupiter" name)
-          Jupiter Terminal renders: #integrated-terminal > div > div > div:first-child (the header)
-          We walk up to 5 levels deep looking for a small div that has both an SVG and "Jupiter" text */
-    function hideJupiterHeader(el, depth) {
-      if (!el || depth > 5) return;
-      var children = Array.prototype.slice.call(el.children);
-      for (var i = 0; i < children.length; i++) {
-        var child = children[i];
-        var h = child.offsetHeight;
-        var hasJupText = child.textContent.indexOf('Jupiter') >= 0;
-        var hasSvg = !!child.querySelector('svg');
-        /* A header bar: small height, has logo svg AND Jupiter text */
-        if (hasJupText && hasSvg && h > 0 && h < 80) {
-          child.style.cssText = 'display:none!important';
-          return;
+    injectInnerStyles(t);
+
+    /* Force dark background on root divs Jupiter creates */
+    t.style.background = '#08090f';
+    var root = t.firstElementChild;
+    if (root) {
+      root.style.cssText = 'background:#08090f!important;border:none!important;border-radius:0!important;';
+      var inner = root.firstElementChild;
+      if (inner) inner.style.cssText = 'background:#08090f!important;';
+    }
+
+    /* 1. Hide Jupiter header (SVG logo + "Jupiter" text, small height) */
+    (function hideHeader(el, depth) {
+      if (!el || depth > 6) return;
+      var kids = Array.prototype.slice.call(el.children);
+      for (var i = 0; i < kids.length; i++) {
+        var c = kids[i];
+        var h = c.offsetHeight;
+        if (c.textContent.indexOf('Jupiter') >= 0 && c.querySelector('svg') && h > 0 && h < 80) {
+          c.style.cssText = 'display:none!important'; return;
         }
       }
-      /* Go one level deeper into the first child */
-      if (children.length) hideJupiterHeader(children[0], depth + 1);
-    }
-    hideJupiterHeader(t, 0);
+      if (kids.length) hideHeader(kids[0], depth + 1);
+    })(t, 0);
 
-    /* 2. Hide "Powered by Jupiter" footer — text-node search */
+    /* 2. Nuclear "Powered by" footer removal — text node walk */
     t.querySelectorAll('*').forEach(function(el) {
-      var txt = el.textContent.trim();
-      if (!el.children.length && (
-          txt === 'Powered by' || txt === 'Jupiter' ||
-          txt.includes('Powered by Jupiter') || txt.includes('Powered by'))) {
-        /* Walk up to find the flex row container */
-        var p = el.parentElement;
-        while (p && p !== t) {
-          if (p.children.length <= 4 && p.offsetHeight < 50) {
+      if (el.children.length > 0) return;
+      var txt = (el.textContent || '').trim();
+      if (txt === 'Powered by' || txt === 'Jupiter' ||
+          txt.indexOf('Powered by Jupiter') >= 0 || txt.indexOf('Powered by') >= 0) {
+        var p = el.parentElement; var n = 0;
+        while (p && p !== t && n++ < 7) {
+          if (p.offsetHeight < 60 && p.children.length <= 5) {
             p.style.cssText = 'display:none!important'; break;
           }
           p = p.parentElement;
         }
       }
     });
-    t.querySelectorAll('a[href*="jup.ag"],a[href*="jupiter.ag"],a[href*="jup.io"]').forEach(function(el) {
-      var wrap = el.parentElement;
-      if (wrap) wrap.style.cssText = 'display:none!important';
+
+    /* 3. Kill all Jupiter external links */
+    t.querySelectorAll('a[href*="jup.ag"],a[href*="jupiter.ag"],a[href*="jup.io"]').forEach(function(a) {
+      var w = a.closest('div') || a.parentElement;
+      if (w) w.style.cssText = 'display:none!important';
     });
 
-    /* 3. Style the main action button green */
-    var btns = t.querySelectorAll('button');
-    btns.forEach(function(btn) {
+    /* 4. Style all buttons */
+    t.querySelectorAll('button').forEach(function(btn) {
       var txt = btn.textContent.trim();
-      if (txt === 'Connect Wallet' || txt === 'Swap' || txt === 'Buy') {
-        btn.style.cssText = 'background:#00ff87!important;color:#000!important;font-weight:700!important;border:none!important;border-radius:8px!important;font-family:"Space Mono",monospace!important;letter-spacing:.08em!important;text-transform:uppercase!important;';
+
+      /* Main CTA: Connect Wallet / Swap / Enter Amount */
+      if (txt === 'Connect Wallet' || txt === 'Swap' || txt === 'Buy' ||
+          txt === 'Enter amount' || txt === 'Insufficient balance') {
+        btn.style.cssText = [
+          'background:#00ff87!important',
+          'color:#000!important',
+          'font-weight:700!important',
+          'border:none!important',
+          'border-radius:10px!important',
+          'font-family:"Space Mono",monospace!important',
+          'letter-spacing:.09em!important',
+          'text-transform:uppercase!important',
+          'box-shadow:0 0 24px rgba(0,255,135,.3)!important',
+          'transition:background .2s,box-shadow .2s!important',
+        ].join(';');
+        return;
       }
-      /* Buy/sell swap direction button */
-      if (btn.querySelector('svg') && !txt) {
-        btn.style.cssText = 'background:rgba(0,255,135,.12)!important;border:1px solid rgba(0,255,135,.25)!important;border-radius:50%!important;';
+
+      /* Swap direction / arrow button (icon only, no text, circular) */
+      if (!txt && btn.querySelector('svg')) {
+        btn.style.cssText = [
+          'background:rgba(0,255,135,.1)!important',
+          'border:1px solid rgba(0,255,135,.28)!important',
+          'border-radius:50%!important',
+          'color:#00ff87!important',
+          'transition:background .2s!important',
+        ].join(';');
+        return;
+      }
+
+      /* Token selector chips (SOL / NEET pill) */
+      if ((btn.querySelector('img') || btn.querySelector('svg')) && txt && txt.length < 12) {
+        btn.style.cssText = [
+          'background:rgba(255,255,255,.04)!important',
+          'border:1px solid rgba(255,255,255,.09)!important',
+          'border-radius:20px!important',
+          'color:#dde4f5!important',
+        ].join(';');
       }
     });
 
-    /* 4. Style input token rows to match dark theme */
-    t.querySelectorAll('input[type="text"],input[type="number"]').forEach(function(inp) {
-      inp.style.cssText = 'color:#dde4f5!important;font-family:"Space Mono",monospace!important;background:transparent!important;';
+    /* 5. Style number inputs */
+    t.querySelectorAll('input').forEach(function(inp) {
+      inp.style.cssText = [
+        'color:#dde4f5!important',
+        'font-family:"Space Mono",monospace!important',
+        'background:transparent!important',
+        'font-size:20px!important',
+      ].join(';');
+    });
+
+    /* 6. Token row panels (Selling / Buying boxes) — mid-height rounded divs */
+    t.querySelectorAll('div').forEach(function(div) {
+      var cls = (div.className && typeof div.className === 'string') ? div.className : '';
+      if ((cls.indexOf('rounded-2xl') >= 0 || cls.indexOf('rounded-xl') >= 0) &&
+          !cls.indexOf('button') >= 0) {
+        var h = div.offsetHeight;
+        if (h > 60 && h < 220) {
+          div.style.background = 'rgba(255,255,255,.025)';
+          div.style.borderColor = 'rgba(255,255,255,.07)';
+          div.style.borderRadius = '10px';
+        }
+      }
     });
   }
 
+  /* Start MutationObserver once terminal element exists */
   var _obs = new MutationObserver(patchTerminal);
   function startObs() {
     var t = document.getElementById('integrated-terminal');
-    if (t) { _obs.observe(t, {childList:true, subtree:true, attributes:true}); patchTerminal(); }
+    if (t) {
+      _obs.observe(t, { childList:true, subtree:true, attributes:true });
+      patchTerminal();
+    }
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', startObs);
-  } else { startObs(); }
-  /* Re-run every 800ms for the first 10s to catch late renders */
-  var _patchCount = 0;
-  var _patchTimer = setInterval(function() {
+  } else {
+    startObs();
+  }
+
+  /* Aggressive polling for first 12 seconds (Jupiter loads async) */
+  var _pc = 0;
+  var _pt = setInterval(function() {
     patchTerminal();
-    if (++_patchCount > 12) clearInterval(_patchTimer);
-  }, 800);
+    if (++_pc > 20) clearInterval(_pt);
+  }, 600);
+
 })();
+
+/* ── Jupiter Terminal loader ── */
 var _jupLoaded = false;
 var _jupInited = false;
 
@@ -3964,7 +4154,7 @@ function loadJupScript(cb) {
   s.src = 'https://terminal.jup.ag/main-v4.js';
   s.setAttribute('data-preload', '');
   s.onload = function() { _jupLoaded = true; cb(); };
-  s.onerror = function() { console.warn('[BUY] Jupiter Terminal failed to load'); };
+  s.onerror = function() { console.warn('[BUY] Jupiter Terminal script failed to load'); };
   document.head.appendChild(s);
 }
 
@@ -3977,38 +4167,35 @@ function initJupiterTerminal() {
       integratedTargetId: 'integrated-terminal',
       endpoint: 'https://api.mainnet-beta.solana.com',
       defaultExplorer: 'Solscan',
+      colorScheme: 'dark',
       formProps: {
         initialInputMint: 'So11111111111111111111111111111111111111112', // SOL
         initialOutputMint: 'Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump', // NEET
         fixedOutputMint: true,
       },
-      /* ── PLATFORM FEE ── your cut on every swap ── */
       platformFeeAndAccounts: {
         referralAccount: '42Wjt3WbW9beVdX2CKdr6b7A7X8hqeXPSJFfM7qxPars',
-        feeBps: 100, // 1% — change to 50 for 0.5%, 200 for 2%, etc.
+        feeBps: 100, // 1% fee supports $NEET
       },
-      /* ─────────────────────────────────────────────────────────────── */
     });
     _jupInited = true;
   });
 }
 
+/* ── Live price / stats for the stats bar ── */
 async function fetchBuyStats() {
   try {
     var r = await fetch('https://api.dexscreener.com/latest/dex/tokens/' + (window.NEET_CA || 'Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump'));
     var d = await r.json();
     var pairs = d.pairs || [];
     if (!pairs.length) return;
-    // pick highest liquidity pair
     var pair = pairs.sort(function(a,b){ return (b.liquidity?.usd||0)-(a.liquidity?.usd||0); })[0];
     var price = parseFloat(pair.priceUsd || 0);
     var chg   = parseFloat((pair.priceChange || {}).h24 || 0);
     var mc    = pair.marketCap || pair.fdv || 0;
-
     var priceEl  = document.getElementById('buy-stat-price');
     var changeEl = document.getElementById('buy-stat-change');
     var mcapEl   = document.getElementById('buy-stat-mcap');
-
     if (priceEl) {
       priceEl.textContent = price < 0.001
         ? '$' + price.toExponential(2)
