@@ -3768,8 +3768,12 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
         function _patchBranding(){
           try{
             var cont=document.getElementById('integrated-terminal');
-            if(!cont||!cont.shadowRoot) return false;
-            var sr=cont.shadowRoot;
+            if(!cont) return false;
+            // Jupiter shadow DOM is inside #jupiter-terminal-instance > div
+            var inst=document.getElementById('jupiter-terminal-instance');
+            var shadowHost=inst?inst.querySelector('div'):cont.querySelector('div>div');
+            var sr=shadowHost?shadowHost.shadowRoot:null;
+            if(!sr) return false;
             if(sr.querySelector('#neet-done')) return true;
 
             // Confirmed structure: shadowRoot > div > div.flex > div.bg-black > div.bg-background
