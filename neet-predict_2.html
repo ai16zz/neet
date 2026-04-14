@@ -3728,17 +3728,17 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
         </div>
         <div class="cswap-body">
           <div class="cswap-panel">
-            <div class="cswap-row1"><span class="cswap-lbl">Selling</span><span class="cswap-bal" id="cs-sol-bal"></span></div>
+            <div class="cswap-row1"><span class="cswap-lbl" id="cs-sell-lbl">Selling</span><span class="cswap-bal" id="cs-sol-bal"></span></div>
             <div class="cswap-row2">
-              <div class="cswap-token"><img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" width="22" height="22" style="border-radius:50%"><span>SOL</span></div>
+              <div class="cswap-token" id="cs-sell-tok"><img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" width="22" height="22" style="border-radius:50%"><span>SOL</span></div>
               <div class="cswap-amt-wrap"><input id="cs-in" type="number" class="cswap-input" placeholder="0.00" min="0" step="any" oninput="csQuote()"><div class="cswap-usd" id="cs-in-usd"></div></div>
             </div>
           </div>
-          <div class="cswap-flip-wrap"><button class="cswap-flip" title="swap direction">&#8645;</button></div>
+          <div class="cswap-flip-wrap"><button class="cswap-flip" title="swap direction" onclick="csFlip()">&#8645;</button></div>
           <div class="cswap-panel">
-            <div class="cswap-row1"><span class="cswap-lbl">Buying</span><span class="cswap-bal" id="cs-neet-bal"></span></div>
+            <div class="cswap-row1"><span class="cswap-lbl" id="cs-buy-lbl">Buying</span><span class="cswap-bal" id="cs-neet-bal"></span></div>
             <div class="cswap-row2">
-              <div class="cswap-token"><img src="https://dd.dexscreener.com/ds-data/tokens/solana/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump.png?size=lg&key=f3b4db" width="22" height="22" style="border-radius:50%" onerror="this.style.opacity='0.3'"><span>neet</span></div>
+              <div class="cswap-token" id="cs-buy-tok"><img src="https://dd.dexscreener.com/ds-data/tokens/solana/Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump.png?size=lg&key=f3b4db" width="22" height="22" style="border-radius:50%" onerror="this.style.opacity='0.3'"><span>neet</span></div>
               <div class="cswap-amt-wrap"><div class="cswap-out" id="cs-out">0.00</div><div class="cswap-usd" id="cs-out-usd"></div></div>
             </div>
           </div>
@@ -3762,10 +3762,30 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
   var _SOL='So11111111111111111111111111111111111111112';
   var _NEET='Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
   var _DEC=6;
+  var _flipped=false;
   var _wallet=null,_quoteTimer=null,_lastQuote=null;
   var _RPC='https://solana-rpc.publicnode.com';
 
   function _prov(){return window.phantom?.solana||window.solana||window.solflare||null;}
+
+  window.csFlip=function(){
+    _flipped=!_flipped;
+    var st=document.getElementById('cs-sell-tok');
+    var bt=document.getElementById('cs-buy-tok');
+    if(st&&bt){var tmp=st.innerHTML;st.innerHTML=bt.innerHTML;bt.innerHTML=tmp;}
+    var sb=document.getElementById('cs-sol-bal');
+    var nb=document.getElementById('cs-neet-bal');
+    if(sb&&nb){var tmp2=sb.textContent;sb.textContent=nb.textContent;nb.textContent=tmp2;}
+    var sl=document.getElementById('cs-sell-lbl');
+    var bl=document.getElementById('cs-buy-lbl');
+    if(sl&&bl){var tmp3=sl.textContent;sl.textContent=bl.textContent;bl.textContent=tmp3;}
+    var inEl=document.getElementById('cs-in');
+    if(inEl)inEl.value='';
+    var outEl=document.getElementById('cs-out');
+    if(outEl)outEl.textContent='0.00';
+    _lastQuote=null;
+    _btn();
+  };
 
   window.csAction=async function(){
     var btn=document.getElementById('cs-btn');
@@ -3826,18 +3846,18 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
       var outUsd=document.getElementById('cs-out-usd');
       var amt=parseFloat(inEl?.value||'0');
       if(!amt||amt<=0){if(outEl)outEl.textContent='0.00';if(infoEl)infoEl.textContent='';_lastQuote=null;_btn();return;}
-      var lam=Math.round(amt*1e9);
+      var lam=Math.round(amt*(_flipped?1e6:1e9));
       if(infoEl)infoEl.textContent='Getting quote...';
       try{
-        var r=await fetch('https://lite-api.jup.ag/swap/v1/quote?inputMint='+_SOL+'&outputMint='+_NEET+'&amount='+lam+'&slippageBps=100');
+        var r=await fetch('https://lite-api.jup.ag/swap/v1/quote?inputMint='+(_flipped?_NEET:_SOL)+'&outputMint='+(_flipped?_SOL:_NEET)+'&amount='+lam+'&slippageBps=100');
         var q=await r.json();
         if(q.error||!q.outAmount){if(infoEl)infoEl.textContent=q.error||'No route found';_lastQuote=null;_btn();return;}
         _lastQuote=q;
-        var out=parseInt(q.outAmount)/Math.pow(10,_DEC);
+        var out=parseInt(q.outAmount)/Math.pow(10,_flipped?9:_DEC);
         if(outEl)outEl.textContent=out>=1000?out.toLocaleString('en',{maximumFractionDigits:0}):out.toFixed(2);
         var pi=parseFloat(q.priceImpactPct||0)*100;
         var rate=(out/amt).toLocaleString('en',{maximumFractionDigits:0});
-        if(infoEl)infoEl.innerHTML='Rate: 1 SOL = '+rate+' NEET &nbsp;·&nbsp; Impact: <span style="color:'+(pi>1?'#ff3b5c':'#00ff87')+'">'+( pi<0.01?'<0.01':pi.toFixed(2))+'%</span>';
+        if(infoEl)infoEl.innerHTML='Rate: 1 '+(_flipped?'NEET':'SOL')+' = '+rate+' '+(_flipped?'SOL':'NEET') &nbsp;·&nbsp; Impact: <span style="color:'+(pi>1?'#ff3b5c':'#00ff87')+'">'+( pi<0.01?'<0.01':pi.toFixed(2))+'%</span>';
         var sp=typeof window.cpx==='number'?window.cpx:0;
         if(sp&&inUsd)inUsd.textContent='~$'+(amt*sp).toFixed(2);
         if(outUsd)outUsd.textContent='';
