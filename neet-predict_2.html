@@ -3874,162 +3874,82 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 </div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════════
-   BUY TAB — NEET Swap
-   Jupiter Terminal v4 renders inside a Shadow DOM.
-   All styling must be injected into shadowRoot directly.
-   ═══════════════════════════════════════════════════════════════ */
+/* ── NEET Swap patcher — NO MutationObserver (avoids freeze) ──
+   Jupiter Terminal v4 uses Shadow DOM. We inject a <style> tag
+   directly into the shadow root, then poll briefly to hide
+   the Jupiter header/footer and style the buttons. That's it. */
 (function() {
-
-  /* ── Find the shadow host (div with .shadowRoot) inside #integrated-terminal ── */
-  function getShadowRoot() {
+  function getSR() {
     var t = document.getElementById('integrated-terminal');
     if (!t) return null;
-    var d1 = t.children[0];
-    if (!d1) return null;
-    var d2 = d1.children[0];
-    if (!d2 || !d2.shadowRoot) return null;
-    return d2.shadowRoot;
+    var d2 = t.children[0] && t.children[0].children[0];
+    return (d2 && d2.shadowRoot) || null;
   }
 
-  /* ── CSS injected directly into the shadow root ── */
-  var NEET_SHADOW_CSS = [
-    /* Card + panel backgrounds */
-    '.bg-black { background:#08090f !important; }',
-    '.bg-background { background:#08090f !important; }',
-    '[class*="bg-[#"] { background:#0d1017 !important; }',
+  var _styled = false;
 
-    /* Hide Jupiter header bar (h-7 is the header's fixed height class) */
-    '.h-7 { display:none !important; }',
-    '.mt-2.h-7 { display:none !important; }',
-
-    /* Hide "Powered by Jupiter" footer row */
-    '.justify-center.flex-row { display:none !important; }',
-    '[class*="text-primary-text\\/50"] { display:none !important; }',
-
-    /* Input panel boxes (Selling / Buying) */
-    '.rounded-xl { background:rgba(255,255,255,.03) !important; border-color:rgba(255,255,255,.08) !important; }',
-    '.rounded-2xl { background:rgba(255,255,255,.03) !important; border-color:rgba(255,255,255,.08) !important; }',
-
-    /* Swap arrow direction button */
-    'button.rounded-full { background:rgba(0,255,135,.1) !important; border:1px solid rgba(0,255,135,.28) !important; color:#00ff87 !important; }',
-
-    /* Text */
-    '.text-primary-text { color:#dde4f5 !important; }',
-    '[class*="text-white"] { color:#dde4f5 !important; }',
-
-    /* Inputs */
-    'input { color:#dde4f5 !important; font-family:"Space Mono",monospace !important; background:transparent !important; font-size:20px !important; }',
-
-    /* Dividers */
-    '[class*="border-t"] { border-color:rgba(255,255,255,.06) !important; }',
-
-    /* Scrollbars */
-    '* { scrollbar-width:thin; scrollbar-color:rgba(0,255,135,.2) transparent; }',
-  ].join('\n');
-
-  /* ── Inject style tag into shadow root ── */
-  function injectShadowStyles(sr) {
-    if (sr.querySelector('#neet-shadow-styles')) return;
-    var s = document.createElement('style');
-    s.id = 'neet-shadow-styles';
-    s.textContent = NEET_SHADOW_CSS;
-    sr.appendChild(s);
-  }
-
-  /* ── Directly hide header + footer elements by DOM position ── */
-  function hideJupiterBranding(sr) {
-    try {
-      /* Structure: sr > div > div(flex) > div(card) > div(panel)
-         panel.children[0] = main content wrapper
-         panel.children[0].children[0] = Jupiter header bar (h=28, text "Jupiter Connect Wallet")
-         panel.children[1] = "Powered by Jupiter" footer (h=32) */
-      var panel = sr.children[0].children[0].children[0].children[0];
-      if (!panel) return;
-
-      var mainWrap = panel.children[0];
-      if (mainWrap && mainWrap.children[0]) {
-        var hdr = mainWrap.children[0];
-        if (hdr.textContent.indexOf('Jupiter') >= 0 || hdr.offsetHeight < 40) {
-          hdr.style.cssText = 'display:none!important';
-        }
-      }
-
-      var footer = panel.children[1];
-      if (footer && (footer.textContent.indexOf('Powered') >= 0 || footer.offsetHeight < 40)) {
-        footer.style.cssText = 'display:none!important';
-      }
-    } catch(e) {}
-  }
-
-  /* ── Style interactive elements (buttons, inputs) via JS ── */
-  function styleElements(sr) {
-    try {
-      sr.querySelectorAll('button').forEach(function(btn) {
-        var txt = btn.textContent.trim();
-        if (txt === 'Connect Wallet' || txt === 'Swap' || txt === 'Buy' ||
-            txt === 'Enter amount' || txt === 'Insufficient balance') {
-          btn.style.cssText = 'background:#00ff87!important;color:#000!important;font-weight:700!important;border:none!important;border-radius:10px!important;font-family:"Space Mono",monospace!important;letter-spacing:.09em!important;text-transform:uppercase!important;box-shadow:0 0 24px rgba(0,255,135,.3)!important;';
-          return;
-        }
-        if (!txt && btn.querySelector('svg')) {
-          btn.style.cssText = 'background:rgba(0,255,135,.1)!important;border:1px solid rgba(0,255,135,.28)!important;border-radius:50%!important;color:#00ff87!important;';
-          return;
-        }
-        if ((btn.querySelector('img') || btn.querySelector('svg')) && txt && txt.length < 12) {
-          btn.style.cssText = 'background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.09)!important;border-radius:20px!important;color:#dde4f5!important;';
-        }
-      });
-      sr.querySelectorAll('input').forEach(function(inp) {
-        inp.style.cssText = 'color:#dde4f5!important;font-family:"Space Mono",monospace!important;background:transparent!important;font-size:20px!important;';
-      });
-    } catch(e) {}
-  }
-
-  /* ── Master patch function ── */
-  function patchTerminal() {
-    var sr = getShadowRoot();
+  function patch() {
+    var sr = getSR();
     if (!sr) return;
-    injectShadowStyles(sr);
-    hideJupiterBranding(sr);
-    styleElements(sr);
+
+    /* 1 — Inject CSS into shadow root once */
+    if (!sr.querySelector('#nss')) {
+      var s = document.createElement('style');
+      s.id = 'nss';
+      s.textContent =
+        '.bg-black,.bg-background{background:#08090f!important}' +
+        /* Hide header (fixed h-7 class) and footer */
+        '.h-7{display:none!important}' +
+        '.justify-center.flex-row{display:none!important}' +
+        /* Input panels */
+        '.rounded-xl,.rounded-2xl{background:rgba(255,255,255,.03)!important;border-color:rgba(255,255,255,.08)!important}' +
+        /* Arrow button */
+        'button.rounded-full{background:rgba(0,255,135,.1)!important;border:1px solid rgba(0,255,135,.28)!important}' +
+        /* Text & inputs */
+        '.text-primary-text{color:#dde4f5!important}' +
+        'input{color:#dde4f5!important;font-family:"Space Mono",monospace!important;background:transparent!important;font-size:20px!important}' +
+        '*{scrollbar-width:thin;scrollbar-color:rgba(0,255,135,.2) transparent}';
+      sr.appendChild(s);
+    }
+
+    /* 2 — Hide header + footer by exact DOM position (confirmed by live inspection) */
+    try {
+      var panel = sr.children[0].children[0].children[0].children[0];
+      var hdr = panel && panel.children[0] && panel.children[0].children[0];
+      if (hdr && hdr.textContent.indexOf('Jupiter') >= 0) hdr.style.display = 'none';
+      var ftr = panel && panel.children[1];
+      if (ftr && ftr.textContent.indexOf('Powered') >= 0) ftr.style.display = 'none';
+    } catch(e) {}
+
+    /* 3 — Style CTA button green */
+    try {
+      sr.querySelectorAll('button').forEach(function(b) {
+        var tx = b.textContent.trim();
+        if (tx === 'Connect Wallet' || tx === 'Swap' || tx === 'Buy' || tx === 'Enter amount') {
+          b.style.background = '#00ff87';
+          b.style.color = '#000';
+          b.style.fontWeight = '700';
+          b.style.border = 'none';
+          b.style.borderRadius = '10px';
+          b.style.fontFamily = '"Space Mono",monospace';
+          b.style.letterSpacing = '.09em';
+          b.style.textTransform = 'uppercase';
+          b.style.boxShadow = '0 0 20px rgba(0,255,135,.3)';
+        }
+      });
+    } catch(e) {}
+
+    _styled = true;
   }
 
-  /* ── Observer: watch both the light DOM wrapper and shadow root ── */
-  var _obs = new MutationObserver(patchTerminal);
-  var _shadowObserved = false;
-
-  function startObs() {
-    var t = document.getElementById('integrated-terminal');
-    if (!t) return;
-    _obs.observe(t, { childList:true, subtree:true });
-    patchTerminal();
-
-    /* Also observe inside the shadow root once it appears */
-    var _shadowCheck = setInterval(function() {
-      var sr = getShadowRoot();
-      if (sr && !_shadowObserved) {
-        _obs.observe(sr, { childList:true, subtree:true, attributes:true });
-        _shadowObserved = true;
-        patchTerminal();
-        clearInterval(_shadowCheck);
-      }
-    }, 200);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startObs);
-  } else {
-    startObs();
-  }
-
-  /* Polling for first 15 seconds (Jupiter loads async, shadow DOM appears late) */
-  var _pc = 0;
-  var _pt = setInterval(function() {
-    patchTerminal();
-    if (++_pc > 25) clearInterval(_pt);
-  }, 600);
-
+  /* Poll every 500ms for up to 20s — stop once styled, then run 3 more times for interactions */
+  var _n = 0, _extra = 0;
+  var _t = setInterval(function() {
+    patch();
+    _n++;
+    if (_styled) _extra++;
+    if (_n > 40 || _extra > 3) clearInterval(_t);
+  }, 500);
 })();
 
 /* ── Jupiter Terminal loader ── */
