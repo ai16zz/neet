@@ -2883,8 +2883,8 @@ function switchToScan(){
 function switchToBuy(){
   _showSection('buy');
   document.getElementById('buyTab')?.classList.add('active');
-  initJupiterTerminal();
-  fetchBuyStats();
+  // small delay so section is visible + has dimensions before Jupiter renders
+  setTimeout(function(){ initJupiterTerminal(); fetchBuyStats(); }, 120);
 }
 </script>
 
@@ -3667,7 +3667,7 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 .buy-topbar-ca:hover{color:#00ff87;}
 
 /* Jupiter terminal iframe area */
-#integrated-terminal{width:100%;min-height:420px;background:#0a0d14;}
+#integrated-terminal{width:100%;height:440px;min-height:440px;background:#0a0d14;display:block;}
 
 /* Footer bar */
 .buy-footer-bar{display:flex;justify-content:space-between;align-items:center;
@@ -3724,7 +3724,7 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 // ── JUPITER TERMINAL ───────────────────────────────────────
 const NEET_MINT = 'Ce2gBhmvqDMxEfuBuBa3MN1dCdXhSFeHFuDbFNHpump';
 let _jupLoaded = false;
-let _jupInited = false;
+let _jupRendered = false;
 
 function loadJupScript(cb){
   if(_jupLoaded){cb&&cb();return;}
@@ -3737,29 +3737,32 @@ function loadJupScript(cb){
 }
 
 function initJupiterTerminal(){
-  if(_jupInited) return;
+  // if already rendered and container still has content, skip
+  const el=document.getElementById('integrated-terminal');
+  if(_jupRendered && el && el.children.length>0) return;
+  _jupRendered=false;
   loadJupScript(function(){
     if(!window.Jupiter){
-      setTimeout(initJupiterTerminal, 500);
+      setTimeout(initJupiterTerminal, 400);
       return;
     }
     try{
+      // clear container before re-init
+      const container=document.getElementById('integrated-terminal');
+      if(container) container.innerHTML='';
       window.Jupiter.init({
         displayMode: 'integrated',
         integratedTargetId: 'integrated-terminal',
-        endpoint: 'https://mainnet.helius-rpc.com/?api-key=demo',
+        endpoint: 'https://api.mainnet-beta.solana.com',
         defaultExplorer: 'Solscan',
         formProps: {
           initialInputMint: 'So11111111111111111111111111111111111111112',
           initialOutputMint: NEET_MINT,
           initialSlippageBps: 100,
-        },
-        platformFeeAndAccounts: {
-          referralAccount: undefined,
-          feeBps: 100,
+          fixedOutputMint: true,
         },
       });
-      _jupInited = true;
+      _jupRendered=true;
     } catch(e){
       console.warn('[BUY] Jupiter.init error:', e);
     }
