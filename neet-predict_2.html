@@ -1510,7 +1510,6 @@ function switchToCartel(){
         <button class="filter-pill"        data-f="dead"         onclick="setFilter('dead')">&#x2620; DEAD <span class="cnt" id="cDead">0</span></button>
         <button class="filter-pill" onclick="toggleCallsPanel()" style="margin-left:8px;background:rgba(0,204,255,.12);border-color:#00ccff;color:#00ccff">&#x1f4cb; CALLS LOG</button>
         <button class="filter-pill" onclick="togglePnlPanel()" style="background:rgba(0,255,135,.12);border-color:#00ff87;color:#00ff87">&#x1f4ca; PNL</button>
-        <button class="filter-pill" onclick="openTGSettings()" style="background:rgba(39,174,255,.12);border-color:#27aeff;color:#27aeff">&#x2708;&#xfe0f; TELEGRAM</button>
       </div>
 
       <!-- Token table -->
@@ -2174,7 +2173,6 @@ function notifyCoin(t,isNew){
   document.body.appendChild(d);_ncToastN++;
   setTimeout(()=>{d.style.opacity='0';setTimeout(()=>{d.remove();_ncToastN=Math.max(0,_ncToastN-1);},400);},12000);
   const velStr=t._rocket?' 🚀+'+Math.round((t._mcVel||0)*100)+'% MC/scan':'';const tgMsg=badge+' *'+sym+'*'+'\n'+'MC: '+mcStr+' | Score: '+t.score+' '+catIcon+velStr+'\n'+'Liq: '+liqStr+' | Vol: '+volStr+'\n'+'SM: '+smList+'\n'+dexUrl;
-  sendTelegram(tgMsg);
 }
 // -- CALLS LOG -------------------------------------------
 function logCalls(tokens){
@@ -2361,76 +2359,6 @@ async function refreshPnlPrices(){
   }
   document.getElementById('pnlLastRefresh').textContent='updated '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   renderPnlTracker();
-}
-// -- TELEGRAM NOTIFICATIONS --------------------------------
-function _tgCfg(){const dflt={token:'',chatId:''};/* Configure via the Telegram setup UI — never hardcode tokens in source */try{const c=JSON.parse(localStorage.getItem('neet_tg')||'{}');return{token:c.token||dflt.token,chatId:c.chatId||dflt.chatId};}catch(e){return dflt;}}
-async function sendTelegram(msg){
-  const c=_tgCfg();
-  if(!c.token||!c.chatId)return;
-  try{
-    await fetch('https://api.telegram.org/bot'+c.token+'/sendMessage',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({chat_id:c.chatId,text:msg,parse_mode:'Markdown',disable_web_page_preview:true})
-    });
-  }catch(e){}
-}
-function openTGSettings(){
-  const m=document.getElementById('tgModal');
-  if(!m)return;
-  const c=_tgCfg();
-  document.getElementById('tgToken').value=c.token||'';
-  document.getElementById('tgChatId').value=c.chatId||'';
-  document.getElementById('tgStatus').textContent=c.token?'✅ Configured — edit below to update':'Not configured';
-  m.style.display='flex';
-}
-function closeTGSettings(){const m=document.getElementById('tgModal');if(m)m.style.display='none';}
-function saveTGSettings(){
-  const token=document.getElementById('tgToken').value.trim();
-  const chatId=document.getElementById('tgChatId').value.trim();
-  if(!token){document.getElementById('tgStatus').textContent='⚠ Enter your bot token';return;}
-  if(!chatId){document.getElementById('tgStatus').textContent='⚠ Enter chat ID or click Auto-Detect';return;}
-  localStorage.setItem('neet_tg',JSON.stringify({token,chatId}));
-  closeTGSettings();
-  sendTelegram('✅ *NEET Scanner* connected!\nTelegram notifications are now active. You will receive alerts when coins score ≥ 50.');
-}
-async function autoDetectChatId(){
-  const token=document.getElementById('tgToken').value.trim();
-  if(!token){document.getElementById('tgStatus').textContent='⚠ Enter bot token first';return;}
-  const btn=document.getElementById('tgDetectBtn');
-  btn.textContent='⏳ Detecting...';btn.disabled=true;
-  document.getElementById('tgStatus').textContent='Checking for messages...';
-  try{
-    const r=await fetch('https://api.telegram.org/bot'+token+'/getUpdates?limit=10&offset=-10');
-    const d=await r.json();
-    if(!d.ok){document.getElementById('tgStatus').textContent='❌ Invalid token: '+d.description;btn.textContent='🔍 Auto-Detect';btn.disabled=false;return;}
-    const updates=d.result||[];
-    let chatId='';
-    for(const u of updates.reverse()){
-      chatId=String(u.message?.chat?.id||u.my_chat_member?.chat?.id||'');
-      if(chatId)break;
-    }
-    if(!chatId){document.getElementById('tgStatus').textContent='⚠ No messages found. Send /start to your bot first, then click again.';btn.textContent='🔍 Auto-Detect';btn.disabled=false;return;}
-    document.getElementById('tgChatId').value=chatId;
-    document.getElementById('tgStatus').textContent='✅ Chat ID detected: '+chatId;
-    btn.textContent='✅ Found!';
-    setTimeout(()=>{btn.textContent='🔍 Auto-Detect';btn.disabled=false;},2500);
-  }catch(e){document.getElementById('tgStatus').textContent='❌ Error: '+e.message;btn.textContent='🔍 Auto-Detect';btn.disabled=false;}
-}
-async function testTelegram(){
-  const token=document.getElementById('tgToken').value.trim();
-  const chatId=document.getElementById('tgChatId').value.trim();
-  if(!token||!chatId){document.getElementById('tgStatus').textContent='⚠ Enter token and chat ID first';return;}
-  const btn=document.getElementById('tgTestBtn');btn.textContent='Sending...';btn.disabled=true;
-  try{
-    const r=await fetch('https://api.telegram.org/bot'+token+'/sendMessage',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({chat_id:chatId,text:'📡 *NEET Scanner* — test notification!\nTelegram alerts are working correctly.\n\n🆕 Example call: *$EXAMPLE* | MC: $50K | Score: 75 ⚡\nLiq: $20K | Vol: $100K',parse_mode:'Markdown'})
-    });
-    const d=await r.json();
-    if(d.ok){document.getElementById('tgStatus').textContent='✅ Message sent! Check Telegram.';btn.textContent='✅ Sent!';}
-    else{document.getElementById('tgStatus').textContent='❌ Failed: '+d.description;btn.textContent='❌ Failed';}
-  }catch(e){document.getElementById('tgStatus').textContent='❌ Error: '+e.message;btn.textContent='❌ Error';}
-  setTimeout(()=>{btn.textContent='📤 Test';btn.disabled=false;},3000);
 }
 // -- SM WALLET ASSIGNMENT (deterministic, stable across refreshes) --
 function assignSM(score,addr) {
@@ -3065,38 +2993,6 @@ window.padLaunchV2=async function(){
 };
 </script>
 
-<!-- TELEGRAM SETTINGS MODAL -->
-<div id="tgModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:10000;justify-content:center;align-items:center">
-  <div style="background:#0d1117;border:1px solid #27aeff;border-radius:14px;padding:28px 24px;width:400px;max-width:92vw;font:13px monospace;color:#ccc">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <span style="color:#27aeff;font-weight:700;font-size:15px">&#x2708;&#xfe0f; TELEGRAM ALERTS</span>
-      <button onclick="closeTGSettings()" style="background:none;border:none;color:#555;font-size:20px;cursor:pointer">&#x2715;</button>
-    </div>
-    <div style="background:rgba(39,174,255,.08);border:1px solid rgba(39,174,255,.2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:11px;line-height:1.8;color:#aaa">
-      <b style="color:#27aeff">Setup (2 min):</b><br>
-      1&#x29; Open Telegram &rarr; search <b style="color:#fff">@BotFather</b><br>
-      2&#x29; Send <span style="color:#00ff87">/newbot</span> &rarr; pick a name &rarr; copy the token<br>
-      3&#x29; Send <span style="color:#00ff87">/start</span> to your new bot from your account<br>
-      4&#x29; Paste token below &rarr; click <b style="color:#fff">Auto-Detect</b>
-    </div>
-    <div style="margin-bottom:12px">
-      <label style="color:#888;font-size:11px;display:block;margin-bottom:5px">BOT TOKEN</label>
-      <input id="tgToken" type="password" placeholder="1234567890:AAF..." style="width:100%;box-sizing:border-box;background:#161b22;border:1px solid #30363d;color:#fff;padding:9px 12px;border-radius:6px;font:13px monospace;outline:none">
-    </div>
-    <div style="margin-bottom:18px">
-      <label style="color:#888;font-size:11px;display:block;margin-bottom:5px">YOUR CHAT ID</label>
-      <div style="display:flex;gap:8px">
-        <input id="tgChatId" type="text" placeholder="Click Auto-Detect after /start" style="flex:1;background:#161b22;border:1px solid #30363d;color:#fff;padding:9px 12px;border-radius:6px;font:13px monospace;outline:none">
-        <button id="tgDetectBtn" onclick="autoDetectChatId()" style="background:rgba(39,174,255,.15);border:1px solid #27aeff;color:#27aeff;padding:9px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;font:12px monospace">&#x1f50d; Auto-Detect</button>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px">
-      <button id="tgTestBtn" onclick="testTelegram()" style="flex:1;background:rgba(0,255,136,.1);border:1px solid #00ff88;color:#00ff88;padding:10px;border-radius:8px;cursor:pointer;font:12px monospace">&#x1f4e4; Test</button>
-      <button onclick="saveTGSettings()" style="flex:2;background:#27aeff;border:none;color:#000;padding:10px;border-radius:8px;cursor:pointer;font:700 13px monospace">&#x1f4be; SAVE &amp; ACTIVATE</button>
-    </div>
-    <div id="tgStatus" style="margin-top:10px;font-size:11px;color:#555;text-align:center"></div>
-  </div>
-</div>
 
 <!-- NEET TRENCHES CHAT -->
 <style>
