@@ -3767,48 +3767,50 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
         // Walk shadow DOM to hide Jupiter branding by actual text content
         function _patchBranding(){
           try{
-            var cont = document.getElementById('integrated-terminal');
+            var cont=document.getElementById('integrated-terminal');
             if(!cont||!cont.shadowRoot) return false;
-            var sr = cont.shadowRoot;
+            var sr=cont.shadowRoot;
             if(sr.querySelector('#neet-done')) return true;
-            var all = Array.from(sr.querySelectorAll('*'));
-            if(all.length<5) return false; // not rendered yet
-            var patched=0;
-            all.forEach(function(el){
-              var txt=el.textContent.trim();
-              // Hide Jupiter header row — find "Jupiter" label then walk up to the flex row
-              if(el.childElementCount===0 && txt==='Jupiter'){
-                var t=el;
-                for(var j=0;j<6;j++){
-                  if(!t.parentElement||t.parentElement===sr) break;
-                  t=t.parentElement;
-                  if(t.childElementCount>=2){t.style.setProperty('display','none','important');patched++;break;}
-                }
-              }
-              // Hide "Powered by Jupiter" footer
-              if(txt.indexOf('Powered by')>-1&&txt.indexOf('Jupiter')>-1&&el.childElementCount<=5){
-                el.style.setProperty('display','none','important');patched++;
-              }
-            });
-            // Restyle Connect Wallet button to match site (not the header one — that's already hidden)
-            all.forEach(function(el){
-              if(el.tagName==='BUTTON'&&el.textContent.trim().toLowerCase().indexOf('connect')>-1){
-                el.style.setProperty('background','rgba(0,255,135,0.06)','important');
-                el.style.setProperty('border','1px solid rgba(0,255,135,0.15)','important');
-                el.style.setProperty('color','#445','important');
-                el.style.setProperty('font-family','Space Mono,monospace','important');
+
+            // Confirmed structure: shadowRoot > div > div.flex > div.bg-black > div.bg-background
+            // panel.children[0] = main content (header is panel.children[0].children[0])
+            // panel.children[1] = Powered by Jupiter footer
+            var panel=sr.querySelector('[class*="bg-background"]');
+            if(!panel||panel.children.length<1) return false;
+
+            // Hide Jupiter header bar (logo + Jupiter label + buttons)
+            var header=panel.children[0]&&panel.children[0].children[0];
+            if(header) header.style.setProperty('display','none','important');
+
+            // Hide Powered by Jupiter footer
+            var footer=panel.children[1];
+            if(footer) footer.style.setProperty('display','none','important');
+
+            // Restyle Connect Wallet button
+            sr.querySelectorAll('button').forEach(function(btn){
+              if(btn.textContent.toLowerCase().indexOf('connect')>-1&&btn.offsetHeight>30){
+                btn.style.setProperty('background','rgba(0,255,135,0.06)','important');
+                btn.style.setProperty('border','1px solid rgba(0,255,135,0.18)','important');
+                btn.style.setProperty('color','#556','important');
+                btn.style.setProperty('border-radius','10px','important');
               }
             });
-            if(patched>0){
-              var done=document.createElement('div');
-              done.id='neet-done';done.style.display='none';
-              sr.appendChild(done);return true;
+
+            // Inject CSS for dark background
+            if(!sr.querySelector('#np')){
+              var s=document.createElement('style');s.id='np';
+              s.textContent='[class*="bg-black"],[class*="bg-background"]{background:#0d1117!important;}';
+              sr.appendChild(s);
             }
-            return false;
+
+            var done=document.createElement('div');
+            done.id='neet-done';done.style.display='none';
+            sr.appendChild(done);
+            return true;
           }catch(e){return false;}
         }
-        // Poll every 300ms until branding is patched (Jupiter renders async)
-        var _pt=0,_pi=setInterval(function(){_pt++;if(_patchBranding()||_pt>30)clearInterval(_pi);},300);
+        // Poll every 300ms
+        var _pt=0,_pi=setInterval(function(){_pt++;if(_patchBranding()||_pt>40)clearInterval(_pi);},300);
       } catch(e){ console.warn('[BUY] Jupiter.init error:', e); }
     });
   };
