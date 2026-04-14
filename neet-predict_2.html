@@ -2880,7 +2880,7 @@ function switchToScan(){
   _showSection('scan');
   document.getElementById('scanTab')?.classList.add('active');
 }
-function switchToBuy(){
+window.switchToBuy = function(){
     _showSection('buy');
     document.getElementById('buyTab')?.classList.add('active');
     initCustomSwap();
