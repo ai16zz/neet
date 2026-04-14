@@ -3801,123 +3801,11 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 #integrated-terminal { position:relative; z-index:1; }
 
 /* ─────────────────────────────────────────────────────────
-   DEEP JUPITER OVERRIDE — Force NEET theme on all internals
+   NOTE: Jupiter Terminal v4 renders inside a Shadow DOM.
+   External CSS cannot pierce it — all overrides are done
+   via JS (see patchTerminal below), which injects a <style>
+   tag directly into the shadow root.
    ───────────────────────────────────────────────────────── */
-
-/* Kill ALL Jupiter branding links / text */
-#integrated-terminal a[href*="jup.ag"],
-#integrated-terminal a[href*="jupiter.ag"],
-#integrated-terminal a[href*="jup.io"] { display:none!important; }
-
-/* Nuclear: hide "Powered by" footer row by Tailwind-pattern */
-#integrated-terminal [class*="justify-center"][class*="py"],
-#integrated-terminal [class*="justify-center"][class*="bottom"],
-#integrated-terminal [class*="footer"],
-#integrated-terminal [class*="Footer"] { display:none!important; }
-
-/* ── Direct first/last child nukes for Jupiter header + footer ── */
-/* Jupiter Terminal v4 structure:
-   #integrated-terminal > div > div > div:first-child  = header (Jupiter logo + name)
-   #integrated-terminal > div > div > div:last-child   = "Powered by Jupiter" footer    */
-#integrated-terminal > div > div > div:first-child { display:none!important; }
-#integrated-terminal > div > div > div:last-child  { display:none!important; }
-
-/* Force container backgrounds to our dark theme */
-#integrated-terminal > div {
-  background:#08090f !important;
-  border:none !important;
-  border-radius:0 !important;
-}
-#integrated-terminal > div > div {
-  background:#08090f !important;
-}
-
-/* Token input panels (Selling / Buying boxes) */
-#integrated-terminal [class*="rounded-2xl"],
-#integrated-terminal [class*="rounded-xl"] {
-  background:rgba(255,255,255,.025) !important;
-  border-color:rgba(255,255,255,.07) !important;
-}
-
-/* Override any remaining white/light bg Tailwind classes */
-#integrated-terminal [class*="bg-white"],
-#integrated-terminal [class*="bg-gray-100"],
-#integrated-terminal [class*="bg-gray-50"] {
-  background:rgba(255,255,255,.03) !important;
-}
-#integrated-terminal [class*="bg-black"],
-#integrated-terminal [class*="bg-\[#"] {
-  background:#0a0d14 !important;
-}
-
-/* Text colors */
-#integrated-terminal [class*="text-white"] { color:#dde4f5 !important; }
-#integrated-terminal [class*="text-gray-400"],
-#integrated-terminal [class*="text-gray-500"] { color:#6b7799 !important; }
-
-/* Border colors */
-#integrated-terminal [class*="border-white\/"],
-#integrated-terminal [class*="border-gray"] { border-color:rgba(255,255,255,.08) !important; }
-
-/* Swap direction (arrow) button */
-#integrated-terminal button[class*="rounded-full"] {
-  background:rgba(0,255,135,.1) !important;
-  border:1px solid rgba(0,255,135,.28) !important;
-  color:var(--green) !important;
-}
-#integrated-terminal button[class*="rounded-full"]:hover {
-  background:rgba(0,255,135,.2) !important;
-  box-shadow:0 0 12px rgba(0,255,135,.2) !important;
-}
-
-/* Main CTA button — the big Connect Wallet / Swap button */
-#integrated-terminal button[class*="w-full"],
-#integrated-terminal button[class*="py-4"],
-#integrated-terminal button[class*="py-5"] {
-  background:#00ff87 !important;
-  color:#000 !important;
-  font-family:'Space Mono',monospace !important;
-  font-weight:700 !important;
-  letter-spacing:.1em !important;
-  text-transform:uppercase !important;
-  border:none !important;
-  border-radius:10px !important;
-  box-shadow:0 0 24px rgba(0,255,135,.28) !important;
-}
-#integrated-terminal button[class*="w-full"]:hover,
-#integrated-terminal button[class*="py-4"]:hover,
-#integrated-terminal button[class*="py-5"]:hover {
-  background:#00e87a !important;
-  box-shadow:0 0 32px rgba(0,255,135,.4) !important;
-}
-
-/* Token selector chips (SOL / NEET pill buttons) */
-#integrated-terminal button[class*="rounded-full"][class*="px"],
-#integrated-terminal button[class*="rounded-2xl"][class*="px"] {
-  background:rgba(255,255,255,.04) !important;
-  border:1px solid rgba(255,255,255,.09) !important;
-  color:#dde4f5 !important;
-}
-
-/* Number inputs */
-#integrated-terminal input,
-#integrated-terminal input[type="text"],
-#integrated-terminal input[type="number"] {
-  color:#dde4f5 !important;
-  font-family:'Space Mono',monospace !important;
-  background:transparent !important;
-  font-size:20px !important;
-}
-
-/* Dividers / hr */
-#integrated-terminal [class*="border-t"],
-#integrated-terminal hr { border-color:rgba(255,255,255,.06) !important; }
-
-/* Scrollbar inside terminal */
-#integrated-terminal * {
-  scrollbar-width:thin;
-  scrollbar-color:rgba(0,255,135,.2) transparent;
-}
 
 /* ── Footer bar ── */
 .buy-footer-bar {
@@ -3986,174 +3874,160 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 </div>
 
 <script>
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    BUY TAB — NEET Swap
-   Strips Jupiter branding, forces NEET color theme
-   on every render cycle via MutationObserver.
-   ═══════════════════════════════════════════════ */
+   Jupiter Terminal v4 renders inside a Shadow DOM.
+   All styling must be injected into shadowRoot directly.
+   ═══════════════════════════════════════════════════════════════ */
 (function() {
 
-  /* ── Inject a <style> inside the terminal for max override power ── */
-  function injectInnerStyles(container) {
-    if (container.querySelector('#neet-inner-styles')) return;
-    var s = document.createElement('style');
-    s.id = 'neet-inner-styles';
-    s.textContent =
-      /* Scrollbars */
-      '* { scrollbar-width:thin; scrollbar-color:rgba(0,255,135,.2) transparent; }' +
-      /* Base background reset */
-      'body,#root,[id],[class] { --tw-bg-opacity:1; }';
-    container.insertBefore(s, container.firstChild);
-  }
-
-  function patchTerminal() {
+  /* ── Find the shadow host (div with .shadowRoot) inside #integrated-terminal ── */
+  function getShadowRoot() {
     var t = document.getElementById('integrated-terminal');
-    if (!t || !t.firstElementChild) return;
-
-    injectInnerStyles(t);
-
-    /* Force dark background on root divs Jupiter creates */
-    t.style.background = '#08090f';
-    var root = t.firstElementChild;
-    if (root) {
-      root.style.cssText = 'background:#08090f!important;border:none!important;border-radius:0!important;';
-      var inner = root.firstElementChild;
-      if (inner) inner.style.cssText = 'background:#08090f!important;';
-    }
-
-    /* 1. Hide Jupiter header (SVG logo + "Jupiter" text)
-       No offsetHeight check — section may be display:none on first run */
-    (function hideHeader(el, depth) {
-      if (!el || depth > 6) return;
-      var kids = Array.prototype.slice.call(el.children);
-      for (var i = 0; i < kids.length; i++) {
-        var c = kids[i];
-        var hasJup = c.textContent.indexOf('Jupiter') >= 0;
-        var hasSvg = !!c.querySelector('svg');
-        var shortContent = c.textContent.trim().length < 200; // avoid hiding the whole app
-        if (hasJup && hasSvg && shortContent) {
-          c.style.cssText = 'display:none!important'; return;
-        }
-      }
-      if (kids.length) hideHeader(kids[0], depth + 1);
-    })(t, 0);
-
-    /* 2. Nuclear "Powered by" footer removal — text node walk
-       No offsetHeight check — works even when parent is display:none */
-    t.querySelectorAll('*').forEach(function(el) {
-      if (el.children.length > 0) return;
-      var txt = (el.textContent || '').trim();
-      if (txt === 'Powered by' || txt === 'Jupiter' ||
-          txt.indexOf('Powered by Jupiter') >= 0 || txt.indexOf('Powered by') >= 0) {
-        // Hide the leaf node itself
-        el.style.cssText = 'display:none!important';
-        // Walk up and hide the first small container (the footer row)
-        var p = el.parentElement; var n = 0;
-        while (p && p !== t && n++ < 8) {
-          if (p.children.length <= 6) {
-            p.style.cssText = 'display:none!important'; break;
-          }
-          p = p.parentElement;
-        }
-      }
-    });
-
-    /* 3. Kill all Jupiter external links */
-    t.querySelectorAll('a[href*="jup.ag"],a[href*="jupiter.ag"],a[href*="jup.io"]').forEach(function(a) {
-      var w = a.closest('div') || a.parentElement;
-      if (w) w.style.cssText = 'display:none!important';
-    });
-
-    /* 4. Style all buttons */
-    t.querySelectorAll('button').forEach(function(btn) {
-      var txt = btn.textContent.trim();
-
-      /* Main CTA: Connect Wallet / Swap / Enter Amount */
-      if (txt === 'Connect Wallet' || txt === 'Swap' || txt === 'Buy' ||
-          txt === 'Enter amount' || txt === 'Insufficient balance') {
-        btn.style.cssText = [
-          'background:#00ff87!important',
-          'color:#000!important',
-          'font-weight:700!important',
-          'border:none!important',
-          'border-radius:10px!important',
-          'font-family:"Space Mono",monospace!important',
-          'letter-spacing:.09em!important',
-          'text-transform:uppercase!important',
-          'box-shadow:0 0 24px rgba(0,255,135,.3)!important',
-          'transition:background .2s,box-shadow .2s!important',
-        ].join(';');
-        return;
-      }
-
-      /* Swap direction / arrow button (icon only, no text, circular) */
-      if (!txt && btn.querySelector('svg')) {
-        btn.style.cssText = [
-          'background:rgba(0,255,135,.1)!important',
-          'border:1px solid rgba(0,255,135,.28)!important',
-          'border-radius:50%!important',
-          'color:#00ff87!important',
-          'transition:background .2s!important',
-        ].join(';');
-        return;
-      }
-
-      /* Token selector chips (SOL / NEET pill) */
-      if ((btn.querySelector('img') || btn.querySelector('svg')) && txt && txt.length < 12) {
-        btn.style.cssText = [
-          'background:rgba(255,255,255,.04)!important',
-          'border:1px solid rgba(255,255,255,.09)!important',
-          'border-radius:20px!important',
-          'color:#dde4f5!important',
-        ].join(';');
-      }
-    });
-
-    /* 5. Style number inputs */
-    t.querySelectorAll('input').forEach(function(inp) {
-      inp.style.cssText = [
-        'color:#dde4f5!important',
-        'font-family:"Space Mono",monospace!important',
-        'background:transparent!important',
-        'font-size:20px!important',
-      ].join(';');
-    });
-
-    /* 6. Token row panels (Selling / Buying boxes) — mid-height rounded divs */
-    t.querySelectorAll('div').forEach(function(div) {
-      var cls = (div.className && typeof div.className === 'string') ? div.className : '';
-      if ((cls.indexOf('rounded-2xl') >= 0 || cls.indexOf('rounded-xl') >= 0) &&
-          !cls.indexOf('button') >= 0) {
-        var h = div.offsetHeight;
-        if (h > 60 && h < 220) {
-          div.style.background = 'rgba(255,255,255,.025)';
-          div.style.borderColor = 'rgba(255,255,255,.07)';
-          div.style.borderRadius = '10px';
-        }
-      }
-    });
+    if (!t) return null;
+    var d1 = t.children[0];
+    if (!d1) return null;
+    var d2 = d1.children[0];
+    if (!d2 || !d2.shadowRoot) return null;
+    return d2.shadowRoot;
   }
 
-  /* Start MutationObserver once terminal element exists */
+  /* ── CSS injected directly into the shadow root ── */
+  var NEET_SHADOW_CSS = [
+    /* Card + panel backgrounds */
+    '.bg-black { background:#08090f !important; }',
+    '.bg-background { background:#08090f !important; }',
+    '[class*="bg-[#"] { background:#0d1017 !important; }',
+
+    /* Hide Jupiter header bar (h-7 is the header's fixed height class) */
+    '.h-7 { display:none !important; }',
+    '.mt-2.h-7 { display:none !important; }',
+
+    /* Hide "Powered by Jupiter" footer row */
+    '.justify-center.flex-row { display:none !important; }',
+    '[class*="text-primary-text\\/50"] { display:none !important; }',
+
+    /* Input panel boxes (Selling / Buying) */
+    '.rounded-xl { background:rgba(255,255,255,.03) !important; border-color:rgba(255,255,255,.08) !important; }',
+    '.rounded-2xl { background:rgba(255,255,255,.03) !important; border-color:rgba(255,255,255,.08) !important; }',
+
+    /* Swap arrow direction button */
+    'button.rounded-full { background:rgba(0,255,135,.1) !important; border:1px solid rgba(0,255,135,.28) !important; color:#00ff87 !important; }',
+
+    /* Text */
+    '.text-primary-text { color:#dde4f5 !important; }',
+    '[class*="text-white"] { color:#dde4f5 !important; }',
+
+    /* Inputs */
+    'input { color:#dde4f5 !important; font-family:"Space Mono",monospace !important; background:transparent !important; font-size:20px !important; }',
+
+    /* Dividers */
+    '[class*="border-t"] { border-color:rgba(255,255,255,.06) !important; }',
+
+    /* Scrollbars */
+    '* { scrollbar-width:thin; scrollbar-color:rgba(0,255,135,.2) transparent; }',
+  ].join('\n');
+
+  /* ── Inject style tag into shadow root ── */
+  function injectShadowStyles(sr) {
+    if (sr.querySelector('#neet-shadow-styles')) return;
+    var s = document.createElement('style');
+    s.id = 'neet-shadow-styles';
+    s.textContent = NEET_SHADOW_CSS;
+    sr.appendChild(s);
+  }
+
+  /* ── Directly hide header + footer elements by DOM position ── */
+  function hideJupiterBranding(sr) {
+    try {
+      /* Structure: sr > div > div(flex) > div(card) > div(panel)
+         panel.children[0] = main content wrapper
+         panel.children[0].children[0] = Jupiter header bar (h=28, text "Jupiter Connect Wallet")
+         panel.children[1] = "Powered by Jupiter" footer (h=32) */
+      var panel = sr.children[0].children[0].children[0].children[0];
+      if (!panel) return;
+
+      var mainWrap = panel.children[0];
+      if (mainWrap && mainWrap.children[0]) {
+        var hdr = mainWrap.children[0];
+        if (hdr.textContent.indexOf('Jupiter') >= 0 || hdr.offsetHeight < 40) {
+          hdr.style.cssText = 'display:none!important';
+        }
+      }
+
+      var footer = panel.children[1];
+      if (footer && (footer.textContent.indexOf('Powered') >= 0 || footer.offsetHeight < 40)) {
+        footer.style.cssText = 'display:none!important';
+      }
+    } catch(e) {}
+  }
+
+  /* ── Style interactive elements (buttons, inputs) via JS ── */
+  function styleElements(sr) {
+    try {
+      sr.querySelectorAll('button').forEach(function(btn) {
+        var txt = btn.textContent.trim();
+        if (txt === 'Connect Wallet' || txt === 'Swap' || txt === 'Buy' ||
+            txt === 'Enter amount' || txt === 'Insufficient balance') {
+          btn.style.cssText = 'background:#00ff87!important;color:#000!important;font-weight:700!important;border:none!important;border-radius:10px!important;font-family:"Space Mono",monospace!important;letter-spacing:.09em!important;text-transform:uppercase!important;box-shadow:0 0 24px rgba(0,255,135,.3)!important;';
+          return;
+        }
+        if (!txt && btn.querySelector('svg')) {
+          btn.style.cssText = 'background:rgba(0,255,135,.1)!important;border:1px solid rgba(0,255,135,.28)!important;border-radius:50%!important;color:#00ff87!important;';
+          return;
+        }
+        if ((btn.querySelector('img') || btn.querySelector('svg')) && txt && txt.length < 12) {
+          btn.style.cssText = 'background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.09)!important;border-radius:20px!important;color:#dde4f5!important;';
+        }
+      });
+      sr.querySelectorAll('input').forEach(function(inp) {
+        inp.style.cssText = 'color:#dde4f5!important;font-family:"Space Mono",monospace!important;background:transparent!important;font-size:20px!important;';
+      });
+    } catch(e) {}
+  }
+
+  /* ── Master patch function ── */
+  function patchTerminal() {
+    var sr = getShadowRoot();
+    if (!sr) return;
+    injectShadowStyles(sr);
+    hideJupiterBranding(sr);
+    styleElements(sr);
+  }
+
+  /* ── Observer: watch both the light DOM wrapper and shadow root ── */
   var _obs = new MutationObserver(patchTerminal);
+  var _shadowObserved = false;
+
   function startObs() {
     var t = document.getElementById('integrated-terminal');
-    if (t) {
-      _obs.observe(t, { childList:true, subtree:true, attributes:true });
-      patchTerminal();
-    }
+    if (!t) return;
+    _obs.observe(t, { childList:true, subtree:true });
+    patchTerminal();
+
+    /* Also observe inside the shadow root once it appears */
+    var _shadowCheck = setInterval(function() {
+      var sr = getShadowRoot();
+      if (sr && !_shadowObserved) {
+        _obs.observe(sr, { childList:true, subtree:true, attributes:true });
+        _shadowObserved = true;
+        patchTerminal();
+        clearInterval(_shadowCheck);
+      }
+    }, 200);
   }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', startObs);
   } else {
     startObs();
   }
 
-  /* Aggressive polling for first 12 seconds (Jupiter loads async) */
+  /* Polling for first 15 seconds (Jupiter loads async, shadow DOM appears late) */
   var _pc = 0;
   var _pt = setInterval(function() {
     patchTerminal();
-    if (++_pc > 20) clearInterval(_pt);
+    if (++_pc > 25) clearInterval(_pt);
   }, 600);
 
 })();
