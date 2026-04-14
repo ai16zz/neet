@@ -3755,7 +3755,7 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
         window.Jupiter.init({
           displayMode: 'integrated',
           integratedTargetId: 'integrated-terminal',
-          endpoint: 'https://api.mainnet-beta.solana.com',
+          endpoint: 'https://rpc.ankr.com/solana',
           defaultExplorer: 'Solscan',
           formProps: {
             initialInputMint: _SOL,
@@ -3813,8 +3813,25 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
             return true;
           }catch(e){return false;}
         }
-        // Poll every 300ms
-        var _pt=0,_pi=setInterval(function(){_pt++;if(_patchBranding()||_pt>40)clearInterval(_pi);},300);
+        // Initial patch: poll until first render (300ms interval, 40 attempts)
+        var _pt=0,_pi=setInterval(function(){
+          _pt++;
+          if(_patchBranding()||_pt>40)clearInterval(_pi);
+        },300);
+        // Persistent watch: re-patch every 1.5s in case Jupiter re-renders (wallet connect etc)
+        setInterval(function(){
+          try{
+            var inst=document.getElementById('jupiter-terminal-instance');
+            var sh=inst?inst.querySelector('div'):null;
+            var sr=sh?sh.shadowRoot:null;
+            if(!sr)return;
+            var panel=sr.querySelector('[class*="bg-background"]');
+            if(!panel)return;
+            var hdr=panel.children[0]&&panel.children[0].children[0];
+            // If header is visible again (Jupiter re-rendered), re-apply patch
+            if(hdr&&hdr.style.display!=='none'){_patchBranding();}
+          }catch(e){}
+        },1500);
       } catch(e){ console.warn('[BUY] Jupiter.init error:', e); }
     });
   };
