@@ -3857,7 +3857,7 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
         if(outEl)outEl.textContent=out>=1000?out.toLocaleString('en',{maximumFractionDigits:0}):out.toFixed(2);
         var pi=parseFloat(q.priceImpactPct||0)*100;
         var rate=(out/amt).toLocaleString('en',{maximumFractionDigits:0});
-        if(infoEl)infoEl.innerHTML='Rate: 1 '+(_flipped?'NEET':'SOL')+' = '+rate+' '+(_flipped?'SOL':'NEET') &nbsp;·&nbsp; Impact: <span style="color:'+(pi>1?'#ff3b5c':'#00ff87')+'">'+( pi<0.01?'<0.01':pi.toFixed(2))+'%</span>';
+        if(infoEl)infoEl.innerHTML='Rate: 1 '+(_flipped?'NEET':'SOL')+' = '+rate+' '+(_flipped?'SOL':'NEET')+' &nbsp;·&nbsp; Impact: <span style="color:'+(pi>1?'#ff3b5c':'#00ff87')+'">'+( pi<0.01?'<0.01':pi.toFixed(2))+'%</span>';
         var sp=typeof window.cpx==='number'?window.cpx:0;
         if(sp&&inUsd)inUsd.textContent='~$'+(amt*sp).toFixed(2);
         if(outUsd)outUsd.textContent='';
