@@ -3761,6 +3761,7 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
             initialInputMint: _SOL,
             initialOutputMint: _NEET,
             initialSlippageBps: 100,
+            fixedInputMint: true,
           },
         });
         _rendered = true;
@@ -3803,7 +3804,12 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
             // Inject CSS for dark background
             if(!sr.querySelector('#np')){
               var s=document.createElement('style');s.id='np';
-              s.textContent='[class*="bg-black"],[class*="bg-background"]{background:#0d1117!important;}';
+              s.textContent='[class*="bg-black"],[class*="bg-background"]{background:#0d1117!important;}'+
+              ' button{background:rgba(0,255,135,0.05)!important;border:1px solid rgba(0,255,135,0.15)!important;color:#8899aa!important;border-radius:10px!important;}'+
+              ' button:hover{background:rgba(0,255,135,0.10)!important;border-color:rgba(0,255,135,0.3)!important;color:#ccd!important;}'+
+              ' input{background:transparent!important;color:#dde4f5!important;}'+
+              ' [class*="warning"]{background:rgba(255,200,0,0.05)!important;}'+
+              ' [class*="Error"],[class*="error"]{color:#ff6b8a!important;}';
               sr.appendChild(s);
             }
 
