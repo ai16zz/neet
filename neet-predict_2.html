@@ -3666,10 +3666,8 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
   transition:color .2s;}
 .buy-topbar-ca:hover{color:#00ff87;}
 
-/* Jupiter terminal clip wrapper */
-.jup-clip{position:relative;overflow:hidden;height:450px;background:#111418;}
-.jup-clip iframe{width:100%;height:530px;border:none;margin-top:-32px;}
-.jup-cover-bottom{position:absolute;bottom:0;left:0;right:0;height:42px;background:#111418;}
+/* Jupiter terminal area */
+#integrated-terminal{width:100%;min-height:380px;background:#05060a;display:block;}
 
 /* Footer bar */
 .buy-footer-bar{display:flex;justify-content:space-between;align-items:center;
@@ -3710,10 +3708,7 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
         <span class="buy-topbar-label">NEET SWAP</span>
         <span class="buy-topbar-ca" onclick="navigator.clipboard?.writeText('Ce2gBhmvqDMxEfuBuBa3MN1dCdXhSFeHFuDbFNHpump')" title="Copy contract">Ce2g...pump</span>
       </div>
-      <div class="jup-clip">
-        <iframe id="jup-frame" src="" allow="clipboard-write" loading="lazy"></iframe>
-        <div class="jup-cover-bottom"></div>
-      </div>
+      <div id="integrated-terminal"></div>
       <div class="buy-footer-bar">
         <span class="buy-badge">&#x26A1; Best price routing &middot; <span>1% fee supports $NEET</span></span>
         <div class="buy-footer-links">
@@ -3726,53 +3721,114 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 </div>
 
 <script>
-// ── JUPITER TERMINAL (iframe) ──────────────────────────────
-const NEET_MINT = 'Ce2gBhmvqDMxEfuBuBa3MN1dCdXhSFeHFuDbFNHpump';
-const SOL_MINT  = 'So11111111111111111111111111111111111111112';
+// ── JUPITER TERMINAL (SDK integrated mode) ─────────────────
+// IIFE prevents const collision with other script blocks on the page
+(function(){
+  var _NEET = 'Ce2gBhmvqDMxEfuBuBa3MN1dCdXhSFeHFuDbFNHpump';
+  var _SOL  = 'So11111111111111111111111111111111111111112';
+  var _scriptLoaded = false;
+  var _rendered = false;
 
-function initJupiterTerminal(){
-  const frame = document.getElementById('jup-frame');
-  if(!frame) return;
-  // only load once
-  if(frame.getAttribute('data-loaded')) return;
-  frame.setAttribute('data-loaded','1');
-  frame.src = 'https://terminal.jup.ag/?inputMint='+SOL_MINT
-    +'&outputMint='+NEET_MINT
-    +'&strictTokenList=false'
-    +'&slippageBps=100';
-}
+  function _loadScript(cb){
+    if(_scriptLoaded){cb();return;}
+    var s=document.createElement('script');
+    s.src='https://terminal.jup.ag/main-v4.js';
+    s.setAttribute('data-preload','');
+    s.onload=function(){_scriptLoaded=true;cb();};
+    s.onerror=function(){console.warn('[BUY] failed to load Jupiter script');};
+    document.head.appendChild(s);
+  }
 
-async function fetchBuyStats(){
-  try{
-    const r = await fetch('https://api.dexscreener.com/latest/dex/tokens/'+NEET_MINT);
-    const d = await r.json();
-    const pair = (d.pairs||[]).sort((a,b)=>(b.liquidity?.usd||0)-(a.liquidity?.usd||0))[0];
-    if(!pair) return;
+  window.initJupiterTerminal = function(){
+    var el = document.getElementById('integrated-terminal');
+    if(!el) return;
+    // Already rendered and has content — skip
+    if(_rendered && el.children.length > 0) return;
+    _rendered = false;
+    _loadScript(function(){
+      if(!window.Jupiter){
+        setTimeout(window.initJupiterTerminal, 400);
+        return;
+      }
+      try{
+        el.innerHTML = '';
+        window.Jupiter.init({
+          displayMode: 'integrated',
+          integratedTargetId: 'integrated-terminal',
+          endpoint: 'https://api.mainnet-beta.solana.com',
+          defaultExplorer: 'Solscan',
+          formProps: {
+            initialInputMint: _SOL,
+            initialOutputMint: _NEET,
+            initialSlippageBps: 100,
+          },
+        });
+        _rendered = true;
+        // Walk shadow DOM to hide Jupiter branding by actual text content
+        function _patchBranding(){
+          try{
+            var cont = document.getElementById('integrated-terminal');
+            if(!cont||!cont.shadowRoot) return false;
+            var sr = cont.shadowRoot;
+            if(sr.querySelector('#neet-done')) return true;
+            var all = Array.from(sr.querySelectorAll('*'));
+            if(all.length<5) return false; // not rendered yet
+            var patched=0;
+            all.forEach(function(el){
+              var txt=el.textContent.trim();
+              // Hide Jupiter header row — find "Jupiter" label then walk up to the flex row
+              if(el.childElementCount===0 && txt==='Jupiter'){
+                var t=el;
+                for(var j=0;j<6;j++){
+                  if(!t.parentElement||t.parentElement===sr) break;
+                  t=t.parentElement;
+                  if(t.childElementCount>=2){t.style.setProperty('display','none','important');patched++;break;}
+                }
+              }
+              // Hide "Powered by Jupiter" footer
+              if(txt.indexOf('Powered by')>-1&&txt.indexOf('Jupiter')>-1&&el.childElementCount<=5){
+                el.style.setProperty('display','none','important');patched++;
+              }
+            });
+            // Restyle Connect Wallet button to match site (not the header one — that's already hidden)
+            all.forEach(function(el){
+              if(el.tagName==='BUTTON'&&el.textContent.trim().toLowerCase().indexOf('connect')>-1){
+                el.style.setProperty('background','rgba(0,255,135,0.06)','important');
+                el.style.setProperty('border','1px solid rgba(0,255,135,0.15)','important');
+                el.style.setProperty('color','#445','important');
+                el.style.setProperty('font-family','Space Mono,monospace','important');
+              }
+            });
+            if(patched>0){
+              var done=document.createElement('div');
+              done.id='neet-done';done.style.display='none';
+              sr.appendChild(done);return true;
+            }
+            return false;
+          }catch(e){return false;}
+        }
+        // Poll every 300ms until branding is patched (Jupiter renders async)
+        var _pt=0,_pi=setInterval(function(){_pt++;if(_patchBranding()||_pt>30)clearInterval(_pi);},300);
+      } catch(e){ console.warn('[BUY] Jupiter.init error:', e); }
+    });
+  };
 
-    const price = parseFloat(pair.priceUsd||0);
-    const ch24 = parseFloat(pair.priceChange?.h24||0);
-    const mcap = pair.marketCap || pair.fdv || 0;
-
-    const priceEl = document.getElementById('buyPrice');
-    const ch24El  = document.getElementById('buy24h');
-    const mcapEl  = document.getElementById('buyMcap');
-
-    if(priceEl) priceEl.textContent = price < 0.01
-      ? '$'+price.toFixed(6)
-      : '$'+price.toFixed(4);
-
-    if(ch24El){
-      ch24El.textContent = (ch24>=0?'+':'')+ch24.toFixed(1)+'%';
-      ch24El.className = 'buy-stat-val '+(ch24>=0?'pos':'neg');
-    }
-    if(mcapEl){
-      mcapEl.textContent = mcap>=1e9 ? '$'+(mcap/1e9).toFixed(1)+'B'
-        : mcap>=1e6 ? '$'+(mcap/1e6).toFixed(1)+'M'
-        : mcap>=1e3 ? '$'+(mcap/1e3).toFixed(0)+'K'
-        : '$'+mcap.toFixed(0);
-    }
-  } catch(e){ console.warn('[BUY] fetchBuyStats error', e); }
-}
+  window.fetchBuyStats = async function(){
+    try{
+      var r = await fetch('https://api.dexscreener.com/latest/dex/tokens/'+_NEET);
+      var d = await r.json();
+      var pair = (d.pairs||[]).sort(function(a,b){return (b.liquidity?.usd||0)-(a.liquidity?.usd||0);})[0];
+      if(!pair) return;
+      var price = parseFloat(pair.priceUsd||0);
+      var ch24  = parseFloat(pair.priceChange?.h24||0);
+      var mcap  = pair.marketCap||pair.fdv||0;
+      var p=document.getElementById('buyPrice'),c=document.getElementById('buy24h'),m=document.getElementById('buyMcap');
+      if(p) p.textContent = price<0.01?'$'+price.toFixed(6):'$'+price.toFixed(4);
+      if(c){c.textContent=(ch24>=0?'+':'')+ch24.toFixed(1)+'%';c.className='buy-stat-val '+(ch24>=0?'pos':'neg');}
+      if(m) m.textContent = mcap>=1e9?'$'+(mcap/1e9).toFixed(1)+'B':mcap>=1e6?'$'+(mcap/1e6).toFixed(1)+'M':mcap>=1e3?'$'+(mcap/1e3).toFixed(0)+'K':'$'+mcap.toFixed(0);
+    } catch(e){}
+  };
+})();
 </script>
 
 </html>
