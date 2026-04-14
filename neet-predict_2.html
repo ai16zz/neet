@@ -502,7 +502,7 @@ async function fetchBal(){
   // Fetch NEET token balance and update UI
   try{
     const NEET_MINT_ADDR='Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
-    const rpcList=['https://solana-rpc.publicnode.com','https://api.mainnet-beta.solana.com','https://rpc.ankr.com/solana'];
+    const rpcList=['https://solana-rpc.publicnode.com','https://api.mainnet-beta.solana.com','https://solana-rpc.publicnode.com'];
     let neetTotal=null;
     for(const rpc of rpcList){
       try{
@@ -3102,7 +3102,7 @@ const NEET_MIN_HOLD=10000;
 const RATE_LIMIT_MS=60*1000;
 const SUPABASE_URL='https://nededygaldxlufaenqne.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZGVkeWdhbGR4bHVmYWVucW5lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NzE4NDksImV4cCI6MjA5MTE0Nzg0OX0.q_A8m5TK9-1TiFzq9Uy8jXE7TaefXsdePCi1Of-_FhY';
-const SOLANA_RPCS=['https://solana-rpc.publicnode.com','https://api.mainnet-beta.solana.com','https://rpc.ankr.com/solana'];
+const SOLANA_RPCS=['https://solana-rpc.publicnode.com','https://api.mainnet-beta.solana.com','https://solana-rpc.publicnode.com'];
 window.NeetChat=(()=>{let wallet=null,xHandle=null,neetBalance=0,supa=null,lastSentAt=0,cdTimer=null;const $=id=>document.getElementById(id);const setStatus=(m,t='')=>{const e=$('neet-status');e.style.display='block';e.className='neet-status '+t;e.textContent=m;};function _hydrateFromStorage(){try{if(wallet&&xHandle&&neetBalance>=NEET_MIN_HOLD)return true;const raw=localStorage.getItem('neet_verify_v1');if(!raw)return false;const s=JSON.parse(raw);if(!s||!s.wallet||!s.twitter_handle)return false;wallet=s.wallet;xHandle=(s.twitter_handle[0]==='@')?s.twitter_handle:('@'+s.twitter_handle);neetBalance=(s.balance!=null&&s.balance!=='')?Number(s.balance):NEET_MIN_HOLD;return true;}catch(e){return false;}}function openGate(){_hydrateFromStorage();if(wallet&&xHandle&&neetBalance>=NEET_MIN_HOLD){openRoom();return;}const g=$('neet-gate');if(g){g.style.display='';g.classList.add('show');}}function closeGate(){const g=$('neet-gate');if(g){g.classList.remove('show');g.style.display='';}}function _updateLabel(){try{const lbl=$('neet-me-label');if(lbl&&wallet){lbl.textContent=(xHandle||'')+'  ·  '+wallet.slice(0,4)+'…'+wallet.slice(-4)+'  ·  '+(Number(neetBalance)||0).toLocaleString()+' NEET';}}catch(e){}}
 function _revokeAccess(){const input=$('neet-input');const btn=$('neet-send');if(input){input.disabled=true;input.placeholder='⚠ insufficient $NEET — disconnect and re-verify';}if(btn)btn.disabled=true;addLocal('⚠ system','your $NEET balance dropped below '+NEET_MIN_HOLD.toLocaleString()+'. Click DISCONNECT to re-verify with an eligible wallet.');try{localStorage.removeItem('neet_verify_v1');}catch(e){}}
 function disconnect(){try{localStorage.removeItem('neet_verify_v1');}catch(e){}wallet=null;xHandle=null;neetBalance=0;supa=null;lastSentAt=0;clearInterval(cdTimer);const input=$('neet-input');const btn=$('neet-send');if(input){input.disabled=false;input.placeholder='say something to the trenches...';input.value='';}if(btn)btn.disabled=false;const msgs=$('neet-msgs');if(msgs)msgs.innerHTML='';closeRoom();setTimeout(()=>{const g=$('neet-gate');if(g){g.style.display='';g.classList.add('show');}},200);}
@@ -3763,7 +3763,7 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
   var _NEET='Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
   var _DEC=6;
   var _wallet=null,_quoteTimer=null,_lastQuote=null;
-  var _RPC='https://rpc.ankr.com/solana';
+  var _RPC='https://solana-rpc.publicnode.com';
 
   function _prov(){return window.phantom?.solana||window.solana||window.solflare||null;}
 
@@ -3788,7 +3788,7 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
     btn.textContent='Swapping...';
     btn.disabled=true;
     try{
-      var sr=await fetch('https://quote-api.jup.ag/v6/swap',{
+      var sr=await fetch('https://lite-api.jup.ag/swap/v1/swap',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({quoteResponse:_lastQuote,userPublicKey:_wallet,wrapAndUnwrapSol:true,prioritizationFeeLamports:'auto'})
@@ -3829,7 +3829,7 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
       var lam=Math.round(amt*1e9);
       if(infoEl)infoEl.textContent='Getting quote...';
       try{
-        var r=await fetch('https://quote-api.jup.ag/v6/quote?inputMint='+_SOL+'&outputMint='+_NEET+'&amount='+lam+'&slippageBps=100');
+        var r=await fetch('https://lite-api.jup.ag/swap/v1/quote?inputMint='+_SOL+'&outputMint='+_NEET+'&amount='+lam+'&slippageBps=100');
         var q=await r.json();
         if(q.error||!q.outAmount){if(infoEl)infoEl.textContent=q.error||'No route found';_lastQuote=null;_btn();return;}
         _lastQuote=q;
