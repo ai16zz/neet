@@ -228,7 +228,6 @@
       const prov = window.NeetWallet.getProvider();
       if (prov) {
         // Ensure the provider is the unified one before delegating
-        window.solana = prov;
       }
       return _origVfy.apply(this, arguments);
     };
