@@ -200,55 +200,6 @@
   }
 
 
-  /* ── 6. INJECT 0.02 SOL FEE DISCLOSURE INTO NEET PAD UI ─────────────────
-     Adds a visible notice beneath the launch button so users know a second
-     Phantom approval will request 0.02 SOL before the launch completes.
-  ──────────────────────────────────────────────────────────────────────── */
-  function injectFeeDisclosure() {
-    // Find the launch button by looking for the onclick="padLaunchV2()"
-    const btns = document.querySelectorAll('button');
-    let launchBtn = null;
-    for (const b of btns) {
-      if ((b.getAttribute('onclick') || '').includes('padLaunch') ||
-          b.textContent.includes('LAUNCH TOKEN')) {
-        launchBtn = b;
-        break;
-      }
-    }
-    if (!launchBtn) return;
-
-    // Don't add twice
-    if (document.getElementById('neet-fee-disclosure')) return;
-
-    const notice = document.createElement('p');
-    notice.id = 'neet-fee-disclosure';
-    notice.style.cssText = [
-      'font-size:11px',
-      'color:rgba(245,196,0,0.85)',
-      'margin-top:8px',
-      'padding:8px 12px',
-      'background:rgba(245,196,0,0.06)',
-      'border:1px solid rgba(245,196,0,0.18)',
-      'border-radius:6px',
-      'font-family:monospace',
-      'line-height:1.6'
-    ].join(';');
-    notice.innerHTML =
-      '⚠ <strong>Two Phantom approvals required:</strong><br>' +
-      '① Token creation on pump.fun<br>' +
-      '② Platform fee: <strong>0.02 SOL</strong> → treasury (buy &amp; burn $NEET)';
-
-    launchBtn.parentNode.insertBefore(notice, launchBtn.nextSibling);
-  }
-
-  // Run on DOM ready and again after a short delay (in case section loads async)
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectFeeDisclosure);
-  } else {
-    injectFeeDisclosure();
-  }
-  setTimeout(injectFeeDisclosure, 1500);
-  setTimeout(injectFeeDisclosure, 4000);
 
 
   /* ── 7. REPLACE ALL connectWallet CALLS TO USE NeetWallet.connect ─────────
