@@ -262,6 +262,7 @@ footer a:hover{color:var(--green);}
     <button class="ntab" id="padTab" onclick="switchToPad()">&#x1F680; LAUNCH</button>
     <button class="ntab" id="scanTab" onclick="switchToScan()">&#x1F50D; SCAN</button>
     <button class="ntab" id="buyTab" onclick="switchToBuy()">&#x1F4B8; BUY</button>
+    <button class="ntab" id="burnTab" onclick="switchToBurn()">&#x1F525; BURN</button>
   </div>
   <div class="wallet-wrap" id="walletWrap">
     <button class="wbtn" id="wb" onclick="toggleWallet(event)"><span class="wdot" id="nc"></span><span id="wa">CONNECT WALLET</span></button>
@@ -1255,7 +1256,7 @@ function _showSection(name){
   // hide all sections
   var pg=document.querySelector('.page');
   if(pg){pg.style.display=name==='predict'?'':'none';}
-  ['cartelSection','padSection','scanSection','buySection'].forEach(function(id){
+  ['cartelSection','padSection','scanSection','buySection','burnSection'].forEach(function(id){
     var el=document.getElementById(id);
     if(el){el.classList.remove('visible');el.style.display='none';}
   });
@@ -2880,6 +2881,10 @@ function switchToScan(){
   _showSection('scan');
   document.getElementById('scanTab')?.classList.add('active');
 }
+window.switchToBurn = function(){
+  _showSection('burn');
+  document.getElementById('burnTab')?.classList.add('active');
+};
 window.switchToBuy = function(){
     _showSection('buy');
     document.getElementById('buyTab')?.classList.add('active');
@@ -3694,6 +3699,59 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 .cswap-cta:hover:not(:disabled){background:rgba(0,255,135,.12);border-color:rgba(0,255,135,.4);color:var(--text);}
 .cswap-cta.ready{background:rgba(0,255,135,.1);border-color:rgba(0,255,135,.45);color:#a8ffd8;}
 .cswap-cta:disabled{opacity:.45;cursor:not-allowed;}
+
+/* ═══════════════════════════════════════════════
+   NEET BURN SECTION
+══════════════════════════════════════════════════ */
+#burnSection{display:none;}
+#burnSection.visible{display:block;}
+.burn-wrap{max-width:860px;margin:0 auto;padding:28px 16px 60px;}
+.burn-hero{border-bottom:1px solid var(--border);padding-bottom:22px;margin-bottom:28px;}
+.burn-hero-tag{color:var(--t2);font-size:9px;letter-spacing:.18em;margin-bottom:6px;}
+.burn-hero-title{color:var(--green);font-size:22px;font-weight:700;letter-spacing:.12em;margin-bottom:5px;}
+.burn-hero-sub{color:var(--t2);font-size:11px;letter-spacing:.08em;}
+.burn-hero-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,80,30,.08);border:1px solid rgba(255,80,30,.25);color:#ff6b35;font-size:9px;letter-spacing:.15em;padding:4px 10px;border-radius:2px;margin-top:10px;}
+.burn-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
+@media(max-width:700px){.burn-stats{grid-template-columns:1fr;}}
+.burn-stat-card{background:var(--card);border:1px solid var(--border);padding:16px 18px;position:relative;overflow:hidden;}
+.burn-stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(255,80,30,.4),transparent);}
+.burn-stat-label{color:var(--t2);font-size:9px;letter-spacing:.18em;margin-bottom:8px;}
+.burn-stat-val{color:var(--green);font-size:24px;font-weight:700;letter-spacing:.06em;margin-bottom:2px;}
+.burn-stat-val.fire{color:#ff6b35;}
+.burn-stat-sub{color:var(--t3);font-size:9px;letter-spacing:.06em;}
+.burn-mech{background:var(--card);border:1px solid var(--border);padding:18px 20px;margin-bottom:28px;}
+.burn-mech-title{color:var(--t2);font-size:9px;letter-spacing:.18em;margin-bottom:14px;}
+.burn-flow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
+.burn-flow-step{flex:1;min-width:120px;background:rgba(0,255,135,.05);border:1px solid rgba(0,255,135,.12);padding:10px 14px;text-align:center;}
+.burn-flow-step .icon{font-size:18px;margin-bottom:4px;}
+.burn-flow-step .lbl{color:var(--t2);font-size:8px;letter-spacing:.12em;}
+.burn-flow-step .val{color:var(--text);font-size:10px;font-weight:700;letter-spacing:.05em;margin-top:3px;}
+.burn-flow-arrow{color:var(--t3);font-size:16px;flex-shrink:0;}
+@media(max-width:600px){.burn-flow-arrow{display:none;}}
+.burn-txs{background:var(--card);border:1px solid var(--border);}
+.burn-txs-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border);}
+.burn-txs-title{color:var(--t2);font-size:9px;letter-spacing:.18em;}
+.burn-txs-count{color:var(--t3);font-size:9px;letter-spacing:.1em;}
+.burn-txs-cols{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 0.8fr;padding:9px 18px;border-bottom:1px solid rgba(255,255,255,.04);background:rgba(0,0,0,.2);}
+.burn-txs-col{color:var(--t3);font-size:8px;letter-spacing:.14em;}
+.burn-tx-row{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 0.8fr;padding:11px 18px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;transition:background .15s;}
+.burn-tx-row:hover{background:rgba(255,255,255,.02);}
+.burn-tx-hash{color:var(--green);font-size:9px;letter-spacing:.06em;font-family:var(--mono);}
+.burn-tx-hash a{color:inherit;text-decoration:none;}
+.burn-tx-hash a:hover{text-decoration:underline;}
+.burn-tx-sol{color:var(--text);font-size:10px;font-family:var(--mono);}
+.burn-tx-neet{color:#ff6b35;font-size:10px;font-family:var(--mono);font-weight:700;}
+.burn-tx-time{color:var(--t3);font-size:9px;font-family:var(--mono);}
+.burn-tx-badge{display:inline-block;background:rgba(255,80,30,.15);border:1px solid rgba(255,80,30,.3);color:#ff6b35;font-size:8px;letter-spacing:.1em;padding:2px 7px;}
+.burn-empty{padding:52px 20px;text-align:center;}
+.burn-empty-icon{font-size:36px;margin-bottom:14px;opacity:.4;}
+.burn-empty-title{color:var(--t2);font-size:11px;letter-spacing:.14em;margin-bottom:8px;}
+.burn-empty-sub{color:var(--t3);font-size:10px;letter-spacing:.06em;max-width:340px;margin:0 auto;line-height:1.6;}
+.burn-total-bar{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;background:rgba(0,255,135,.04);border-top:1px solid var(--border);flex-wrap:wrap;gap:8px;}
+.burn-total-item{text-align:center;}
+.burn-total-label{color:var(--t3);font-size:8px;letter-spacing:.14em;}
+.burn-total-value{color:var(--green);font-size:11px;font-weight:700;letter-spacing:.08em;margin-top:2px;}
+
 </style>
 
 <div id="buySection">
@@ -3918,4 +3976,107 @@ function openRoom(){_hydrateFromStorage();const r=$('neet-room');if(!r){console.
 </script>
 
 <script src="neet-security-patch.js"></script>
+
+<!-- NEET BURN SECTION -->
+<div id="burnSection">
+  <div class="burn-wrap">
+    <div class="burn-hero">
+      <div class="burn-hero-tag">SOLANA · PROTOCOL FEES · DEFLATIONARY</div>
+      <div class="burn-hero-title">&#x1F525; NEET BURN TRACKER</div>
+      <div class="burn-hero-sub">Every round, 3% of the pool goes to treasury &rarr; used to buy &amp; permanently burn $NEET</div>
+      <div class="burn-hero-pill">FEES BUY NEET AND BURN IT FOREVER</div>
+    </div>
+    <div class="burn-stats">
+      <div class="burn-stat-card">
+        <div class="burn-stat-label">TOTAL NEET BURNED</div>
+        <div class="burn-stat-val fire" id="burnTotalNeet">&mdash;</div>
+        <div class="burn-stat-sub">tokens permanently destroyed</div>
+      </div>
+      <div class="burn-stat-card">
+        <div class="burn-stat-label">SOL SPENT ON BURNS</div>
+        <div class="burn-stat-val" id="burnTotalSol">&mdash;</div>
+        <div class="burn-stat-sub">SOL from protocol fees used to buy NEET</div>
+      </div>
+      <div class="burn-stat-card">
+        <div class="burn-stat-label">BURN EVENTS</div>
+        <div class="burn-stat-val" id="burnTxCount">&mdash;</div>
+        <div class="burn-stat-sub">on-chain burn transactions</div>
+      </div>
+    </div>
+    <div class="burn-mech">
+      <div class="burn-mech-title">HOW THE BURN MECHANISM WORKS</div>
+      <div class="burn-flow">
+        <div class="burn-flow-step"><div class="icon">&#x1F3B2;</div><div class="lbl">PLAYERS BET</div><div class="val">SOL into pool</div></div>
+        <div class="burn-flow-arrow">&rarr;</div>
+        <div class="burn-flow-step"><div class="icon">&#x1F4B0;</div><div class="lbl">3% FEE</div><div class="val">goes to treasury</div></div>
+        <div class="burn-flow-arrow">&rarr;</div>
+        <div class="burn-flow-step"><div class="icon">&#x1F504;</div><div class="lbl">BUY $NEET</div><div class="val">treasury buys NEET</div></div>
+        <div class="burn-flow-arrow">&rarr;</div>
+        <div class="burn-flow-step"><div class="icon">&#x1F525;</div><div class="lbl">BURN FOREVER</div><div class="val">sent to null address</div></div>
+      </div>
+    </div>
+    <div class="burn-txs">
+      <div class="burn-txs-header">
+        <div class="burn-txs-title">BURN TRANSACTIONS</div>
+        <div class="burn-txs-count" id="burnTxLabel">0 burns recorded</div>
+      </div>
+      <div class="burn-txs-cols" id="burnTxCols" style="display:none">
+        <div class="burn-txs-col">TX HASH</div>
+        <div class="burn-txs-col">SOL SPENT</div>
+        <div class="burn-txs-col">NEET BURNED</div>
+        <div class="burn-txs-col">DATE</div>
+        <div class="burn-txs-col">STATUS</div>
+      </div>
+      <div id="burnTxRows">
+        <div class="burn-empty" id="burnEmptyState">
+          <div class="burn-empty-icon">&#x1F525;</div>
+          <div class="burn-empty-title">NO BURNS YET &mdash; PROTOCOL JUST LAUNCHED</div>
+          <div class="burn-empty-sub">Once the treasury accumulates fees from rounds, burns will appear here. Every transaction is on-chain and verifiable on Solscan.</div>
+        </div>
+      </div>
+      <div class="burn-total-bar" id="burnTotalBar" style="display:none">
+        <div class="burn-total-item"><div class="burn-total-label">TOTAL SOL USED</div><div class="burn-total-value" id="burnBarSol">0.000 SOL</div></div>
+        <div class="burn-total-item"><div class="burn-total-label">TOTAL NEET BURNED</div><div class="burn-total-value" id="burnBarNeet">0 NEET</div></div>
+        <div class="burn-total-item"><div class="burn-total-label">TOTAL EVENTS</div><div class="burn-total-value" id="burnBarCount">0 TXS</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var B=[];
+  function fmt(n,d){if(n===null||n===undefined)return '—';return Number(n).toLocaleString('en-US',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});}
+  function render(){
+    var total=B.reduce(function(a,r){return a+(r.neet||0);},0);
+    var sol=B.reduce(function(a,r){return a+(r.sol||0);},0);
+    var n=B.length,el;
+    el=document.getElementById('burnTotalNeet');if(el)el.textContent=n>0?fmt(total,0)+' NEET':'—';
+    el=document.getElementById('burnTotalSol');if(el)el.textContent=n>0?fmt(sol,4)+' SOL':'—';
+    el=document.getElementById('burnTxCount');if(el)el.textContent=n>0?String(n):'—';
+    el=document.getElementById('burnTxLabel');if(el)el.textContent=n+(n===1?' burn recorded':' burns recorded');
+    var colsEl=document.getElementById('burnTxCols');
+    var rowsEl=document.getElementById('burnTxRows');
+    var bar=document.getElementById('burnTotalBar');
+    var empty=document.getElementById('burnEmptyState');
+    if(n===0){if(empty)empty.style.display='';if(colsEl)colsEl.style.display='none';if(bar)bar.style.display='none';return;}
+    if(empty)empty.style.display='none';
+    if(colsEl)colsEl.style.display='';
+    if(bar)bar.style.display='';
+    var rows='';
+    B.slice().reverse().forEach(function(r){
+      var sh=r.hash?r.hash.slice(0,8)+'…'+r.hash.slice(-6):'—';
+      var url=r.solscanUrl||(r.hash?'https://solscan.io/tx/'+r.hash:'#');
+      rows+='<div class="burn-tx-row"><div class="burn-tx-hash"><a href="'+url+'" target="_blank" rel="noopener">'+sh+'</a></div><div class="burn-tx-sol">'+fmt(r.sol,4)+' SOL</div><div class="burn-tx-neet">'+fmt(r.neet,0)+' NEET</div><div class="burn-tx-time">'+(r.date||'—')+'</div><div><span class="burn-tx-badge">BURNED</span></div></div>';
+    });
+    if(rowsEl){var e2=rowsEl.querySelector('#burnEmptyState');if(e2)e2.remove();rowsEl.innerHTML=rows;}
+    el=document.getElementById('burnBarSol');if(el)el.textContent=fmt(sol,4)+' SOL';
+    el=document.getElementById('burnBarNeet');if(el)el.textContent=fmt(total,0)+' NEET';
+    el=document.getElementById('burnBarCount');if(el)el.textContent=n+' TXS';
+  }
+  window.addBurnRecord=function(r){B.push(r);render();};
+  window.setBurnRecords=function(records){B=records||[];render();};
+  render();
+})();
+</script>
+
 </html>
