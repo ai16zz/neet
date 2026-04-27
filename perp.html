@@ -160,14 +160,14 @@ footer a:hover{color:var(--green);}
 <div class="bg-grid"></div>
 <div class="bg-scan"></div>
 <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
-
+​
 <div class="ticker"><div class="ticker-t">
   <span class="ti"><b>$NEET-PERP</b> <span class="ts">·</span> PERPETUAL FUTURES ON SOLANA <span class="ts">·</span> POWERED BY NEET CLEARING HOUSE <span class="ts">·</span> UP TO 20X LEVERAGE <span class="ts">·</span> LONG &amp; SHORT</span>
   <span class="ti">NEET COMMUNITY PERP DEX <span class="ts">·</span> BUILT ON SOLANA DEVNET <span class="ts">·</span> vAMM CLEARING HOUSE <span class="ts">·</span> <b>$NEET-PERP</b> <span class="ts">·</span> TRADE WITH THE COMMUNITY</span>
   <span class="ti"><b>$NEET-PERP</b> <span class="ts">·</span> PERPETUAL FUTURES ON SOLANA <span class="ts">·</span> POWERED BY NEET CLEARING HOUSE <span class="ts">·</span> UP TO 20X LEVERAGE <span class="ts">·</span> LONG &amp; SHORT</span>
   <span class="ti">NEET COMMUNITY PERP DEX <span class="ts">·</span> BUILT ON SOLANA DEVNET <span class="ts">·</span> vAMM CLEARING HOUSE <span class="ts">·</span> <b>$NEET-PERP</b> <span class="ts">·</span> TRADE WITH THE COMMUNITY</span>
 </div></div>
-
+​
 <header>
   <a href="neet-predict_2.html" class="logo"><span class="logo-t">$NEET</span><span class="logo-p">PERP</span></a>
   <div class="nav-wrap">
@@ -183,7 +183,7 @@ footer a:hover{color:var(--green);}
     <span id="wa">CONNECT WALLET</span>
   </button>
 </header>
-
+​
 <!-- MARKET HEADER -->
 <div class="mkt-header">
   <div>
@@ -193,7 +193,7 @@ footer a:hover{color:var(--green);}
   <span class="mkt-badge">SOLANA</span>
   <span class="mkt-badge" style="background:rgba(245,196,0,.08);border-color:rgba(245,196,0,.2);color:var(--gold);">DEVNET</span>
 </div>
-
+​
 <!-- STATS BAR -->
 <div class="stats-bar">
   <div class="stat-item">
@@ -229,10 +229,10 @@ footer a:hover{color:var(--green);}
     <div class="stat-val" id="liqPoolEl">——</div>
   </div>
 </div>
-
+​
 <!-- MAIN -->
 <div class="perp-wrap">
-
+​
   <!-- LEFT: CHART + POSITIONS -->
   <div class="p-left">
     <div class="chart-controls">
@@ -265,16 +265,16 @@ footer a:hover{color:var(--green);}
       </div>
     </div>
   </div>
-
+​
   <!-- RIGHT: TRADE FORM -->
   <div class="p-right">
     <div class="ls-tabs">
       <button class="lstab long active" id="longTab" onclick="setDir('long')">▲ Long/Buy</button>
       <button class="lstab short" id="shortTab" onclick="setDir('short')">▼ Short/Sell</button>
     </div>
-
+​
     <div class="trade-body">
-
+​
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <div class="otype-row" style="flex:1">
           <button class="otbtn active" id="mktBtn" onclick="setOtype('market')">Market</button>
@@ -282,7 +282,7 @@ footer a:hover{color:var(--green);}
         </div>
         <div class="cur-price" id="curPxDisplay">——</div>
       </div>
-
+​
       <div id="limitBox" style="display:none;" class="inp-group">
         <div class="inp-lbl">Limit Price <span>USD</span></div>
         <div class="irow">
@@ -290,22 +290,22 @@ footer a:hover{color:var(--green);}
           <div class="sunit">USD</div>
         </div>
       </div>
-
+​
       <div class="inp-group">
-        <div class="inp-lbl">You're paying <span id="availBal">Available: —</span></div>
+        <div class="inp-lbl">Collateral <span id="availBal">Available: —</span></div>
         <div class="irow">
-          <input type="number" class="sinput" id="colInput" placeholder="0.00" min="0" step="0.01" oninput="calcOrder()">
-          <div class="sunit">SOL</div>
+          <input type="number" class="sinput" id="colInput" placeholder="0.00" min="0" step="1" oninput="calcOrder()">
+          <div class="sunit">USDC</div>
         </div>
         <div class="qrow">
-          <button class="qbtn" onclick="setCol(.05)">0.05</button>
-          <button class="qbtn" onclick="setCol(.1)">0.1</button>
-          <button class="qbtn" onclick="setCol(.25)">0.25</button>
-          <button class="qbtn" onclick="setCol(.5)">0.5</button>
-          <button class="qbtn" onclick="setCol(1)">1.0</button>
+          <button class="qbtn" onclick="setCol(10)">$10</button>
+          <button class="qbtn" onclick="setCol(25)">$25</button>
+          <button class="qbtn" onclick="setCol(50)">$50</button>
+          <button class="qbtn" onclick="setCol(100)">$100</button>
+          <button class="qbtn" onclick="setCol(500)">$500</button>
         </div>
       </div>
-
+​
       <div class="inp-group">
         <div class="inp-lbl">Leverage</div>
         <div class="lev-ctrl">
@@ -318,7 +318,7 @@ footer a:hover{color:var(--green);}
           <span>1x</span><span>5x</span><span>10x</span><span>15x</span><span>20x</span>
         </div>
       </div>
-
+​
       <label class="tpsl-row">
         <input type="checkbox" id="tpslToggle" onchange="toggleTpsl()">
         <span>Take Profit / Stop Loss</span>
@@ -329,9 +329,9 @@ footer a:hover{color:var(--green);}
         <div class="inp-lbl" style="margin-top:6px;">Stop Loss</div>
         <div class="irow"><input type="number" class="sinput" id="slInput" placeholder="0.00" style="font-size:13px;" oninput="calcOrder()"><div class="sunit">$</div></div>
       </div>
-
+​
       <button class="pbtn" id="placeBtn" onclick="placeOrder()">CONNECT WALLET</button>
-
+​
       <div class="sumbox">
         <div class="sumr"><span class="k">Entry Price</span><span class="v" id="entryPxD">——</span></div>
         <div class="sumr"><span class="k">Position Size</span><span class="v" id="posSzD">——</span></div>
@@ -341,26 +341,19 @@ footer a:hover{color:var(--green);}
         <div class="sumr"><span class="k">Trading Fee (0.1%)</span><span class="v" id="feeD">——</span></div>
         <div class="sumr"><span class="k">Borrow Rate</span><span class="v" id="borrowD">——</span></div>
       </div>
-
+​
     </div>
-
-    <div class="proto-box">
-      <div class="proto-lbl">NEET PERP PROTOCOL <span class="devnet-chip">DEVNET</span></div>
-      <div class="pid-row"><span class="pid-key">clearing_house</span><span class="pid-val" onclick="copyPid(this,'2bvorArGtZTma2WoLtxejbtokywxyAd3FEVboT7Vzuww')">2bvor...zuww</span></div>
-      <div class="pid-row"><span class="pid-key">amm</span><span class="pid-val" onclick="copyPid(this,'CfqUg2Mv7PcPEh5rLuUvAfGugYva7GZStDmFYkspgNYo')">CfqUg...NYo</span></div>
-      <div class="pid-row"><span class="pid-key">oracle</span><span class="pid-val" onclick="copyPid(this,'9ejr5z91rYKboS8bG8iDE9t3iSf2jVCrVbBy2pRHWexS')">9ejr5...exS</span></div>
-      <div class="pid-row"><span class="pid-key">funding</span><span class="pid-val" onclick="copyPid(this,'91G4AGvfd6JfJqWojEVrapA4615sNrrr2Tddm9zmnDRL')">91G4A...DRL</span></div>
-      <div class="pid-row"><span class="pid-key">liquidation</span><span class="pid-val" onclick="copyPid(this,'8t58GABFWM4eXqHhYcnxgSLE3e2W7Wvmz5QRqjbms6NP')">8t58G...6NP</span></div>
-    </div>
+​
+    
   </div>
-
+​
 </div>
-
+​
 <footer>
   <span>$neet perp · solana devnet · vAMM clearing house · <a href="https://github.com/ai16zz/neet-perp" target="_blank">github</a></span>
   <span><a href="neet-predict_2.html">← back to predict</a></span>
 </footer>
-
+​
 <div class="modal-ov" id="modal">
   <div class="modal">
     <div class="modal-icon" id="mIcon">⚡</div>
@@ -370,7 +363,7 @@ footer a:hover{color:var(--green);}
   </div>
 </div>
 <div class="toast" id="toast"></div>
-
+​
 <script>
 /* ══════════════════════════════════════════════
    CONFIG
@@ -379,11 +372,11 @@ const NEET_CA  = 'Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
 const NEET_POOL= '5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy'; // neet/SOL raydium
 const RPCS     = ['https://rpc.ankr.com/solana','https://api.mainnet-beta.solana.com'];
 const FEE=0.001, MAINT=0.05;
-
+​
 /* STATE */
 const S = { px:0, hi24:0, lo24:0, chg24:0, vol24:0, liq:0, fund:(Math.random()-.5)*.002, oi:Math.random()*3e5+1e5, candles:[] };
-let dir='long', otype='market', lev=10, wpk=null, bal=0, positions=[], chart=null, candleSeries=null, curTf='5m';
-
+let dir='long', otype='market', lev=10, wpk=null, bal=0, usdcBal=0, positions=[], chart=null, candleSeries=null, curTf='5m';
+​
 /* ══════════════════════════════════════════════
    CHART INIT
 ══════════════════════════════════════════════ */
@@ -437,7 +430,7 @@ function initChart(){
   });
   new ResizeObserver(()=>{ if(chart) chart.applyOptions({width:el.clientWidth,height:el.clientHeight}); }).observe(el);
 }
-
+​
 /* ══════════════════════════════════════════════
    GECKO TERMINAL — REAL OHLCV
 ══════════════════════════════════════════════ */
@@ -449,7 +442,7 @@ const TF_MAP={
   '4h': {unit:'hour',   agg:4},
   '1d': {unit:'day',    agg:1}
 };
-
+​
 async function fetchOHLCV(tf){
   const {unit,agg}=TF_MAP[tf]||TF_MAP['5m'];
   setWsInd(false,'loading...');
@@ -467,7 +460,7 @@ async function fetchOHLCV(tf){
       low:  parseFloat(c[3]),
       close:parseFloat(c[4])
     })).filter(c=>c.open>0).sort((a,b)=>a.time-b.time);
-
+​
     S.candles=candles;
     if(candleSeries&&candles.length){
       candleSeries.setData(candles);
@@ -482,7 +475,7 @@ async function fetchOHLCV(tf){
     setTimeout(()=>fetchOHLCV(curTf),8000);
   }
 }
-
+​
 /* ══════════════════════════════════════════════
    JUPITER — LIVE PRICE TICK
 ══════════════════════════════════════════════ */
@@ -516,7 +509,7 @@ async function fetchNEET(){
     }
   }catch{}
 }
-
+​
 /* ══════════════════════════════════════════════
    GECKO POOL STATS — 24H DATA
 ══════════════════════════════════════════════ */
@@ -540,12 +533,12 @@ async function fetchPoolStats(){
     updateStats();
   }catch{}
 }
-
+​
 function setWsInd(live,label){
   document.getElementById('wsDot').className='ws-dot'+(live?' live':'');
   document.getElementById('wsLbl').textContent=label||(live?'live · gecko + jupiter':'reconnecting...');
 }
-
+​
 /* ══════════════════════════════════════════════
    FORMAT
 ══════════════════════════════════════════════ */
@@ -563,7 +556,7 @@ function fmtVol(v){
   if(v>=1e3)return'$'+(v/1e3).toFixed(1)+'K';
   return'$'+v.toFixed(2);
 }
-
+​
 /* ══════════════════════════════════════════════
    STATS UI
 ══════════════════════════════════════════════ */
@@ -588,7 +581,7 @@ function updateStats(){
   calcOrder();
   updatePosUI();
 }
-
+​
 /* ══════════════════════════════════════════════
    TIMEFRAME
 ══════════════════════════════════════════════ */
@@ -601,7 +594,7 @@ function setTf(tf){
   if(candleSeries) candleSeries.setData([]);
   fetchOHLCV(tf);
 }
-
+​
 /* ══════════════════════════════════════════════
    TRADING FORM
 ══════════════════════════════════════════════ */
@@ -611,7 +604,7 @@ function setDir(d){
   document.getElementById('shortTab').className='lstab short'+(d==='short'?' active':'');
   calcOrder(); updBtn();
 }
-
+​
 function setOtype(t){
   otype=t;
   document.getElementById('mktBtn').className='otbtn'+(t==='market'?' active':'');
@@ -619,29 +612,28 @@ function setOtype(t){
   document.getElementById('limitBox').style.display=t==='limit'?'flex':'none';
   calcOrder();
 }
-
+​
 function setLev(v){
   lev=parseInt(v);
   document.getElementById('levDisp').textContent=lev+'x';
   document.getElementById('levSlider').value=lev;
   calcOrder(); updBtn();
 }
-
+​
 function adjLev(d){ setLev(Math.max(1,Math.min(20,lev+d))); }
 function setCol(v){ document.getElementById('colInput').value=v; calcOrder(); updBtn(); }
 function toggleTpsl(){ document.getElementById('tpslBox').style.display=document.getElementById('tpslToggle').checked?'flex':'none'; }
-
+​
 function calcOrder(){
   const col=parseFloat(document.getElementById('colInput').value)||0;
   const px=S.px||0;
   const ep=otype==='limit'?(parseFloat(document.getElementById('limitPxInput').value)||px):px;
-  document.getElementById('availBal').textContent=wpk?`Available: ${bal.toFixed(4)} SOL`:'Available: —';
+  document.getElementById('availBal').textContent=wpk?`Available: ${usdcBal.toFixed(2)} USDC`:'Available: —';
   if(!col||!px){
     ['entryPxD','posSzD','liqPxD','feeD'].forEach(i=>document.getElementById(i).textContent='——');
     document.getElementById('borrowD').textContent='——'; updBtn(); return;
   }
-  const solPx=S.solPx||180; // approx SOL price for USD sizing
-  const sizUsd=col*solPx*lev, fee=sizUsd*FEE;
+  const sizUsd=col*lev, fee=sizUsd*FEE; // col already in USD
   const liqP=dir==='long'?ep*(1-1/lev+MAINT):ep*(1+1/lev-MAINT);
   document.getElementById('entryPxD').textContent=fmtPx(ep);
   document.getElementById('posSzD').textContent='$'+sizUsd.toFixed(2);
@@ -650,14 +642,14 @@ function calcOrder(){
   document.getElementById('borrowD').textContent=(S.fund>0?'+':'')+((S.fund*100/8).toFixed(5))+'% / hr';
   updBtn();
 }
-
+​
 function updBtn(){
   const btn=document.getElementById('placeBtn');
   const col=parseFloat(document.getElementById('colInput').value)||0;
   if(!wpk){ btn.textContent='CONNECT WALLET'; btn.className='pbtn'; return; }
-  if(!col||col<0.01){ btn.textContent='ENTER AMOUNT'; btn.className='pbtn'; return; }
-  if(col>bal){ btn.textContent='INSUFFICIENT BALANCE'; btn.className='pbtn'; return; }
-  const sz=(col*(S.solPx||180)*lev);
+  if(!col||col<1){ btn.textContent='ENTER AMOUNT'; btn.className='pbtn'; return; }
+  if(col>usdcBal&&usdcBal>0){ btn.textContent='INSUFFICIENT USDC'; btn.className='pbtn'; return; }
+  const sz=col*lev;
   if(dir==='long'){
     btn.textContent=`LONG $NEET-PERP · $${sz.toFixed(0)}`;
     btn.className='pbtn long-go';
@@ -666,12 +658,12 @@ function updBtn(){
     btn.className='pbtn short-go';
   }
 }
-
+​
 function placeOrder(){
   if(!wpk) return;
-  const col=parseFloat(document.getElementById('colInput').value)||0; if(!col||col<0.01)return;
+  const col=parseFloat(document.getElementById('colInput').value)||0; if(!col||col<1)return;
   const px=S.px||0, ep=otype==='limit'?(parseFloat(document.getElementById('limitPxInput').value)||px):px;
-  const solPx=S.solPx||180, sizUsd=col*solPx*lev, fee=sizUsd*FEE;
+  const sizUsd=col*lev, fee=sizUsd*FEE;
   const liqP=dir==='long'?ep*(1-1/lev+MAINT):ep*(1+1/lev-MAINT);
   positions.push({id:Date.now(),dir,lev,col,ep,sizUsd,liqP,fee,ts:Date.now()});
   S.oi+=sizUsd;
@@ -689,7 +681,7 @@ function placeOrder(){
   document.getElementById('colInput').value='';
   calcOrder(); updatePosUI();
 }
-
+​
 /* ══════════════════════════════════════════════
    POSITIONS
 ══════════════════════════════════════════════ */
@@ -711,7 +703,7 @@ function updatePosUI(){
     </div>`;
   }).join('');
 }
-
+​
 function closePos(i){
   const p=positions[i], px=S.px||p.ep, chg=(px-p.ep)/p.ep;
   const pnl=p.dir==='long'?chg*p.sizUsd:-chg*p.sizUsd, ps=(pnl>=0?'+':'')+pnl.toFixed(2);
@@ -721,7 +713,7 @@ function closePos(i){
   document.getElementById('modal').classList.add('on');
   S.oi-=p.sizUsd; positions.splice(i,1); updatePosUI();
 }
-
+​
 /* ══════════════════════════════════════════════
    WALLET
 ══════════════════════════════════════════════ */
@@ -745,10 +737,15 @@ async function fetchBal(){
   try{
     const r=await fetch(RPCS[0],{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getBalance',params:[wpk,{commitment:'confirmed'}]})});
     const d=await r.json(); bal=(d?.result?.value||0)/1e9;
-    document.getElementById('availBal').textContent=`Available: ${bal.toFixed(4)} SOL`;
+    const USDC_MINT='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+    const r2=await fetch(RPCS[0],{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:2,method:'getTokenAccountsByOwner',params:[wpk,{mint:USDC_MINT},{encoding:'jsonParsed',commitment:'confirmed'}]})});
+    const d2=await r2.json();
+    const accounts=d2?.result?.value||[];
+    usdcBal=accounts.reduce((sum,a)=>sum+parseFloat(a.account?.data?.parsed?.info?.tokenAmount?.uiAmount||0),0);
+    document.getElementById('availBal').textContent=`Available: ${usdcBal.toFixed(2)} USDC`;
   }catch{}
 }
-
+​
 /* also fetch SOL price for collateral sizing */
 async function fetchSolPx(){
   try{
@@ -758,38 +755,38 @@ async function fetchSolPx(){
     if(px>0) S.solPx=px;
   }catch{}
 }
-
+​
 function copyPid(el,addr){
   navigator.clipboard.writeText(addr).then(()=>{const o=el.textContent;el.textContent='copied!';el.style.color='var(--green)';setTimeout(()=>{el.textContent=o;el.style.color='';},1400);}).catch(()=>{});
 }
-
+​
 /* ══════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════ */
 async function init(){
   initChart();
-
+​
   // Load OHLCV chart data first
   await fetchOHLCV(curTf);
-
+​
   // Fetch pool stats (24h change, volume, liquidity)
   fetchPoolStats();
   fetchSolPx();
-
+​
   // Live price updates every 3s
   fetchNEET();
   setInterval(fetchNEET, 3000);
-
+​
   // Refresh pool stats every 60s
   setInterval(fetchPoolStats, 60000);
   setInterval(fetchSolPx, 60000);
-
+​
   // Refresh OHLCV every 5 minutes
   setInterval(()=>fetchOHLCV(curTf), 300000);
-
+​
   // Position PnL tick
   setInterval(updatePosUI, 1000);
-
+​
   // Auto reconnect wallet
   await new Promise(r=>setTimeout(r,500));
   const p=getProv();
@@ -805,4 +802,3 @@ init();
 </script>
 </body>
 </html>
-                                                                                                                                                                                                                                                                                                                                                                                             
