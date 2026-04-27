@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+body  { @apply bg-gray-950 text-white; }
+
+/* Scrollbar */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { @apply bg-gray-900; }
+::-webkit-scrollbar-thumb  { @apply bg-gray-700 rounded-full; }
+
+/* Range slider */
+input[type=range]::-webkit-slider-thumb {
+  @apply w-4 h-4 rounded-full bg-blue-500 cursor-pointer;
+  -webkit-appearance: none;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  @apply h-1 bg-gray-700 rounded-full;
+}

@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = [
+    "programs/neet_clearing_house",
+    "programs/neet_amm",
+    "programs/neet_oracle_adapter",
+    "programs/neet_funding",
+    "programs/neet_liquidation",
+    "programs/neet_insurance",
+    "programs/neet_treasury",
+]
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1

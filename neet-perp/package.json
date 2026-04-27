@@ -1,0 +1,20 @@
+{
+  "name": "neet-perp",
+  "version": "0.1.0",
+  "description": "NEET Perpetual Futures Protocol",
+  "private": true,
+  "workspaces": ["app", "keeper", "sdk"],
+  "scripts": {
+    "build": "anchor build",
+    "test": "anchor test",
+    "deploy:devnet": "ts-node scripts/deploy.ts devnet",
+    "deploy:mainnet": "ts-node scripts/deploy.ts mainnet",
+    "app": "cd app && yarn dev",
+    "keeper": "cd keeper && yarn start"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.0"
+  }
+}
