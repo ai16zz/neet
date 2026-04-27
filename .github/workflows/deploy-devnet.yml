@@ -9,7 +9,7 @@ on:
 
 env:
   ANCHOR_VERSION: "0.30.1"
-  SOLANA_VERSION: "v1.18.8"
+  SOLANA_VERSION: "v2.2.1"
   NODE_VERSION:   "20"
 
 jobs:
@@ -76,20 +76,6 @@ jobs:
           fi
           solana balance
         working-directory: .
-
-      # Pin edition2024 crates — Solana 1.18.x ships Rust/Cargo 1.75 which
-      # can't parse manifests using "edition = '2024'". These cargo update
-      # commands run with the SYSTEM cargo (1.87+) and rewrite Cargo.lock
-      # before the platform-tools cargo ever touches the dependency tree.
-      - name: Pin deps for Solana 1.18.x / Cargo 1.75 compatibility
-        run: |
-          cargo update -p blake3      --precise 1.5.4   2>&1 | tail -3 || true
-          cargo update -p cpufeatures --precise 0.2.12  2>&1 | tail -3 || true
-          cargo update -p digest      --precise 0.10.7  2>&1 | tail -3 || true
-          cargo update -p hashbrown   --precise 0.14.5  2>&1 | tail -3 || true
-          cargo update -p indexmap    --precise 2.6.0   2>&1 | tail -3 || true
-          echo "Lock file after pinning:"
-          grep -E "^(name|version) = " Cargo.lock | paste - - | grep -E "blake3|cpufeatures|digest|hashbrown|indexmap"
 
       - name: Build Anchor programs
         run: anchor build
