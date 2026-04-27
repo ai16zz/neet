@@ -18,7 +18,7 @@
   --r:8px;
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13px;min-height:100vh;overflow-x:hidden;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13px;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
 .bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(0,255,135,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,135,.018) 1px,transparent 1px);background-size:48px 48px;}
 .bg-scan{position:fixed;inset:0;z-index:999;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.035) 3px,rgba(0,0,0,.035) 4px);}
 .orb{position:fixed;border-radius:50%;filter:blur(140px);pointer-events:none;z-index:0;}
@@ -26,13 +26,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
 .o2{width:500px;height:500px;background:rgba(255,59,92,.05);bottom:-150px;right:-100px;}
 .o3{width:350px;height:350px;background:rgba(77,138,255,.04);top:40%;left:55%;}
 /* TICKER */
-.ticker{position:relative;z-index:50;background:rgba(0,255,135,.04);border-bottom:1px solid rgba(0,255,135,.1);padding:6px 0;overflow:hidden;white-space:nowrap;}
+.ticker{position:relative;z-index:50;background:rgba(0,255,135,.04);border-bottom:1px solid rgba(0,255,135,.1);padding:6px 0;overflow:hidden;white-space:nowrap;flex-shrink:0;}
 .ticker-t{display:inline-flex;animation:tick 32s linear infinite;}
 .ti{display:inline-flex;align-items:center;gap:18px;padding:0 32px;font-family:var(--mono);font-size:10px;letter-spacing:.13em;color:rgba(0,255,135,.45);}
 .ti b{color:var(--green);}.ts{color:rgba(0,255,135,.18);}
 @keyframes tick{from{transform:translateX(0);}to{transform:translateX(-50%);}}
 /* HEADER */
-header{position:sticky;top:0;z-index:200;background:rgba(5,6,10,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 20px;height:54px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+header{position:relative;z-index:200;background:rgba(5,6,10,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 20px;height:54px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;}
 .logo{text-decoration:none;display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .logo-t{font-family:var(--dsp);font-size:22px;letter-spacing:.06em;color:var(--text);}
 .logo-p{background:var(--green);color:#000;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.16em;padding:3px 7px;border-radius:3px;}
@@ -46,12 +46,12 @@ header{position:sticky;top:0;z-index:200;background:rgba(5,6,10,.92);backdrop-fi
 .wdot{width:6px;height:6px;border-radius:50%;background:var(--t3);transition:background .3s;flex-shrink:0;}
 .wbtn.connected .wdot{background:var(--green);}
 /* MARKET HEADER */
-.mkt-header{position:relative;z-index:1;display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--border);background:rgba(5,6,10,.85);backdrop-filter:blur(12px);padding:10px 20px;}
+.mkt-header{position:relative;z-index:1;display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--border);background:rgba(5,6,10,.85);backdrop-filter:blur(12px);padding:10px 20px;flex-shrink:0;}
 .mkt-symbol{font-family:var(--dsp);font-size:20px;letter-spacing:.06em;color:var(--green);}
 .mkt-name{font-family:var(--mono);font-size:9px;letter-spacing:.15em;color:var(--t2);text-transform:uppercase;}
 .mkt-badge{background:rgba(0,255,135,.1);border:1px solid rgba(0,255,135,.2);color:var(--green);font-family:var(--mono);font-size:8px;padding:2px 8px;border-radius:3px;letter-spacing:.12em;}
 /* STATS BAR */
-.stats-bar{position:relative;z-index:1;display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border);background:rgba(10,13,20,.6);padding:8px 20px;overflow-x:auto;scrollbar-width:none;}
+.stats-bar{position:relative;z-index:1;display:flex;align-items:center;gap:0;border-bottom:1px solid var(--border);background:rgba(10,13,20,.6);padding:8px 20px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
 .stats-bar::-webkit-scrollbar{display:none}
 .stat-item{display:flex;flex-direction:column;gap:2px;padding:0 18px 0 0;flex-shrink:0;}
 .stat-item:not(:last-child){border-right:1px solid var(--border);margin-right:18px;}
@@ -59,7 +59,7 @@ header{position:sticky;top:0;z-index:200;background:rgba(5,6,10,.92);backdrop-fi
 .stat-val{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);}
 .stat-val.g{color:var(--green);}.stat-val.r{color:var(--red);}
 /* MAIN LAYOUT */
-.perp-wrap{display:grid;grid-template-columns:1fr 300px;height:calc(100vh - 54px - 38px - 48px - 38px);position:relative;z-index:1;}
+.perp-wrap{display:grid;grid-template-columns:1fr 300px;flex:1;min-height:0;position:relative;z-index:1;overflow:hidden;}
 .p-left{display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;}
 .p-right{display:flex;flex-direction:column;overflow-y:auto;background:rgba(10,13,20,.4);}
 /* CHART */
@@ -71,7 +71,7 @@ header{position:sticky;top:0;z-index:200;background:rgba(5,6,10,.92);backdrop-fi
 .ws-dot{width:5px;height:5px;border-radius:50%;background:var(--t3);transition:background .3s;}
 .ws-dot.live{background:var(--green);animation:blink 2s infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-#chartContainer{flex:1;overflow:hidden;min-height:0;cursor:crosshair;}
+#chartContainer{flex:1;overflow:hidden;min-height:280px;cursor:crosshair;}
 /* POSITIONS BOTTOM PANEL */
 .pos-panel{border-top:1px solid var(--border);background:rgba(5,6,10,.8);flex-shrink:0;min-height:120px;max-height:200px;overflow:hidden;display:flex;flex-direction:column;}
 .pos-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);}
@@ -152,7 +152,13 @@ header{position:sticky;top:0;z-index:200;background:rgba(5,6,10,.92);backdrop-fi
 footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:9px;letter-spacing:.11em;color:var(--t3);}
 footer a{color:var(--t2);text-decoration:none;transition:color .15s;}
 footer a:hover{color:var(--green);}
-@media(max-width:1000px){.perp-wrap{grid-template-columns:1fr;}.p-right{border-top:1px solid var(--border);}}
+@media(max-width:1000px){
+  body{height:auto;overflow:auto;}
+  .perp-wrap{grid-template-columns:1fr;height:auto;flex:none;}
+  .p-left{height:auto;}
+  #chartContainer{height:320px;min-height:320px;flex:none;}
+  .p-right{border-top:1px solid var(--border);}
+}
 @media(max-width:700px){.stats-bar .stat-item{padding:0 10px 0 0;margin-right:10px;}}
 </style>
 </head>
@@ -383,6 +389,8 @@ let dir='long', otype='market', lev=10, wpk=null, bal=0, usdcBal=0, positions=[]
 function initChart(){
   const el=document.getElementById('chartContainer');
   if(chart){ chart.remove(); chart=null; candleSeries=null; }
+  const w=Math.max(el.clientWidth||el.offsetWidth||600,200);
+  const h=Math.max(el.clientHeight||el.offsetHeight||400,280);
   chart=LightweightCharts.createChart(el,{
     layout:{background:{type:'Solid',color:'#05060a'},textColor:'#6b7799',fontSize:11,fontFamily:"'Space Mono',monospace"},
     grid:{vertLines:{color:'rgba(255,255,255,0.03)'},horzLines:{color:'rgba(255,255,255,0.045)'}},
@@ -415,7 +423,7 @@ function initChart(){
     handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
     handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:{time:true,price:true},axisDoubleClickReset:{time:true,price:true}},
     kineticScroll:{touch:true,mouse:true},
-    width:el.clientWidth, height:el.clientHeight
+    width:w, height:h
   });
   candleSeries=chart.addCandlestickSeries({
     upColor:'#00ff87', downColor:'#ff3b5c',
@@ -646,21 +654,19 @@ function calcOrder(){
 function updBtn(){
   const btn=document.getElementById('placeBtn');
   const col=parseFloat(document.getElementById('colInput').value)||0;
-  if(!wpk){ btn.textContent='CONNECT WALLET'; btn.className='pbtn'; return; }
-  if(!col||col<1){ btn.textContent='ENTER AMOUNT'; btn.className='pbtn'; return; }
-  if(col>usdcBal&&usdcBal>0){ btn.textContent='INSUFFICIENT USDC'; btn.className='pbtn'; return; }
   const sz=col*lev;
+  if(!col||col<1){ btn.textContent='ENTER AMOUNT'; btn.className='pbtn'; return; }
+  if(wpk&&col>usdcBal&&usdcBal>0){ btn.textContent='INSUFFICIENT USDC'; btn.className='pbtn'; return; }
   if(dir==='long'){
-    btn.textContent=`LONG $NEET-PERP · $${sz.toFixed(0)}`;
+    btn.textContent=wpk?`LONG $NEET-PERP · ${sz.toFixed(0)}`:`⚡ DEMO LONG · ${sz.toFixed(0)}`;
     btn.className='pbtn long-go';
   } else {
-    btn.textContent=`SHORT $NEET-PERP · $${sz.toFixed(0)}`;
+    btn.textContent=wpk?`SHORT $NEET-PERP · ${sz.toFixed(0)}`:`⚡ DEMO SHORT · ${sz.toFixed(0)}`;
     btn.className='pbtn short-go';
   }
 }
 ​
 function placeOrder(){
-  if(!wpk) return;
   const col=parseFloat(document.getElementById('colInput').value)||0; if(!col||col<1)return;
   const px=S.px||0, ep=otype==='limit'?(parseFloat(document.getElementById('limitPxInput').value)||px):px;
   const sizUsd=col*lev, fee=sizUsd*FEE;
@@ -676,7 +682,7 @@ function placeOrder(){
     `Liq Price: <b style="color:var(--red)">${fmtPx(liqP)}</b><br>`+
     `Fee: $${fee.toFixed(4)}<br><br>`+
     `<span style="color:rgba(0,255,135,.5);font-size:10px">clearing_house: 2bvorArG...zuww</span><br>`+
-    `<span style="color:rgba(245,196,0,.5);font-size:10px">⚡ DEMO MODE · devnet program</span>`;
+    `<span style="color:rgba(245,196,0,.5);font-size:10px">⚡ ${wpk?'devnet program':'DEMO MODE — connect wallet for real trades'}</span>`;
   document.getElementById('modal').classList.add('on');
   document.getElementById('colInput').value='';
   calcOrder(); updatePosUI();
@@ -719,7 +725,6 @@ function closePos(i){
 ══════════════════════════════════════════════ */
 function getProv(){ if(window.phantom?.solana?.isPhantom)return window.phantom.solana; return window.solana||null; }
 async function connectWallet(){
-  if(location.protocol==='file:'){alert('Must be on https://');return;}
   let p=getProv();
   if(!p){ for(let i=0;i<12;i++){await new Promise(r=>setTimeout(r,250));p=getProv();if(p)break;} }
   if(!p){ if(confirm('Phantom not found. Install?'))window.open('https://phantom.app/download','_blank'); return; }
@@ -764,6 +769,7 @@ function copyPid(el,addr){
    INIT
 ══════════════════════════════════════════════ */
 async function init(){
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
   initChart();
 ​
   // Load OHLCV chart data first
@@ -802,3 +808,4 @@ init();
 </script>
 </body>
 </html>
+​
