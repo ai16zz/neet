@@ -377,7 +377,7 @@ footer a:hover{color:var(--green);}
 const NEET_CA  = 'Ce2gx9KGXJ6C9Mp5b5x1sn9Mg87JwEbrQby4Zqo3pump';
 const NEET_POOL= '5wNu5QhdpRGrL37ffcd6TMMqZugQgxwafgz477rShtHy'; // neet/SOL raydium
 const RPCS     = ['https://rpc.ankr.com/solana','https://api.mainnet-beta.solana.com'];
-const FEE=0.001, MAINT=0.05;
+const FEE=0.001, MAINT=0.025;
 //
 /* STATE */
 const S = { px:0, hi24:0, lo24:0, chg24:0, vol24:0, liq:0, fund:(Math.random()-.5)*.002, oi:Math.random()*3e5+1e5, candles:[] };
@@ -704,7 +704,7 @@ function updatePosUI(){
       <span>$${p.sizUsd.toFixed(2)}</span>
       <span style="font-size:10px">${fmtPx(p.ep)} / ${fmtPx(S.px||p.ep)}</span>
       <span style="color:var(--red);font-size:10px">${fmtPx(p.liqP)}</span>
-      <span>${p.col.toFixed(4)} SOL</span>
+      <span>${p.col.toFixed(2)} USDC</span>
       <span class="pos-pnl ${pnlCls}">${pnlStr}</span>
       <span><button class="close-pos" onclick="closePos(${i})">Close</button></span>
     </div>`;
