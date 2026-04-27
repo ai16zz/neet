@@ -668,6 +668,7 @@ function updBtn(){
 //
 function placeOrder(){
   const col=parseFloat(document.getElementById('colInput').value)||0; if(!col||col<1)return;
+  if(!S.px||S.px<0.000001){ showToast('⚠ Price not loaded yet — wait 1s and try again'); return; }
   const px=S.px||0, ep=otype==='limit'?(parseFloat(document.getElementById('limitPxInput').value)||px):px;
   const sizUsd=col*lev, fee=sizUsd*FEE;
   const liqP=dir==='long'?ep*(1-1/lev+MAINT):ep*(1+1/lev-MAINT);
@@ -691,7 +692,7 @@ function placeOrder(){
     `Liq Price: <b style="color:var(--red)">${fmtPx(liqP)}</b><br>`+
     `Fee: $${fee.toFixed(4)}<br><br>`+
     `<span style="color:rgba(0,255,135,.5);font-size:10px">clearing_house: 2bvorArG...zuww</span><br>`+
-    `<span style="color:rgba(245,196,0,.5);font-size:10px">⚡ ${wpk?'devnet program':'DEMO MODE — connect wallet for real trades'}</span>`;
+    `<span style="color:rgba(245,196,0,.5);font-size:10px">⚡ ${wpk?'devnet · real on-chain':'PAPER TRADE · devnet deploy coming soon'}</span>`;
   document.getElementById('modal').classList.add('on');
   document.getElementById('colInput').value='';
   calcOrder(); updatePosUI();
