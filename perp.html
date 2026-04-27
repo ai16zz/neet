@@ -671,7 +671,16 @@ function placeOrder(){
   const px=S.px||0, ep=otype==='limit'?(parseFloat(document.getElementById('limitPxInput').value)||px):px;
   const sizUsd=col*lev, fee=sizUsd*FEE;
   const liqP=dir==='long'?ep*(1-1/lev+MAINT):ep*(1+1/lev-MAINT);
-  positions.push({id:Date.now(),dir,lev,col,ep,sizUsd,liqP,fee,ts:Date.now()});
+  const exIdx=positions.findIndex(p=>p.dir===dir);
+  if(exIdx>=0){
+    const ex=positions[exIdx];
+    const totalSiz=ex.sizUsd+sizUsd, totalCol=ex.col+col;
+    const avgEp=(ex.ep*ex.sizUsd+ep*sizUsd)/totalSiz;
+    const newLiq=dir==='long'?avgEp*(1-1/lev+MAINT):avgEp*(1+1/lev-MAINT);
+    positions[exIdx]={...ex,ep:avgEp,sizUsd:totalSiz,col:totalCol,liqP:newLiq,fee:ex.fee+fee,lev};
+  } else {
+    positions.push({id:Date.now(),dir,lev,col,ep,sizUsd,liqP,fee,ts:Date.now()});
+  }
   S.oi+=sizUsd;
   document.getElementById('mIcon').textContent=dir==='long'?'▲':'▼';
   document.getElementById('mTitle').textContent=dir==='long'?'LONG OPENED':'SHORT OPENED';
