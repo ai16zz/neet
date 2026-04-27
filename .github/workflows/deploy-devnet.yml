@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'programs/**'
+      - 'neet-perp/programs/**'
 
 env:
   ANCHOR_VERSION: "0.30.1"
@@ -17,6 +17,9 @@ jobs:
     name: Build Anchor Programs & Deploy to Devnet
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: neet-perp
 
     steps:
       - name: Checkout
@@ -28,25 +31,25 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-anchor-0.30.1
-          restore-keys: ${{ runner.os }}-cargo-
+            ~/.cargo/bin/anchor
+          key: ${{ runner.os }}-anchor-0.30.1
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
 
       - name: Install Solana CLI
         run: |
           sh -c "$(curl -sSfL https://release.anza.xyz/${{ env.SOLANA_VERSION }}/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+        working-directory: .
 
       - name: Install Anchor CLI
         run: |
-          cargo install --version ${{ env.ANCHOR_VERSION }} anchor-cli
+          if [ ! -f ~/.cargo/bin/anchor ]; then
+            cargo install --version ${{ env.ANCHOR_VERSION }} anchor-cli
+          fi
           anchor --version
+        working-directory: .
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -63,15 +66,16 @@ jobs:
           solana config set --url devnet
           solana address
           solana balance || true
+        working-directory: .
 
       - name: Airdrop devnet SOL
         run: |
-          BALANCE=$(solana balance | awk '{print $1}' | tr -d 'SOL ')
-          echo "Balance: $BALANCE SOL"
-          if awk "BEGIN {exit !($BALANCE < 3)}"; then
+          BAL=$(solana balance | awk '{print $1}')
+          if awk "BEGIN {exit !($BAL < 3)}"; then
             for i in 1 2 3; do solana airdrop 2 || true; sleep 5; done
           fi
           solana balance
+        working-directory: .
 
       - name: Build Anchor programs
         run: anchor build
@@ -100,5 +104,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: neet-perp-programs
-          path: target/deploy/*.so
+          path: neet-perp/target/deploy/*.so
           retention-days: 30
