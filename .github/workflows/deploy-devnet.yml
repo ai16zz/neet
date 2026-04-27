@@ -1,0 +1,128 @@
+name: Build & Deploy to Devnet
+
+on:
+  workflow_dispatch:         # run manually from GitHub Actions tab
+  push:
+    branches: [main]
+    paths:
+      - 'programs/**'        # auto-deploy when smart contracts change
+
+env:
+  ANCHOR_VERSION: "0.30.1"
+  SOLANA_VERSION: "v1.18.8"
+  NODE_VERSION:   "20"
+
+jobs:
+  build-and-deploy:
+    name: Build Anchor Programs & Deploy to Devnet
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      # -- 1. Checkout
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # -- 2. Cache Rust / Cargo
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      # -- 3. Install Rust
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      # -- 4. Install Solana CLI
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      # -- 5. Install Anchor CLI
+      - name: Install Anchor CLI
+        run: |
+          cargo install --version ${{ env.ANCHOR_VERSION }} anchor-cli --locked
+          anchor --version
+
+      # -- 6. Node.js + Yarn
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install Node dependencies
+        run: yarn install --frozen-lockfile
+
+      # -- 7. Restore deploy wallet from GitHub Secret
+      - name: Restore deploy wallet
+        run: |
+          mkdir -p ~/.config/solana
+          echo '${{ secrets.DEPLOY_KEYPAIR }}' > ~/.config/solana/id.json
+          solana config set --url devnet
+          solana address
+          echo "Devnet balance:"
+          solana balance || true
+
+      # -- 8. Airdrop devnet SOL if balance is low
+      - name: Airdrop devnet SOL
+        run: |
+          BALANCE=$(solana balance | awk '{print $1}')
+          echo "Current balance: $BALANCE SOL"
+          if (( $(echo "$BALANCE < 3" | bc -l) )); then
+            echo "Balance low - airdropping..."
+            for i in 1 2 3; do
+              solana airdrop 2 || true
+              sleep 5
+            done
+            solana balance
+          fi
+
+      # -- 9. Build all 7 programs
+      - name: Build Anchor programs
+        run: anchor build
+
+      - name: Verify .so files
+        run: |
+          echo "Built programs:"
+          ls -lh target/deploy/*.so
+
+      # -- 10. Deploy to devnet
+      - name: Deploy to devnet
+        run: anchor deploy --provider.cluster devnet
+
+      # -- 11. Initialize protocol state
+      - name: Initialize protocol
+        run: |
+          npm install -g ts-node typescript
+          DEPLOY_KEYPAIR=~/.config/solana/id.json ts-node scripts/deploy.ts devnet
+        env:
+          ANCHOR_PROVIDER_URL: https://api.devnet.solana.com
+
+      # -- 12. Print program IDs
+      - name: Print deployed program IDs
+        run: |
+          echo "=============================="
+          echo "NEET-PERP DEVNET PROGRAM IDs"
+          echo "=============================="
+          cat Anchor.toml | grep -A 10 "\[programs.devnet\]"
+          echo ""
+          echo "Clearing House:"
+          solana program show 2bvorArGtZTma2WoLtxejbtokywxyAd3FEVboT7Vzuww --url devnet || true
+
+      # -- 13. Upload build artifacts
+      - name: Upload .so files
+        uses: actions/upload-artifact@v4
+        with:
+          name: neet-perp-programs
+          path: target/deploy/*.so
+          retention-days: 30
