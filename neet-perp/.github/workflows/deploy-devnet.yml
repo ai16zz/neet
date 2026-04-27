@@ -87,7 +87,17 @@ jobs:
             solana balance
           fi
 
-      # ── 9. Build all 7 programs ──────────────────────────────────────────
+      # ── 9. Pin deps for Solana 1.18.x platform tools (Rust 1.75) ───────────
+      - name: Pin dependencies for Rust 1.75 compatibility
+        run: |
+          # blake3 1.8.5+ pulls digest 0.11 → block-buffer 0.12 which needs edition2024
+          # Solana 1.18.x platform tools only have Rust/Cargo 1.75.0 — pin blake3 to 1.5.4
+          cargo update -p blake3 --precise 1.5.4 2>&1 || echo "blake3 already compatible"
+          cargo update -p digest --precise 0.10.7 2>&1 || echo "digest already compatible"
+          echo "Updated lock file packages:"
+          grep -A 2 '"blake3"' Cargo.lock | head -10
+
+      # ── 10. Build all 7 programs ─────────────────────────────────────────
       - name: Build Anchor programs
         run: anchor build
 
@@ -112,17 +122,4 @@ jobs:
       - name: Print deployed program IDs
         run: |
           echo "=============================="
-          echo "NEET-PERP DEVNET PROGRAM IDs"
-          echo "=============================="
-          cat Anchor.toml | grep -A 10 "\[programs.devnet\]"
-          echo ""
-          echo "Clearing House:"
-          solana program show 2bvorArGtZTma2WoLtxejbtokywxyAd3FEVboT7Vzuww --url devnet || true
-
-      # ── 13. Upload build artifacts ───────────────────────────────────────
-      - name: Upload .so files
-        uses: actions/upload-artifact@v4
-        with:
-          name: neet-perp-programs
-          path: target/deploy/*.so
-          retention-days: 30
+       
