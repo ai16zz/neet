@@ -71,7 +71,7 @@ header{position:sticky;top:0;z-index:200;background:rgba(5,6,10,.92);backdrop-fi
 .ws-dot{width:5px;height:5px;border-radius:50%;background:var(--t3);transition:background .3s;}
 .ws-dot.live{background:var(--green);animation:blink 2s infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-#chartContainer{flex:1;overflow:hidden;min-height:0;}
+#chartContainer{flex:1;overflow:hidden;min-height:0;cursor:crosshair;}
 /* POSITIONS BOTTOM PANEL */
 .pos-panel{border-top:1px solid var(--border);background:rgba(5,6,10,.8);flex-shrink:0;min-height:120px;max-height:200px;overflow:hidden;display:flex;flex-direction:column;}
 .pos-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);}
@@ -397,21 +397,49 @@ function initChart(){
   const el=document.getElementById('chartContainer');
   if(chart){ chart.remove(); chart=null; candleSeries=null; }
   chart=LightweightCharts.createChart(el,{
-    layout:{background:{type:'Solid',color:'#05060a'},textColor:'#6b7799'},
-    grid:{vertLines:{color:'rgba(255,255,255,0.04)'},horzLines:{color:'rgba(255,255,255,0.04)'}},
-    crosshair:{mode:LightweightCharts.CrosshairMode.Normal,
-      vertLine:{color:'rgba(0,255,135,.3)',labelBackgroundColor:'#0a0d14'},
-      horzLine:{color:'rgba(0,255,135,.3)',labelBackgroundColor:'#0a0d14'}},
-    rightPriceScale:{borderColor:'rgba(255,255,255,.07)',textColor:'#6b7799'},
-    timeScale:{borderColor:'rgba(255,255,255,.07)',textColor:'#6b7799',timeVisible:true,secondsVisible:false},
-    handleScroll:{mouseWheel:true,pressedMouseMove:true},
-    handleScale:{mouseWheel:true,pinch:true},
+    layout:{background:{type:'Solid',color:'#05060a'},textColor:'#6b7799',fontSize:11,fontFamily:"'Space Mono',monospace"},
+    grid:{vertLines:{color:'rgba(255,255,255,0.03)'},horzLines:{color:'rgba(255,255,255,0.045)'}},
+    crosshair:{
+      mode:LightweightCharts.CrosshairMode.Normal,
+      vertLine:{color:'rgba(0,255,135,.35)',width:1,style:0,labelBackgroundColor:'#0a1a10'},
+      horzLine:{color:'rgba(0,255,135,.35)',width:1,style:0,labelBackgroundColor:'#0a1a10'}
+    },
+    rightPriceScale:{
+      borderColor:'rgba(255,255,255,.07)',
+      textColor:'#8a96b5',
+      minimumWidth:90,
+      autoScale:true,
+      entireTextOnly:false,
+      ticksVisible:true,
+      scaleMargins:{top:0.08,bottom:0.08}
+    },
+    timeScale:{
+      borderColor:'rgba(255,255,255,.07)',
+      textColor:'#8a96b5',
+      timeVisible:true,
+      secondsVisible:false,
+      rightOffset:5,
+      barSpacing:8,
+      minBarSpacing:2,
+      fixLeftEdge:false,
+      fixRightEdge:false,
+      lockVisibleTimeRangeOnResize:true
+    },
+    handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
+    handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:{time:true,price:true},axisDoubleClickReset:{time:true,price:true}},
+    kineticScroll:{touch:true,mouse:true},
     width:el.clientWidth, height:el.clientHeight
   });
   candleSeries=chart.addCandlestickSeries({
     upColor:'#00ff87', downColor:'#ff3b5c',
     borderUpColor:'#00ff87', borderDownColor:'#ff3b5c',
-    wickUpColor:'#00ff87', wickDownColor:'#ff3b5c'
+    wickUpColor:'rgba(0,255,135,.7)', wickDownColor:'rgba(255,59,92,.7)',
+    priceLineVisible:true,
+    priceLineWidth:1,
+    priceLineColor:'#00ff87',
+    priceLineStyle:2,
+    lastValueVisible:true,
+    priceFormat:{type:'price',precision:8,minMove:0.00000001}
   });
   new ResizeObserver(()=>{ if(chart) chart.applyOptions({width:el.clientWidth,height:el.clientHeight}); }).observe(el);
 }
@@ -783,4 +811,4 @@ init();
 </script>
 </body>
 </html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+                                                                                                                                                                                                      
