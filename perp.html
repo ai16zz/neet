@@ -258,7 +258,7 @@ footer a:hover{color:var(--green);}
     <div id="chartContainer"></div>
     <div class="pos-panel">
       <div class="pos-tabs">
-        <button class="pos-tab active">Positions</button>
+        <button class="pos-tab active" id="posTabBtn">Positions</button>
         <button class="pos-tab">Open Orders</button>
         <button class="pos-tab">History</button>
       </div>
@@ -694,12 +694,13 @@ function placeOrder(){
 function updatePosUI(){
   positions.forEach(p=>{ const px=S.px||p.ep, chg=(px-p.ep)/p.ep; p.pnl=p.dir==='long'?chg*p.sizUsd:-chg*p.sizUsd; });
   const el=document.getElementById('posBody');
-  if(!wpk){ el.innerHTML='<div class="pos-empty">Connect wallet to view positions</div>'; return; }
-  if(!positions.length){ el.innerHTML='<div class="pos-empty">No open positions</div>'; return; }
+  const tabBtn=document.getElementById('posTabBtn');
+  if(tabBtn) tabBtn.textContent=positions.length?`Positions (${positions.length})`:'Positions';
+  if(!positions.length){ el.innerHTML=`<div class="pos-empty">${wpk?'No open positions':'No open positions'}</div>`; return; }
   el.innerHTML=positions.map((p,i)=>{
     const pnlCls=p.pnl>=0?'pos':'neg', pnlStr=(p.pnl>=0?'+':'')+p.pnl.toFixed(2)+' USD';
     return`<div class="pos-row">
-      <span><span class="pos-dir ${p.dir}">${p.dir==='long'?'▲ LONG':'▼ SHORT'}</span> $NEET-PERP <span style="color:var(--t3);font-size:9px">${p.lev}x</span></span>
+      <span><span class="pos-dir ${p.dir}">${p.dir==='long'?'▲ LONG':'▼ SHORT'}</span> $NEET-PERP <span style="color:var(--t3);font-size:9px">${p.lev}x</span>${!wpk?'<span style="color:var(--gold);font-size:8px;margin-left:4px;letter-spacing:.1em"> DEMO</span>':''}</span>
       <span>$${p.sizUsd.toFixed(2)}</span>
       <span style="font-size:10px">${fmtPx(p.ep)} / ${fmtPx(S.px||p.ep)}</span>
       <span style="color:var(--red);font-size:10px">${fmtPx(p.liqP)}</span>
