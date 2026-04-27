@@ -258,9 +258,9 @@ footer a:hover{color:var(--green);}
     <div id="chartContainer"></div>
     <div class="pos-panel">
       <div class="pos-tabs">
-        <button class="pos-tab active" id="posTabBtn">Positions</button>
-        <button class="pos-tab">Open Orders</button>
-        <button class="pos-tab">History</button>
+        <button class="pos-tab active" id="posTabBtn" onclick="switchPosTab('positions')">Positions</button>
+        <button class="pos-tab" id="ordersTabBtn" onclick="switchPosTab('orders')">Open Orders</button>
+        <button class="pos-tab" id="historyTabBtn" onclick="switchPosTab('history')">History</button>
       </div>
       <div class="pos-body">
         <div class="pos-hdr-row">
@@ -381,7 +381,7 @@ const FEE=0.001, MAINT=0.025;
 //
 /* STATE */
 const S = { px:0, hi24:0, lo24:0, chg24:0, vol24:0, liq:0, fund:(Math.random()-.5)*.002, oi:Math.random()*3e5+1e5, candles:[] };
-let dir='long', otype='market', lev=10, wpk=null, bal=0, usdcBal=0, positions=[], chart=null, candleSeries=null, curTf='5m';
+let dir='long', otype='market', lev=10, wpk=null, bal=0, usdcBal=0, positions=[], closedTrades=[], chart=null, candleSeries=null, curTf='5m';
 //
 /* ══════════════════════════════════════════════
    CHART INIT
@@ -727,7 +727,7 @@ function closePos(i){
   document.getElementById('mTitle').textContent=pnl>=0?'PROFIT':'LOSS';
   document.getElementById('mBody').innerHTML=`$NEET-PERP ${p.dir.toUpperCase()} ${p.lev}x closed<br><br>Realised PnL: <b style="color:${pnl>=0?'var(--green)':'var(--red)'}">${ps} USD</b><br>Exit price: ${fmtPx(px)}<br><br><span style="color:rgba(245,196,0,.5);font-size:10px">⚡ DEMO MODE · on-chain settlement soon</span>`;
   document.getElementById('modal').classList.add('on');
-  S.oi-=p.sizUsd; positions.splice(i,1); updatePosUI();
+  closedTrades.unshift({...p,exitPx:px,pnl,ts:Date.now()}); S.oi-=p.sizUsd; positions.splice(i,1); updatePosUI();
 }
 //
 /* ══════════════════════════════════════════════
@@ -812,6 +812,38 @@ async function init(){
     document.getElementById('wdot').style.background='var(--green)';
     document.getElementById('wb').classList.add('connected');
     fetchBal(); updBtn(); updatePosUI();
+  }
+}
+function switchPosTab(t){
+  ['positions','orders','history'].forEach(n=>{
+    const btn=document.getElementById(n==='positions'?'posTabBtn':n==='orders'?'ordersTabBtn':'historyTabBtn');
+    if(btn) btn.className='pos-tab'+(t===n?' active':'');
+  });
+  const el=document.getElementById('posBody');
+  if(t==='positions'){ updatePosUI(); return; }
+  if(t==='orders'){
+    el.innerHTML='<div class="pos-empty">No open limit orders — market orders execute instantly</div>'; return;
+  }
+  if(t==='history'){
+    if(!closedTrades.length){ el.innerHTML='<div class="pos-empty">No closed trades yet</div>'; return; }
+    el.innerHTML='<div class="pos-hdr-row"><span>MARKET</span><span>SIZE</span><span>ENTRY / EXIT</span><span>PNL</span><span>TIME</span><span></span></div>'+
+      closedTrades.map(p=>{
+        const pnlCls=p.pnl>=0?'pos':'neg';
+        const pnlStr=(p.pnl>=0?'+':'')+p.pnl.toFixed(2)+' USD';
+        const t=new Date(p.ts);
+        const timeStr=t.getHours().toString().padStart(2,'0')+':'+t.getMinutes().toString().padStart(2,'0');
+        return '<div class="pos-row"><span><span class="pos-dir '+p.dir+'">'+(p.dir==='long'?'▲ LONG':'▼ SHORT')+'</span> $NEET-PERP <span style="color:var(--t3);font-size:9px">'+p.lev+'x</span></span>'+
+          '<span>
+</script>
+</body>
+</html>
+//
++p.sizUsd.toFixed(2)+'</span>'+
+          '<span style="font-size:10px">'+fmtPx(p.ep)+' / '+fmtPx(p.exitPx)+'</span>'+
+          '<span class="pos-pnl '+pnlCls+'">'+pnlStr+'</span>'+
+          '<span style="color:var(--t2);font-size:10px">'+timeStr+'</span>'+
+          '<span></span></div>';
+      }).join('');
   }
 }
 init();
