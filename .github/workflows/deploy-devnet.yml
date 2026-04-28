@@ -130,7 +130,7 @@ jobs:
       - name: Initialize protocol
         run: |
           npm install -g ts-node typescript @solana/web3.js @coral-xyz/anchor @solana/spl-token
-          DEPLOY_KEYPAIR=~/.config/solana/id.json ts-node --transpile-only scripts/deploy.ts devnet
+          DEPLOY_KEYPAIR=~/.config/solana/id.json ts-node --transpile-only --compiler-options '{"module":"CommonJS","moduleResolution":"node"}' scripts/deploy.ts devnet
         env:
           ANCHOR_PROVIDER_URL: https://api.devnet.solana.com
 
