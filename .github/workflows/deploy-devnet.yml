@@ -11,10 +11,7 @@ env:
   ANCHOR_VERSION: "0.31.1"
   SOLANA_VERSION: "v2.3.0"
   NODE_VERSION:   "20"
-  # Deploy wallet address (pre-fund this once with 15+ devnet SOL)
-  # https://faucet.solana.com  →  EE9GCrk9U4nbD2x36teZwUnfoyFs66ZjfS9hUHsKAT9E
   DEPLOY_WALLET: "EE9GCrk9U4nbD2x36teZwUnfoyFs66ZjfS9hUHsKAT9E"
-  MIN_SOL: "13"
 
 jobs:
   build-and-deploy:
@@ -73,54 +70,41 @@ jobs:
           echo '${{ secrets.DEPLOY_KEYPAIR }}' > ~/.config/solana/id.json
           solana config set --url devnet
           echo "Wallet: $(solana address)"
-        working-directory: .
-
-      # Devnet faucet is rate-limited from CI IPs.
-      # Pre-fund EE9GCrk9U4nbD2x36teZwUnfoyFs66ZjfS9hUHsKAT9E once:
-      #   1. Visit https://faucet.solana.com  (or run locally: solana airdrop 2 --url devnet)
-      #   2. Request 2 SOL × 8 times  →  16 SOL total
-      # After first deploy the SOL stays locked in program accounts forever.
-      # Re-deploys (upgrades) only cost a few lamports in fees.
-      - name: Check wallet balance
-        run: |
           BAL=$(solana balance | awk '{print $1}')
           echo "Balance: $BAL SOL"
-          if awk "BEGIN {exit !($BAL < ${{ env.MIN_SOL }})}"; then
-            echo ""
-            echo "════════════════════════════════════════════════════════"
-            echo "  INSUFFICIENT DEVNET SOL"
-            echo "  Need ${{ env.MIN_SOL }}+ SOL, have $BAL SOL"
-            echo ""
-            echo "  Pre-fund the deploy wallet ONCE:"
-            echo "  1. Open https://faucet.solana.com"
-            echo "  2. Paste: ${{ env.DEPLOY_WALLET }}"
-            echo "  3. Request 2 SOL × 8 times  (devnet only)"
-            echo ""
-            echo "  OR from your local terminal:"
-            echo "    solana airdrop 2 ${{ env.DEPLOY_WALLET }} --url devnet"
-            echo "    (repeat 8 times with 30s gaps)"
-            echo ""
-            echo "  Then re-run this workflow from the Actions tab."
-            echo "════════════════════════════════════════════════════════"
+          if awk "BEGIN {exit !($BAL < 1.5)}"; then
+            echo "ERROR: Need at least 1.5 SOL. Fund ${{ env.DEPLOY_WALLET }} at https://faucet.solana.com"
             exit 1
           fi
-          echo "✓ Sufficient balance for deployment"
         working-directory: .
 
       - name: Build Anchor programs
         run: anchor build
 
       - name: Verify .so files
-        run: ls -lh target/deploy/*.so
+        run: |
+          echo "Built programs:"
+          ls -lh target/deploy/*.so
 
-      # Deploy each program individually so we know which one fails
-      # and can top-up SOL in between if needed.
+      # Deploy each program individually.
+      # If balance runs out mid-way, partial deploy is saved on-chain.
+      # Re-run after topping up wallet to deploy remaining programs.
       - name: Deploy programs to devnet
         run: |
           WALLET=$(solana address)
-          PROGRAMS=(neet_amm neet_clearing_house neet_funding
-                    neet_insurance neet_liquidation neet_oracle_adapter
-                    neet_treasury)
+          # Deploy priority order: core contracts first
+          PROGRAMS=(
+            neet_clearing_house
+            neet_amm
+            neet_oracle_adapter
+            neet_funding
+            neet_liquidation
+            neet_insurance
+            neet_treasury
+          )
+
+          DEPLOYED=()
+          SKIPPED=()
 
           for prog in "${PROGRAMS[@]}"; do
             echo ""
@@ -130,20 +114,46 @@ jobs:
             BAL=$(solana balance | awk '{print $1}')
             echo " Balance: $BAL SOL"
 
+            if awk "BEGIN {exit !($BAL < 1.5)}"; then
+              echo " ⚠ Insufficient SOL — skipping $prog"
+              echo " Fund ${{ env.DEPLOY_WALLET }} at https://faucet.solana.com then re-run"
+              SKIPPED+=("$prog")
+              continue
+            fi
+
+            DEPLOYED_OK=false
             for attempt in 1 2 3; do
               echo " Attempt $attempt..."
               if anchor deploy --provider.cluster devnet --program-name "$prog"; then
                 echo " ✓ $prog deployed"
+                DEPLOYED+=("$prog")
+                DEPLOYED_OK=true
                 break
               fi
               echo " ✗ failed — waiting 20s"
               sleep 20
-              if [ "$attempt" -eq 3 ]; then
-                echo "ERROR: $prog failed after 3 attempts"
-                exit 1
-              fi
             done
+
+            if [ "$DEPLOYED_OK" = false ]; then
+              echo " ERROR: $prog failed after 3 attempts"
+              SKIPPED+=("$prog")
+            fi
           done
+
+          echo ""
+          echo "══════════════════════════════════"
+          echo " DEPLOYMENT SUMMARY"
+          echo "══════════════════════════════════"
+          echo " Deployed (${#DEPLOYED[@]}): ${DEPLOYED[*]}"
+          echo " Skipped  (${#SKIPPED[@]}): ${SKIPPED[*]}"
+          echo " Final balance: $(solana balance)"
+
+          # Fail if core contracts not deployed
+          if [[ ! " ${DEPLOYED[*]} " =~ " neet_clearing_house " ]]; then
+            echo "ERROR: neet_clearing_house not deployed — insufficient SOL"
+            echo "Add more SOL to ${{ env.DEPLOY_WALLET }} and re-run"
+            exit 1
+          fi
         env:
           ANCHOR_PROVIDER_URL: https://api.devnet.solana.com
 
@@ -161,8 +171,7 @@ jobs:
           echo "=============================="
           grep -A 10 "programs.devnet" Anchor.toml
           echo ""
-          echo "Wallet balance after deploy:"
-          solana balance
+          echo "Final wallet balance: $(solana balance)"
 
       - name: Upload .so files
         uses: actions/upload-artifact@v4
