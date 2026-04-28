@@ -10,7 +10,7 @@ on:
 env:
   ANCHOR_VERSION: "0.31.1"
   SOLANA_VERSION: "v2.3.0"
-  NODE_VERSION:   "20"
+  NODE_VERSION: "20"
   DEPLOY_WALLET: "EE9GCrk9U4nbD2x36teZwUnfoyFs66ZjfS9hUHsKAT9E"
 
 jobs:
@@ -86,13 +86,8 @@ jobs:
           echo "Built programs:"
           ls -lh target/deploy/*.so
 
-      # Deploy each program individually.
-      # If balance runs out mid-way, partial deploy is saved on-chain.
-      # Re-run after topping up wallet to deploy remaining programs.
       - name: Deploy programs to devnet
         run: |
-          WALLET=$(solana address)
-          # Deploy priority order: core contracts first
           PROGRAMS=(
             neet_clearing_house
             neet_amm
@@ -102,65 +97,40 @@ jobs:
             neet_insurance
             neet_treasury
           )
-
           DEPLOYED=()
           SKIPPED=()
-
           for prog in "${PROGRAMS[@]}"; do
-            echo ""
-            echo "══════════════════════════════════"
-            echo " Deploying: $prog"
-            echo "══════════════════════════════════"
+            echo "Deploying: $prog"
             BAL=$(solana balance | awk '{print $1}')
-            echo " Balance: $BAL SOL"
-
             if awk "BEGIN {exit !($BAL < 1.5)}"; then
-              echo " ⚠ Insufficient SOL — skipping $prog"
-              echo " Fund ${{ env.DEPLOY_WALLET }} at https://faucet.solana.com then re-run"
+              echo "Skipping $prog - low balance"
               SKIPPED+=("$prog")
               continue
             fi
-
             DEPLOYED_OK=false
             for attempt in 1 2 3; do
-              echo " Attempt $attempt..."
               if anchor deploy --provider.cluster devnet --program-name "$prog"; then
-                echo " ✓ $prog deployed"
                 DEPLOYED+=("$prog")
                 DEPLOYED_OK=true
                 break
               fi
-              echo " ✗ failed — waiting 20s"
               sleep 20
             done
-
-            if [ "$DEPLOYED_OK" = false ]; then
-              echo " ERROR: $prog failed after 3 attempts"
-              SKIPPED+=("$prog")
-            fi
+            if [ "$DEPLOYED_OK" = false ]; then SKIPPED+=("$prog"); fi
           done
-
-          echo ""
-          echo "══════════════════════════════════"
-          echo " DEPLOYMENT SUMMARY"
-          echo "══════════════════════════════════"
-          echo " Deployed (${#DEPLOYED[@]}): ${DEPLOYED[*]}"
-          echo " Skipped  (${#SKIPPED[@]}): ${SKIPPED[*]}"
-          echo " Final balance: $(solana balance)"
-
-          # Fail if core contracts not deployed
+          echo "Deployed: ${DEPLOYED[*]}"
+          echo "Skipped:  ${SKIPPED[*]}"
+          echo "Balance:  $(solana balance)"
           if [[ ! " ${DEPLOYED[*]} " =~ " neet_clearing_house " ]]; then
-            echo "ERROR: neet_clearing_house not deployed — insufficient SOL"
-            echo "Add more SOL to ${{ env.DEPLOY_WALLET }} and re-run"
-            exit 1
+            echo "ERROR: neet_clearing_house not deployed"; exit 1
           fi
         env:
           ANCHOR_PROVIDER_URL: https://api.devnet.solana.com
 
       - name: Initialize protocol
         run: |
-          npm install -g ts-node typescript
-          DEPLOY_KEYPAIR=~/.config/solana/id.json ts-node scripts/deploy.ts devnet
+          npm install -g ts-node typescript @solana/web3.js @coral-xyz/anchor @solana/spl-token
+          DEPLOY_KEYPAIR=~/.config/solana/id.json ts-node --transpile-only scripts/deploy.ts devnet
         env:
           ANCHOR_PROVIDER_URL: https://api.devnet.solana.com
 
@@ -170,8 +140,7 @@ jobs:
           echo "NEET-PERP DEVNET PROGRAM IDs"
           echo "=============================="
           grep -A 10 "programs.devnet" Anchor.toml
-          echo ""
-          echo "Final wallet balance: $(solana balance)"
+          echo "Balance: $(solana balance)"
 
       - name: Upload .so files
         uses: actions/upload-artifact@v4
