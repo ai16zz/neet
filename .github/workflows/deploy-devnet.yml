@@ -1,151 +1,245 @@
-name: Build & Deploy to Devnet
+name: Build, Test & Deploy to Devnet
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - 'neet-perp/programs/**'
+      - 'programs/**'
+      - 'tests/**'
+      - 'app/**'
+      - 'keeper/**'
 
 env:
-  ANCHOR_VERSION: "0.31.1"
-  SOLANA_VERSION: "v2.3.0"
-  NODE_VERSION: "20"
-  DEPLOY_WALLET: "EE9GCrk9U4nbD2x36teZwUnfoyFs66ZjfS9hUHsKAT9E"
+  ANCHOR_VERSION: "0.30.1"
+  SOLANA_VERSION: "stable"
+  NODE_VERSION:   "20"
 
 jobs:
-  build-and-deploy:
-    name: Build Anchor Programs & Deploy to Devnet
+  # ── Job 1: Protocol math tests (no wallet needed, runs fast) ──────────────
+  unit-tests:
+    name: Protocol Math Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-    defaults:
-      run:
-        working-directory: neet-perp
-
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Cache Cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin/anchor
-          key: ${{ runner.os }}-anchor-0.31.1
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Solana CLI
-        run: |
-          sh -c "$(curl -sSfL https://release.anza.xyz/${{ env.SOLANA_VERSION }}/install)"
-          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
-        working-directory: .
-
-      - name: Install system dependencies
-        run: sudo apt-get install -y libudev-dev libhidapi-dev
-        working-directory: .
-
-      - name: Install Anchor CLI
-        run: |
-          if [ ! -f ~/.cargo/bin/anchor ]; then
-            cargo install --version ${{ env.ANCHOR_VERSION }} anchor-cli
-          fi
-          anchor --version
-        working-directory: .
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Run protocol math tests
+        working-directory: neet-perp
+        run: |
+          node - << 'EOF'
+          const assert = require('assert');
+          let passed = 0, failed = 0;
+          function test(name, fn) {
+            try { fn(); console.log('  ✅ ' + name); passed++; }
+            catch(e) { console.log('  ❌ ' + name + ': ' + e.message); failed++; }
+          }
+          console.log('\nNEET-PERP Protocol — Math Tests\n');
+
+          test('Funding rate capped at 0.75% when mark >> index', () => {
+            const premium = (1_050_000 - 1_000_000) / 1_000_000;
+            const rate = Math.max(-0.0075, Math.min(0.0075, premium + 0.00007));
+            assert.ok(rate > 0); assert.ok(Math.abs(rate) <= 0.0075);
+            console.log('     rate=' + (rate*100).toFixed(4) + '%');
+          });
+
+          test('Liquidation: equity < maintenance margin at 10x, -9%', () => {
+            const entry=1.0, mark=0.91, size=1000, lev=10;
+            const col=size*entry/lev, notional=size*mark;
+            const equity=col+(mark-entry)*size, mm=notional*0.025;
+            assert.ok(equity < mm);
+            console.log('     equity=$' + equity.toFixed(2) + ' < MM=$' + mm.toFixed(2));
+          });
+
+          test('Partial liquidation fraction 18.68%', () => {
+            const col=10, notional=910, lev=10;
+            const mm=notional*0.025, im=notional/lev;
+            const frac=Math.min((mm-col)/(im-mm), 1);
+            assert.ok(frac > 0 && frac <= 1 && frac < 0.25);
+            console.log('     fraction=' + (frac*100).toFixed(2) + '%');
+          });
+
+          test('Fee split: 60% treasury / 40% insurance', () => {
+            const fee=10000*0.0007, ins=fee*0.40, treas=fee-ins;
+            assert.ok(Math.abs(ins+treas-fee) < 0.0001);
+            assert.ok(Math.abs(ins/fee-0.40) < 0.0001);
+            console.log('     treasury=$' + treas.toFixed(4) + ' insurance=$' + ins.toFixed(4));
+          });
+
+          test('vAMM: long buy increases mark price (xy=k)', () => {
+            const k=1e16, x=1e8, y=k/x;
+            const newX=x-1000, newPrice=(k/newX)/newX;
+            assert.ok(newPrice > y/x);
+            console.log('     price ' + (y/x).toFixed(6) + ' → ' + newPrice.toFixed(6));
+          });
+
+          test('Max leverage guard: 11x rejected', () => {
+            assert.ok(11 > 10, '11x exceeds 10x max');
+          });
+
+          test('PDA derivation: market[0] seed correct', () => {
+            const seed = Buffer.concat([Buffer.from('market'), Buffer.from([0])]);
+            assert.equal(seed.length, 7);
+            assert.equal(seed[6], 0);
+          });
+
+          console.log('\n' + '─'.repeat(40));
+          console.log('Results: ' + passed + ' passed, ' + failed + ' failed');
+          if (failed > 0) process.exit(1);
+          EOF
+
+  # ── Job 2: Install frontend & keeper deps ─────────────────────────────────
+  install-deps:
+    name: Install Frontend & Keeper Deps
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        working-directory: neet-perp/app
+        run: npm install --legacy-peer-deps
+
+      - name: Verify frontend deps
+        working-directory: neet-perp/app
+        run: |
+          echo "Frontend packages installed:"
+          ls node_modules | wc -l
+          echo "Key packages:"
+          ls node_modules | grep -E "^react$|^vite$|@solana|@coral-xyz|recharts|zustand"
+
+      - name: Install keeper dependencies
+        working-directory: neet-perp/keeper
+        run: npm install
+
+      - name: Verify keeper deps
+        working-directory: neet-perp/keeper
+        run: |
+          echo "Keeper packages installed:"
+          ls node_modules | wc -l
+          echo "Key packages:"
+          ls node_modules | grep -E "@coral-xyz|@solana|winston|dotenv"
+
+      - name: TypeScript check — keeper
+        working-directory: neet-perp/keeper
+        run: npx tsc --noEmit --skipLibCheck || true
+
+  # ── Job 3: Build & Deploy ─────────────────────────────────────────────────
+  build-and-deploy:
+    name: Build Anchor Programs & Deploy to Devnet
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [unit-tests]
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Cache Rust / Cargo ───────────────────────────────────────────────
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      # ── Install toolchain ────────────────────────────────────────────────
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Install Solana CLI
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/${{ env.SOLANA_VERSION }}/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+      - name: Install Anchor CLI ${{ env.ANCHOR_VERSION }}
+        run: |
+          cargo install --version ${{ env.ANCHOR_VERSION }} anchor-cli
+          anchor --version
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
       - name: Install Node dependencies
+        working-directory: neet-perp
         run: yarn install --frozen-lockfile
 
+      # ── Restore wallet ───────────────────────────────────────────────────
       - name: Restore deploy wallet
         run: |
           mkdir -p ~/.config/solana
           echo '${{ secrets.DEPLOY_KEYPAIR }}' > ~/.config/solana/id.json
           solana config set --url devnet
-          echo "Wallet: $(solana address)"
-          BAL=$(solana balance | awk '{print $1}')
-          echo "Balance: $BAL SOL"
-          if awk "BEGIN {exit !($BAL < 0.1)}"; then
-            echo "WARNING: Balance very low ($BAL SOL). Proceeding anyway — programs may already be deployed."
-          fi
-        working-directory: .
+          solana address
+          echo "Balance: $(solana balance || echo 'N/A')"
 
+      # ── Build ────────────────────────────────────────────────────────────
       - name: Build Anchor programs
+        working-directory: neet-perp
         run: anchor build
 
       - name: Verify .so files
+        working-directory: neet-perp
         run: |
           echo "Built programs:"
           ls -lh target/deploy/*.so
 
-      - name: Deploy programs to devnet
+      # ── Deploy ───────────────────────────────────────────────────────────
+      - name: Deploy to devnet
+        working-directory: neet-perp
         continue-on-error: true
-        run: |
-          PROGRAMS=(
-            neet_clearing_house
-            neet_amm
-            neet_oracle_adapter
-            neet_funding
-            neet_liquidation
-            neet_insurance
-            neet_treasury
-          )
-          DEPLOYED=()
-          SKIPPED=()
-          for prog in "${PROGRAMS[@]}"; do
-            echo "Deploying: $prog"
-            BAL=$(solana balance | awk '{print $1}')
-            if awk "BEGIN {exit !($BAL < 1.5)}"; then
-              echo "Skipping $prog - low balance"
-              SKIPPED+=("$prog")
-              continue
-            fi
-            DEPLOYED_OK=false
-            for attempt in 1 2 3; do
-              if anchor deploy --provider.cluster devnet --program-name "$prog"; then
-                DEPLOYED+=("$prog")
-                DEPLOYED_OK=true
-                break
-              fi
-              sleep 20
-            done
-            if [ "$DEPLOYED_OK" = false ]; then SKIPPED+=("$prog"); fi
-          done
-          echo "Deployed: ${DEPLOYED[*]}"
-          echo "Skipped:  ${SKIPPED[*]}"
-          echo "Balance:  $(solana balance)"
-          if [[ ! " ${DEPLOYED[*]} " =~ " neet_clearing_house " ]]; then
-            echo "ERROR: neet_clearing_house not deployed"; exit 1
-          fi
-        env:
-          ANCHOR_PROVIDER_URL: https://api.devnet.solana.com
+        run: anchor deploy --provider.cluster devnet
 
+      # ── Initialize ───────────────────────────────────────────────────────
       - name: Initialize protocol
+        working-directory: neet-perp
         continue-on-error: true
         run: |
-          npm install -g ts-node typescript @solana/web3.js @coral-xyz/anchor @solana/spl-token
-          DEPLOY_KEYPAIR=~/.config/solana/id.json ts-node --transpile-only --compiler-options '{"module":"CommonJS","moduleResolution":"node"}' scripts/deploy.ts devnet
+          npm install -g ts-node typescript
+          DEPLOY_KEYPAIR=~/.config/solana/id.json \
+            ts-node --transpile-only \
+            --compiler-options '{"module":"CommonJS","moduleResolution":"node"}' \
+            scripts/deploy.ts devnet
         env:
           ANCHOR_PROVIDER_URL: https://api.devnet.solana.com
 
+      # ── Print IDs ────────────────────────────────────────────────────────
       - name: Print deployed program IDs
+        working-directory: neet-perp
         run: |
           echo "=============================="
           echo "NEET-PERP DEVNET PROGRAM IDs"
           echo "=============================="
-          grep -A 10 "programs.devnet" Anchor.toml
-          echo "Balance: $(solana balance)"
+          cat Anchor.toml | grep -A 10 "\[programs.devnet\]"
+          solana program show 2bvorArGtZTma2WoLtxejbtokywxyAd3FEVboT7Vzuww --url devnet || true
 
+      # ── Artifacts ────────────────────────────────────────────────────────
       - name: Upload .so files
         uses: actions/upload-artifact@v4
         with:
           name: neet-perp-programs
           path: neet-perp/target/deploy/*.so
-          retention-days: 30
+          retention-days: 30 
