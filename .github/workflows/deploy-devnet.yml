@@ -43,6 +43,10 @@ jobs:
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
         working-directory: .
 
+      - name: Install system dependencies
+        run: sudo apt-get install -y libudev-dev libhidapi-dev
+        working-directory: .
+
       - name: Install Anchor CLI
         run: |
           if [ ! -f ~/.cargo/bin/anchor ]; then
