@@ -1,4 +1,4 @@
-name: Build, Test & Deploy to Devnet x
+name: Build, Test & Deploy to Devnet
 
 on:
   workflow_dispatch:
