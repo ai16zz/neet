@@ -8,7 +8,7 @@ on:
       - 'neet-perp/programs/**'
 
 env:
-  ANCHOR_VERSION: "0.30.1"
+  ANCHOR_VERSION: "0.31.1"
   SOLANA_VERSION: "v2.3.0"
   NODE_VERSION:   "20"
 
@@ -78,8 +78,6 @@ jobs:
         working-directory: .
 
 
-      - name: Pin proc-macro2 for anchor-syn 0.30.1 compatibility
-        run: cargo update -p proc-macro2 --precise 1.0.94
 
       - name: Build Anchor programs
         run: anchor build
