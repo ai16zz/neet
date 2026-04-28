@@ -16,7 +16,7 @@ jobs:
   build-and-deploy:
     name: Build Anchor Programs & Deploy to Devnet
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     defaults:
       run:
         working-directory: neet-perp
@@ -32,7 +32,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin/anchor
-          key: ${{ runner.os }}-anchor-0.30.1
+          key: ${{ runner.os }}-anchor-0.31.1
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -68,20 +68,38 @@ jobs:
           mkdir -p ~/.config/solana
           echo '${{ secrets.DEPLOY_KEYPAIR }}' > ~/.config/solana/id.json
           solana config set --url devnet
-          solana address
-          solana balance || true
+          echo "Wallet: $(solana address)"
+          echo "Balance: $(solana balance)"
         working-directory: .
 
-      - name: Airdrop devnet SOL
+      # Deploy 7 programs × ~1.6 SOL avg = ~12 SOL needed.
+      # Devnet faucet rate-limits by IP so we try both CLI and direct RPC,
+      # with 30 s pauses between attempts.
+      - name: Fund deploy wallet (devnet)
         run: |
-          BAL=$(solana balance | awk '{print $1}')
-          if awk "BEGIN {exit !($BAL < 3)}"; then
-            for i in 1 2 3; do solana airdrop 2 || true; sleep 5; done
-          fi
-          solana balance
+          WALLET=$(solana address)
+          echo "Funding wallet: $WALLET"
+          for attempt in $(seq 1 15); do
+            BAL=$(solana balance | awk '{print $1}')
+            printf "[%02d/15] balance = %s SOL\n" "$attempt" "$BAL"
+            if awk "BEGIN {exit !($BAL >= 14)}"; then
+              echo "✓ Sufficient balance"
+              break
+            fi
+            # CLI path
+            solana airdrop 2 --url devnet 2>&1 | tail -1 || true
+            sleep 20
+            # Direct JSON-RPC path (separate rate-limit counter)
+            SIG=$(curl -sf https://api.devnet.solana.com \
+              -H 'Content-Type: application/json' \
+              -d "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"requestAirdrop\",\"params\":[\"$WALLET\",2000000000]}" \
+              | python3 -c "import json,sys; r=json.load(sys.stdin); print(r.get('result','ERR:'+str(r.get('error',{}))))" \
+              2>/dev/null || echo "rpc-failed")
+            echo "RPC airdrop sig: $SIG"
+            sleep 20
+          done
+          echo "Final balance: $(solana balance)"
         working-directory: .
-
-
 
       - name: Build Anchor programs
         run: anchor build
@@ -89,8 +107,57 @@ jobs:
       - name: Verify .so files
         run: ls -lh target/deploy/*.so
 
-      - name: Deploy to devnet
-        run: anchor deploy --provider.cluster devnet
+      # Deploy each of the 7 programs individually so we can top-up SOL
+      # between deployments if the faucet was stingy.
+      - name: Deploy programs to devnet
+        run: |
+          WALLET=$(solana address)
+          PROGRAMS=(neet_amm neet_clearing_house neet_funding
+                    neet_insurance neet_liquidation neet_oracle_adapter
+                    neet_treasury)
+
+          for prog in "${PROGRAMS[@]}"; do
+            echo ""
+            echo "══════════════════════════════════════════"
+            echo " Deploying: $prog"
+            echo "══════════════════════════════════════════"
+
+            # Top-up if below 2.5 SOL
+            for top in 1 2 3 4 5; do
+              BAL=$(solana balance | awk '{print $1}')
+              echo "  balance = $BAL SOL"
+              if awk "BEGIN {exit !($BAL < 2.5)}"; then
+                echo "  Low SOL — airdropping..."
+                solana airdrop 2 --url devnet 2>&1 | tail -1 || true
+                sleep 20
+                curl -sf https://api.devnet.solana.com \
+                  -H 'Content-Type: application/json' \
+                  -d "{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"requestAirdrop\",\"params\":[\"$WALLET\",2000000000]}" \
+                  > /dev/null 2>&1 || true
+                sleep 20
+              else
+                break
+              fi
+            done
+
+            for attempt in 1 2 3; do
+              echo "  Deploy attempt $attempt..."
+              if anchor deploy --provider.cluster devnet --program-name "$prog"; then
+                echo "  ✓ $prog deployed"
+                break
+              fi
+              echo "  ✗ failed — waiting 30 s then retry"
+              sleep 30
+              solana airdrop 2 --url devnet 2>&1 | tail -1 || true
+              sleep 15
+              if [ "$attempt" -eq 3 ]; then
+                echo "ERROR: $prog failed after 3 attempts"
+                exit 1
+              fi
+            done
+          done
+        env:
+          ANCHOR_PROVIDER_URL: https://api.devnet.solana.com
 
       - name: Initialize protocol
         run: |
