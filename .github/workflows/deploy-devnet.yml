@@ -107,7 +107,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Install frontend dependencies
         working-directory: neet-perp/app
@@ -119,7 +118,7 @@ jobs:
           echo "Frontend packages installed:"
           ls node_modules | wc -l
           echo "Key packages:"
-          ls node_modules | grep -E "^react$|^vite$|@solana|@coral-xyz|recharts|zustand"
+          ls node_modules | grep -E "^react$|^vite$|@solana|@coral-xyz|recharts|zustand" || true
 
       - name: Install keeper dependencies
         working-directory: neet-perp/keeper
@@ -131,7 +130,7 @@ jobs:
           echo "Keeper packages installed:"
           ls node_modules | wc -l
           echo "Key packages:"
-          ls node_modules | grep -E "@coral-xyz|@solana|winston|dotenv"
+          ls node_modules | grep -E "@coral-xyz|@solana|winston|dotenv" || true
 
       - name: TypeScript check — keeper
         working-directory: neet-perp/keeper
@@ -181,7 +180,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
 
       - name: Install Node dependencies
         working-directory: neet-perp
