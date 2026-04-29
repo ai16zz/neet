@@ -2,6 +2,12 @@ name: Build, Test, Deploy & Publish
 
 on:
   workflow_dispatch:
+    inputs:
+      deploy_onchain:
+        description: 'Deploy programs to Solana devnet (requires funded wallet + secrets)'
+        required: false
+        default: 'false'
+        type: boolean
   push:
     branches: [main]
 
@@ -110,6 +116,7 @@ jobs:
   # ----------------------------------------------------------------
   build-and-deploy:
     name: Build Anchor Programs & Deploy to Devnet
+    if: github.event.inputs.deploy_onchain == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [unit-tests]
@@ -216,7 +223,7 @@ jobs:
     name: Build Frontend & Publish to GitHub Pages
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [install-deps, build-and-deploy]
+    needs: [install-deps, unit-tests]
     steps:
       - uses: actions/checkout@v4
 
@@ -248,7 +255,7 @@ jobs:
         working-directory: neet-perp/app
         env:
           VITE_RPC_URL: ${{ secrets.VITE_RPC_URL }}
-          VITE_USDC_MINT: ${{ needs.build-and-deploy.outputs.usdc_mint }}
+          VITE_USDC_MINT: ${{ secrets.VITE_USDC_MINT || '' }}
         run: npm run build 2>&1
 
       - name: Deploy perp app to GitHub Pages
