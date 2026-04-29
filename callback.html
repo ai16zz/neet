@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>NEET – Verifying X Account...</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#080d08;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:monospace}
+    .box{text-align:center;color:#00ff88;padding:40px}
+    .box h2{font-size:14px;letter-spacing:3px;margin-bottom:16px;color:#00ff88}
+    .box p{font-size:11px;color:#666;margin-bottom:8px}
+    .spinner{width:36px;height:36px;border:2px solid #1a2a1a;border-top-color:#00ff88;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 20px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .err{color:#ff5555}.ok{color:#00ff88}
+  </style>
+</head>
+<body>
+<div class="box">
+  <div class="spinner" id="spinner"></div>
+  <h2>// VERIFYING X ACCOUNT</h2>
+  <p id="msg">Exchanging credentials with Twitter...</p>
+  <p id="sub" style="font-size:10px;color:#444;margin-top:8px"></p>
+</div>
+<script>
+/*
+  callback.html – Twitter OAuth 2.0 PKCE callback handler
+
+  SETUP: Deploy verify-worker.js to Cloudflare Workers (free), then update BACKEND_URL below.
+  Worker URL format: https://neet-verify.<your-subdomain>.workers.dev/api/verify-twitter
+*/
+const BACKEND_URL = 'https://neet-verify.cardanowhalealert.workers.dev/api/verify-twitter';
+const MAIN_PAGE   = './neet-predict_2.html';
+const MAIN_ORIGIN = 'https://ai16zz.github.io';
+
+function setMsg(t,c){const e=document.getElementById('msg');if(e){e.textContent=t;if(c)e.className=c;}}
+function setSub(t){const e=document.getElementById('sub');if(e)e.textContent=t;}
+function stopSpinner(){const s=document.getElementById('spinner');if(s)s.style.display='none';}
+
+function sendSuccess(data){
+  stopSpinner();
+  setMsg('Verified! '+(window.opener?'Closing...':'Returning to #trenches...'),'ok');
+  if(window.opener && !window.opener.closed){
+    window.opener.postMessage({type:'neet_oauth', handle:data.handle, name:data.name, pfp:data.pfp, id:data.id}, MAIN_ORIGIN);
+    setTimeout(()=>window.close(), 1400);
+  } else {
+    const qs=new URLSearchParams({neet_oauth_handle:data.handle,neet_oauth_name:encodeURIComponent(data.name||data.handle),neet_oauth_pfp:encodeURIComponent(data.pfp||''),neet_oauth_id:data.id||''});
+    setTimeout(()=>{ location.href=MAIN_PAGE+'?'+qs.toString(); }, 1200);
+  }
+}
+
+function sendError(msg){
+  stopSpinner();
+  setMsg('✗ '+msg,'err');
+  setSub(window.opener?'Closing...':'Returning...');
+  if(window.opener && !window.opener.closed){
+    window.opener.postMessage({type:'neet_oauth', error:msg}, MAIN_ORIGIN);
+    setTimeout(()=>window.close(), 2200);
+  } else {
+    setTimeout(()=>{ location.href=MAIN_PAGE+'?neet_oauth_error='+encodeURIComponent(msg); }, 2200);
+  }
+}
+
+async function handleCallback(){
+  const p=new URLSearchParams(location.search);
+  const code=p.get('code'), state=p.get('state'), err=p.get('error');
+
+  if(err){ sendError('Auth rejected: '+err); return; }
+  if(!code||!state){ sendError('Missing auth code.'); return; }
+
+  const savedState = localStorage.getItem('neet_pkce_state')   || sessionStorage.getItem('neet_pkce_state');
+  const verifier   = localStorage.getItem('neet_pkce_verifier')|| sessionStorage.getItem('neet_pkce_verifier');
+  const wallet     = localStorage.getItem('neet_pkce_wallet')  || sessionStorage.getItem('neet_pkce_wallet');
+
+  if(state!==savedState){ sendError('State mismatch (CSRF guard).'); return; }
+  if(!verifier||!wallet){ sendError('Session expired. Start over.'); return; }
+
+  setMsg('Verifying with NEET server...');
+
+  try{
+    const resp=await fetch(BACKEND_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({wallet, code, code_verifier:verifier, redirect_uri:location.origin+location.pathname})});
+    const data=await resp.json();
+    if(!resp.ok||data.error) throw new Error(data.error||'Verification failed ('+resp.status+')');
+
+    ['neet_pkce_verifier','neet_pkce_state','neet_pkce_wallet'].forEach(k=>{
+      localStorage.removeItem(k); sessionStorage.removeItem(k);
+    });
+
+    sendSuccess({handle:data.handle, name:data.name, pfp:data.pfp, id:data.twitter_id});
+
+  }catch(e){
+    sendError(e.message);
+  }
+}
+
+handleCallback();
+</script>
+</body>
+</html>
