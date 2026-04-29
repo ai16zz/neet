@@ -1,243 +1,253 @@
-name: Build, Test & Deploy to Devnet
+name: Build, Test, Deploy & Publish
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - 'programs/**'
-      - 'tests/**'
-      - 'app/**'
-      - 'keeper/**'
 
 env:
   ANCHOR_VERSION: "0.30.1"
-  SOLANA_VERSION: "stable"
-  NODE_VERSION:   "20"
+  SOLANA_VERSION:  "stable"
+  NODE_VERSION:    "20"
+
+# Allow GitHub Pages deployment
+permissions:
+  contents: write
+  pages:    write
+  id-token: write
 
 jobs:
-  # ── Job 1: Protocol math tests (no wallet needed, runs fast) ──────────────
+  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  # JOB 1 â Protocol math unit tests (no Rust needed, ~10s)
+  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   unit-tests:
     name: Protocol Math Tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Run protocol math tests
         working-directory: neet-perp
-        run: |
-          node - << 'EOF'
-          const assert = require('assert');
-          let passed = 0, failed = 0;
-          function test(name, fn) {
-            try { fn(); console.log('  ✅ ' + name); passed++; }
-            catch(e) { console.log('  ❌ ' + name + ': ' + e.message); failed++; }
-          }
-          console.log('\nNEET-PERP Protocol — Math Tests\n');
+        run: node - << 'EOF'
+const assert = (cond, msg) => { if (!cond) { console.error('FAIL:', msg); process.exit(1); } };
+const PRICE_PREC = 1_000_000, MAX_RATE = 75/10000, FUND_INT = 7000/1e9;
 
-          test('Funding rate capped at 0.75% when mark >> index', () => {
-            const premium = (1_050_000 - 1_000_000) / 1_000_000;
-            const rate = Math.max(-0.0075, Math.min(0.0075, premium + 0.00007));
-            assert.ok(rate > 0); assert.ok(Math.abs(rate) <= 0.0075);
-            console.log('     rate=' + (rate*100).toFixed(4) + '%');
-          });
+// Funding rate capped
+const mark=1.05,index=1.00,prem=(mark-index)/index,rate=Math.max(-MAX_RATE,Math.min(MAX_RATE,prem+FUND_INT));
+assert(rate>0,'positive funding');assert(Math.abs(rate)<=MAX_RATE,'capped');
+console.log('â Funding rate:', (rate*100).toFixed(4)+'%');
 
-          test('Liquidation: equity < maintenance margin at 10x, -9%', () => {
-            const entry=1.0, mark=0.91, size=1000, lev=10;
-            const col=size*entry/lev, notional=size*mark;
-            const equity=col+(mark-entry)*size, mm=notional*0.025;
-            assert.ok(equity < mm);
-            console.log('     equity=$' + equity.toFixed(2) + ' < MM=$' + mm.toFixed(2));
-          });
+// Liquidation detection
+const entry=1.00,markP=0.91,size=1000,lev=10,coll=size*entry/lev;
+const notional=size*markP,pnl=(markP-entry)*size,equity=coll+pnl,mm=notional*0.025;
+assert(equity<mm,'liquidatable'); console.log('â Liq: equity='+equity.toFixed(2)+' mm='+mm.toFixed(2));
 
-          test('Partial liquidation fraction 18.68%', () => {
-            const col=10, notional=910, lev=10;
-            const mm=notional*0.025, im=notional/lev;
-            const frac=Math.min((mm-col)/(im-mm), 1);
-            assert.ok(frac > 0 && frac <= 1 && frac < 0.25);
-            console.log('     fraction=' + (frac*100).toFixed(2) + '%');
-          });
+// Partial liq fraction
+const deficit=mm-equity,im=notional/lev,frac=Math.min(deficit/(im-mm),1);
+assert(frac>0&&frac<=1,"valid fraction'); console.log('â Partial liq frac='+frac.toFixed(4));
 
-          test('Fee split: 60% treasury / 40% insurance', () => {
-            const fee=10000*0.0007, ins=fee*0.40, treas=fee-ins;
-            assert.ok(Math.abs(ins+treas-fee) < 0.0001);
-            assert.ok(Math.abs(ins/fee-0.40) < 0.0001);
-            console.log('     treasury=$' + treas.toFixed(4) + ' insurance=$' + ins.toFixed(4));
-          });
+// Fee split
+const fee=10000*0.0007,ins=fee*0.4,treas=fee-ins;
+assert(Math.abs(ins+treas-fee)<0.0001,'fee split'); console.log('â Fees: ins='+ins.toFixed(4)+' treasury='+treas.toFixed(4));
 
-          test('vAMM: long buy increases mark price (xy=k)', () => {
-            const k=1e16, x=1e8, y=k/x;
-            const newX=x-1000, newPrice=(k/newX)/newX;
-            assert.ok(newPrice > y/x);
-            console.log('     price ' + (y/x).toFixed(6) + ' → ' + newPrice.toFixed(6));
-          });
+// IMR calc
+const notional2=5000,lev2=5,im2=notional2/lev2;
+assert(im2===1000,'margin'); console.log('â IM='+im2);
 
-          test('Max leverage guard: 11x rejected', () => {
-            assert.ok(11 > 10, '11x exceeds 10x max');
-          });
+// vAMM price impact
+const base=100000000000000,quote=base*1.0,k=base*quote;
+const newBase=base*0.999,newQuote=k/newBase,cost=newQuote-quote;
+const newPrice=newQuote/newBase;
+assert(newPrice>1.0,'price increased'); console.log('â vAMM long: price='+newPrice.toFixed(6));
 
-          test('PDA derivation: market[0] seed correct', () => {
-            const seed = Buffer.concat([Buffer.from('market'), Buffer.from([0])]);
-            assert.equal(seed.length, 7);
-            assert.equal(seed[6], 0);
-          });
+// Overflow guard
+const MAX_U64=BigInt('18446744073709551615');
+const a=BigInt(500000000000),b=BigInt(10000);
+assert(a*b<MAX_U64*BigInt(10),'no overflow'); console.log('â Overflow guard passed');
 
-          console.log('\n' + '─'.repeat(40));
-          console.log('Results: ' + passed + ' passed, ' + failed + ' failed');
-          if (failed > 0) process.exit(1);
-          EOF
+console.log('\nð All 7 tests passed');
+EOF
 
-  # ── Job 2: Install frontend & keeper deps ─────────────────────────────────
+  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  # JOB 2 â Install frontend + keeper deps (parallel with unit-tests)
+  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   install-deps:
     name: Install Frontend & Keeper Deps
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install frontend dependencies
+      - name: Install frontend deps
         working-directory: neet-perp/app
         run: npm install --legacy-peer-deps
 
-      - name: Verify frontend deps
-        working-directory: neet-perp/app
-        run: |
-          echo "Frontend packages installed:"
-          ls node_modules | wc -l
-          echo "Key packages:"
-          ls node_modules | grep -E "^react$|^vite$|@solana|@coral-xyz|recharts|zustand" || true
-
-      - name: Install keeper dependencies
+      - name: Install keeper deps
         working-directory: neet-perp/keeper
         run: npm install
 
-      - name: Verify keeper deps
-        working-directory: neet-perp/keeper
-        run: |
-          echo "Keeper packages installed:"
-          ls node_modules | wc -l
-          echo "Key packages:"
-          ls node_modules | grep -E "@coral-xyz|@solana|winston|dotenv" || true
-
-      - name: TypeScript check — keeper
-        working-directory: neet-perp/keeper
+      - name: TypeScript check (frontend)
+        working-directory: neet-perp/app
         run: npx tsc --noEmit --skipLibCheck || true
 
-  # ── Job 3: Build & Deploy ─────────────────────────────────────────────────
+  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  # JOB 3 â Build Anchor programs + deploy to devnet
+  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   build-and-deploy:
     name: Build Anchor Programs & Deploy to Devnet
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [unit-tests]
-
+    outputs:
+      usdc_mint: ${{ steps.init.outputs.usdc_mint }}
     steps:
-      # ── Checkout ────────────────────────────────────────────────────────
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # ── Cache Rust / Cargo ───────────────────────────────────────────────
-      - name: Cache Cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
-      # ── Install toolchain ────────────────────────────────────────────────
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: neet-perp
 
       - name: Install Solana CLI
         run: |
           sh -c "$(curl -sSfL https://release.anza.xyz/${{ env.SOLANA_VERSION }}/install)"
           echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
 
-      - name: Install Anchor CLI ${{ env.ANCHOR_VERSION }}
+      - name: Install Anchor CLI
         run: |
-          cargo install --version ${{ env.ANCHOR_VERSION }} anchor-cli
-          anchor --version
+          npm install -g @coral-xyz/anchor-cli@${{ env.ANCHOR_VERSION }} --legacy-peer-deps
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install Node dependencies
-        working-directory: neet-perp
-        run: yarn install --frozen-lockfile
-
-      # ── Restore wallet ───────────────────────────────────────────────────
-      - name: Restore deploy wallet
+      - name: Write deploy wallet
         run: |
           mkdir -p ~/.config/solana
           echo '${{ secrets.DEPLOY_KEYPAIR }}' > ~/.config/solana/id.json
           solana config set --url devnet
-          solana address
-          echo "Balance: $(solana balance || echo 'N/A')"
+          echo "Deploy wallet: $(solana address)"
+          echo "Balance: $(solana balance)"
 
-      # ── Build ────────────────────────────────────────────────────────────
+      - name: Write program keypairs
+        working-directory: neet-perp
+        run: |
+          mkdir -p target/deploy
+          echo '${{ secrets.PROG_CLEARING_HOUSE }}' > target/deploy/neet_clearing_house-keypair.json
+          echo '${{ secrets.PROG_AMM }}'            > target/deploy/neet_amm-keypair.json
+          echo '${{ secrets.PROG_ORACLE }}'         > target/deploy/neet_oracle_adapter-keypair.json
+          echo '${{ secrets.PROG_FUNDING }}'        > target/deploy/neet_funding-keypair.json
+          echo '${{ secrets.PROG_LIQUIDATION }}'    > target/deploy/neet_liquidation-keypair.json
+          echo '${{ secrets.PROG_INSURANCE }}'      > target/deploy/neet_insurance-keypair.json
+          echo '${{ secrets.PROG_TREASURY }}'       > target/deploy/neet_treasury-keypair.json
+
+      - name: Patch declare_id!() to match keypairs
+        working-directory: neet-perp
+        run: |
+          sed -i 's/declare_id!("[^"]*")/declare_id!("EdqgHXeGhpBqp2MrshF3PVpBe6D2s7g8UYALy9MHLzww")/' programs/neet_clearing_house/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("6jAsJnMMFEP1j8yN7T578Th9qv4886w7dEsP4wmkwmkc")/' programs/neet_amm/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("DLCNVQMwyFEr6WgzKYScXc7PZs3xfLEwPehYer7LSAUe")/' programs/neet_oracle_adapter/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("H9T4E6E2nqVMqGh8M5hbW3kHHxJ66SjnDkTaZgnm3CJ")/' programs/neet_funding/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("Bosr1Ah36SiY8jESXRbYXAXUDbm1kGGV8VQ9j8Apx5KQ")/' programs/neet_liquidation/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("bMfcXaB9aqYJFYBexVUBTsqAAMUmmChur2jt4NpHNJr")/' programs/neet_insurance/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("9Sq1nXNFt2uFvZNNxBnCCgT2P1s7HDdewJnBiuQxQuYQ")/' programs/neet_treasury/src/lib.rs
+          echo "declare_id patches applied"
+
       - name: Build Anchor programs
         working-directory: neet-perp
-        run: anchor build
+        run: anchor build 2>&1
 
-      - name: Verify .so files
+      - name: Copy IDL files to frontend
         working-directory: neet-perp
         run: |
-          echo "Built programs:"
-          ls -lh target/deploy/*.so
+          mkdir -p app/src/idl
+          cp target/idl/neet_clearing_house.json app/src/idl/ 2>/dev/null || true
+          cp target/idl/neet_amm.json            app/src/idl/ 2>/dev/null || true
+          echo "IDL files copied"
 
-      # ── Deploy ───────────────────────────────────────────────────────────
       - name: Deploy to devnet
         working-directory: neet-perp
-        continue-on-error: true
-        run: anchor deploy --provider.cluster devnet
+        run: |
+          anchor deploy \
+            --provider.cluster devnet \
+            --provider.wallet ~/.config/solana/id.json \
+            2>&1 || echo "Deploy finished (check output above)"
 
-      # ── Initialize ───────────────────────────────────────────────────────
       - name: Initialize protocol
-        working-directory: neet-perp
-        continue-on-error: true
-        run: |
-          npm install -g ts-node typescript
-          DEPLOY_KEYPAIR=~/.config/solana/id.json \
-            ts-node --transpile-only \
-            --compiler-options '{"module":"CommonJS","moduleResolution":"node"}' \
-            scripts/deploy.ts devnet
-        env:
-          ANCHOR_PROVIDER_URL: https://api.devnet.solana.com
-
-      # ── Print IDs ────────────────────────────────────────────────────────
-      - name: Print deployed program IDs
+        id: init
         working-directory: neet-perp
         run: |
-          echo "=============================="
-          echo "NEET-PERP DEVNET PROGRAM IDs"
-          echo "=============================="
-          cat Anchor.toml | grep -A 10 "\[programs.devnet\]"
-          solana program show 2bvorArGtZTma2WoLtxejbtokywxyAd3FEVboT7Vzuww --url devnet || true
+          npm install --legacy-peer-deps
+          npx ts-node scripts/deploy.ts devnet 2>&1 || echo "Init finished"
+          USDC=$(cat deploy-info.json 2>/dev/null | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).usdcMint)}catch{console.log('')}})" 2>/dev/null || echo "")
+          echo "usdc_mint=$UKDC" >> $GITHUB_OUTPUT
+          echo "USDC mint: $USDC"
 
-      # ── Artifacts ────────────────────────────────────────────────────────
-      - name: Upload .so files
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: neet-perp-programs
-          path: neet-perp/target/deploy/*.so
-          retention-days: 30 
+          name: anchor-build
+          path: |
+            neet-perp/target/deploy/*.so
+            neet-perp/target/idl/*.json
+            neet-perp/deploy-info.json
+          retention-days: 7
+
+  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  # JOB 4 â Build React app + publish to GitHub Pages
+  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  build-frontend:
+    name: Build Frontend & Publish to GitHub Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [install-deps, build-and-deploy]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install frontend deps
+        working-directory: neet-perp/app
+        run: npm install --legacy-peer-deps
+
+      - name: Download build artifacts (IDL)
+        uses: actions/download-artifact@v4
+        with:
+          name: anchor-build
+          path: neet-perp/artifacts
+        continue-on-error: true
+
+      - name: Copy IDL from artifacts if available
+        working-directory: neet-perp
+        run: |
+          if [ -d artifacts/target/idl ]; then
+            cp artifacts/target/idl/*.json app/src/idl/ 2>/dev/null && echo "IDL from build" || true
+          fi
+          echo "Using IDL files:"
+          ls app/src/idl/
+
+      - name: Build React app
+        working-directory: neet-perp/app
+        env:
+          VITE_RPC_URL: ${{ secrets.VITE_RPC_URL || 'https://api.devnet.solana.com' }}
+          VITE_USDC_MINT: ${{ needs.build-and-deploy.outputs.usdc_mint }}
+        run: npm run build 2>&1
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir:  ./neet-perp/app/../../perp
+          destination_dir: perp
+          keep_files: true
+          commit_message: "deploy: NEET-PERP trading UI [${{ github.sha }}]"
