@@ -1,1 +1,113 @@
-
+{
+  "version": "0.1.0",
+  "name": "neet_amm",
+  "address": "6jAsJnMMFEP1j8yN7T578Th9qv4886w7dEsP4wmkwmkc",
+  "instructions": [
+    {
+      "name": "initializeMarket",
+      "accounts": [
+        { "name": "market", "isMut": true, "isSigner": false },
+        { "name": "admin", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [
+        { "name": "marketIndex", "type": "u8" },
+        { "name": "initialPrice", "type": "u64" },
+        { "name": "baseReserveInit", "type": "u64" }
+      ]
+    },
+    {
+      "name": "swapBaseAsset",
+      "accounts": [
+        { "name": "market", "isMut": true, "isSigner": false },
+        { "name": "clearingHouse", "isMut": false, "isSigner": true }
+      ],
+      "args": [
+        { "name": "marketIndex", "type": "u8" },
+        { "name": "baseAmount", "type": "u64" },
+        { "name": "direction", "type": "bool" },
+        { "name": "priceLimit", "type": "u64" }
+      ],
+      "returns": "u64"
+    },
+    {
+      "name": "updateIndexPrice",
+      "accounts": [
+        { "name": "market", "isMut": true, "isSigner": false },
+        { "name": "keeper", "isMut": false, "isSigner": true }
+      ],
+      "args": [
+        { "name": "marketIndex", "type": "u8" },
+        { "name": "indexPrice", "type": "u64" }
+      ]
+    },
+    {
+      "name": "adjustK",
+      "accounts": [
+        { "name": "market", "isMut": true, "isSigner": false },
+        { "name": "admin", "isMut": false, "isSigner": true }
+      ],
+      "args": [
+        { "name": "marketIndex", "type": "u8" },
+        { "name": "newSqrtK", "type": "u64" }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "AmmMarket",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "marketIndex", "type": "u8" },
+          { "name": "admin", "type": "publicKey" },
+          { "name": "baseReserve", "type": "u128" },
+          { "name": "quoteReserve", "type": "u128" },
+          { "name": "k", "type": "u128" },
+          { "name": "sqrtK", "type": "u128" },
+          { "name": "markPrice", "type": "u64" },
+          { "name": "markPriceTwap", "type": "u64" },
+          { "name": "indexPrice", "type": "u64" },
+          { "name": "totalLongs", "type": "u64" },
+          { "name": "totalShorts", "type": "u64" },
+          { "name": "cumulativeFundingRate", "type": "i64" },
+          { "name": "lastFundingTs", "type": "i64" },
+          { "name": "twapLastTs", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    }
+  ],
+  "types": [],
+  "events": [
+    {
+      "name": "MarketCreated",
+      "fields": [
+        { "name": "marketIndex", "type": "u8", "index": false },
+        { "name": "initialPrice", "type": "u64", "index": false },
+        { "name": "ts", "type": "i64", "index": false }
+      ]
+    },
+    {
+      "name": "Swapped",
+      "fields": [
+        { "name": "marketIndex", "type": "u8", "index": false },
+        { "name": "direction", "type": "bool", "index": false },
+        { "name": "baseAmount", "type": "u64", "index": false },
+        { "name": "quoteAmount", "type": "u64", "index": false },
+        { "name": "newMarkPrice", "type": "u64", "index": false },
+        { "name": "ts", "type": "i64", "index": false }
+      ]
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "Overflow", "msg": "Math overflow" },
+    { "code": 6001, "name": "Liquidity", "msg": "Insufficient AMM liquidity" },
+    { "code": 6002, "name": "Impact", "msg": "Price impact exceeds 2%" },
+    { "code": 6003, "name": "Slippage", "msg": "Slippage exceeded" },
+    { "code": 6004, "name": "BadPrice", "msg": "Bad price" }
+  ],
+  "metadata": {
+    "address": "6jAsJnMMFEP1j8yN7T578Th9qv4886w7dEsP4wmkwmkc"
+  }
+}
