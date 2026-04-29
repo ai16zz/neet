@@ -7,19 +7,19 @@ on:
 
 env:
   ANCHOR_VERSION: "0.30.1"
-  SOLANA_VERSION:  "stable"
-  NODE_VERSION:    "20"
+  SOLANA_VERSION: "stable"
+  NODE_VERSION: "20"
 
 # Allow GitHub Pages deployment
 permissions:
   contents: write
-  pages:    write
+  pages: write
   id-token: write
 
 jobs:
-  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-  # JOB 1 â Protocol math unit tests (no Rust needed, ~10s)
-  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  # ----------------------------------------------------------------
+  # JOB 1 - Protocol math unit tests (no Rust needed, ~10s)
+  # ----------------------------------------------------------------
   unit-tests:
     name: Protocol Math Tests
     runs-on: ubuntu-latest
@@ -32,49 +32,57 @@ jobs:
 
       - name: Run protocol math tests
         working-directory: neet-perp
-        run: node - << 'EOF'
-const assert = (cond, msg) => { if (!cond) { console.error('FAIL:', msg); process.exit(1); } };
-const PRICE_PREC = 1_000_000, MAX_RATE = 75/10000, FUND_INT = 7000/1e9;
+        run: |
+          node - <<'EOF'
+          const assert = (cond, msg) => { if (!cond) { console.error('FAIL:', msg); process.exit(1); } };
+          const MAX_RATE = 75/10000, FUND_INT = 7000/1e9;
 
-// Funding rate capped
-const mark=1.05,index=1.00,prem=(mark-index)/index,rate=Math.max(-MAX_RATE,Math.min(MAX_RATE,prem+FUND_INT));
-assert(rate>0,'positive funding');assert(Math.abs(rate)<=MAX_RATE,'capped');
-console.log('â Funding rate:', (rate*100).toFixed(4)+'%');
+          // Funding rate capped
+          const mark=1.05,index=1.00,prem=(mark-index)/index,rate=Math.max(-MAX_RATE,Math.min(MAX_RATE,prem+FUND_INT));
+          assert(rate>0,'positive funding');
+          assert(Math.abs(rate)<=MAX_RATE,'capped');
+          console.log('OK Funding rate:', (rate*100).toFixed(4)+'%');
 
-// Liquidation detection
-const entry=1.00,markP=0.91,size=1000,lev=10,coll=size*entry/lev;
-const notional=size*markP,pnl=(markP-entry)*size,equity=coll+pnl,mm=notional*0.025;
-assert(equity<mm,'liquidatable'); console.log('â Liq: equity='+equity.toFixed(2)+' mm='+mm.toFixed(2));
+          // Liquidation detection
+          const entry=1.00,markP=0.91,size=1000,lev=10,coll=size*entry/lev;
+          const notional=size*markP,pnl=(markP-entry)*size,equity=coll+pnl,mm=notional*0.025;
+          assert(equity<mm,'liquidatable');
+          console.log('OK Liq: equity='+equity.toFixed(2)+' mm='+mm.toFixed(2));
 
-// Partial liq fraction
-const deficit=mm-equity,im=notional/lev,frac=Math.min(deficit/(im-mm),1);
-assert(frac>0&&frac<=1,"valid fraction'); console.log('â Partial liq frac='+frac.toFixed(4));
+          // Partial liq fraction
+          const deficit=mm-equity,im=notional/lev,frac=Math.min(deficit/(im-mm),1);
+          assert(frac>0&&frac<=1,'valid fraction');
+          console.log('OK Partial liq frac='+frac.toFixed(4));
 
-// Fee split
-const fee=10000*0.0007,ins=fee*0.4,treas=fee-ins;
-assert(Math.abs(ins+treas-fee)<0.0001,'fee split'); console.log('â Fees: ins='+ins.toFixed(4)+' treasury='+treas.toFixed(4));
+          // Fee split
+          const fee=10000*0.0007,ins=fee*0.4,treas=fee-ins;
+          assert(Math.abs(ins+treas-fee)<0.0001,'fee split');
+          console.log('OK Fees: ins='+ins.toFixed(4)+' treasury='+treas.toFixed(4));
 
-// IMR calc
-const notional2=5000,lev2=5,im2=notional2/lev2;
-assert(im2===1000,'margin'); console.log('â IM='+im2);
+          // IMR calc
+          const notional2=5000,lev2=5,im2=notional2/lev2;
+          assert(im2===1000,'margin');
+          console.log('OK IM='+im2);
 
-// vAMM price impact
-const base=100000000000000,quote=base*1.0,k=base*quote;
-const newBase=base*0.999,newQuote=k/newBase,cost=newQuote-quote;
-const newPrice=newQuote/newBase;
-assert(newPrice>1.0,'price increased'); console.log('â vAMM long: price='+newPrice.toFixed(6));
+          // vAMM price impact
+          const base=100000000000000,quote=base*1.0,k=base*quote;
+          const newBase=base*0.999,newQuote=k/newBase;
+          const newPrice=newQuote/newBase;
+          assert(newPrice>1.0,'price increased');
+          console.log('OK vAMM long: price='+newPrice.toFixed(6));
 
-// Overflow guard
-const MAX_U64=BigInt('18446744073709551615');
-const a=BigInt(500000000000),b=BigInt(10000);
-assert(a*b<MAX_U64*BigInt(10),'no overflow'); console.log('â Overflow guard passed');
+          // Overflow guard
+          const MAX_U64=BigInt('18446744073709551615');
+          const a=BigInt(500000000000),b=BigInt(10000);
+          assert(a*b<MAX_U64*BigInt(10),'no overflow');
+          console.log('OK Overflow guard passed');
 
-console.log('\nð All 7 tests passed');
-EOF
+          console.log('\nAll 7 tests passed');
+          EOF
 
-  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-  # JOB 2 â Install frontend + keeper deps (parallel with unit-tests)
-  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  # ----------------------------------------------------------------
+  # JOB 2 - Install frontend + keeper deps (parallel with unit-tests)
+  # ----------------------------------------------------------------
   install-deps:
     name: Install Frontend & Keeper Deps
     runs-on: ubuntu-latest
@@ -97,9 +105,9 @@ EOF
         working-directory: neet-perp/app
         run: npx tsc --noEmit --skipLibCheck || true
 
-  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-  # JOB 3 â Build Anchor programs + deploy to devnet
-  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  # ----------------------------------------------------------------
+  # JOB 3 - Build Anchor programs + deploy to devnet
+  # ----------------------------------------------------------------
   build-and-deploy:
     name: Build Anchor Programs & Deploy to Devnet
     runs-on: ubuntu-latest
@@ -188,7 +196,7 @@ EOF
           npm install --legacy-peer-deps
           npx ts-node scripts/deploy.ts devnet 2>&1 || echo "Init finished"
           USDC=$(cat deploy-info.json 2>/dev/null | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).usdcMint)}catch{console.log('')}})" 2>/dev/null || echo "")
-          echo "usdc_mint=$UKDC" >> $GITHUB_OUTPUT
+          echo "usdc_mint=$USDC" >> $GITHUB_OUTPUT
           echo "USDC mint: $USDC"
 
       - name: Upload build artifacts
@@ -201,9 +209,9 @@ EOF
             neet-perp/deploy-info.json
           retention-days: 7
 
-  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-  # JOB 4 â Build React app + publish to GitHub Pages
-  # ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  # ----------------------------------------------------------------
+  # JOB 4 - Build React app + publish to GitHub Pages
+  # ----------------------------------------------------------------
   build-frontend:
     name: Build Frontend & Publish to GitHub Pages
     runs-on: ubuntu-latest
@@ -239,7 +247,7 @@ EOF
       - name: Build React app
         working-directory: neet-perp/app
         env:
-          VITE_RPC_URL: ${{ secrets.VITE_RPC_URL || 'https://api.devnet.solana.com' }}
+          VITE_RPC_URL: ${{ secrets.VITE_RPC_URL }}
           VITE_USDC_MINT: ${{ needs.build-and-deploy.outputs.usdc_mint }}
         run: npm run build 2>&1
 
@@ -247,8 +255,7 @@ EOF
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir:  ./neet-perp/app/../../perp
+          publish_dir: ./neet-perp/app/dist
           destination_dir: perp
           keep_files: true
           commit_message: "deploy: NEET-PERP trading UI [${{ github.sha }}]"
-
