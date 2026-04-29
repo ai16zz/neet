@@ -251,7 +251,7 @@ jobs:
           VITE_USDC_MINT: ${{ needs.build-and-deploy.outputs.usdc_mint }}
         run: npm run build 2>&1
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy perp app to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -259,3 +259,23 @@ jobs:
           destination_dir: perp
           keep_files: true
           commit_message: "deploy: NEET-PERP trading UI [${{ github.sha }}]"
+
+      - name: Collect root static files
+        run: |
+          mkdir -p /tmp/site-root
+          for f in callback.html index.html neet-predict_2.html neet-predict_2_edit.html \
+                   neet-security-patch.js neet_background.jpg perp.html \
+                   pumpfun-grads.json scan.html verify-worker.js \
+                   nansen-data.json nansen-profiler.json nansen-screener.json \
+                   neet-dev-stats.json; do
+            [ -f "$f" ] && cp "$f" /tmp/site-root/ && echo "Copied: $f"
+          done
+          ls /tmp/site-root/
+
+      - name: Deploy root static files to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: /tmp/site-root
+          keep_files: true
+          commit_message: "deploy: sync root static files [${{ github.sha }}]"
