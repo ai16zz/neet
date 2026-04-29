@@ -251,3 +251,4 @@ EOF
           destination_dir: perp
           keep_files: true
           commit_message: "deploy: NEET-PERP trading UI [${{ github.sha }}]"
+
