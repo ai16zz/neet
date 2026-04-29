@@ -9,7 +9,7 @@ export default defineConfig({
     nodePolyfills({ globals: { Buffer: true, global: true, process: true } }),
   ],
   build: {
-    outDir: '../../perp',
+    outDir: 'dist',
     emptyOutDir: true,
     rollupOptions: {
       output: {
