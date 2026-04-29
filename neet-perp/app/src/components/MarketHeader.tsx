@@ -1,81 +1,62 @@
-import React, { useEffect, useState } from 'react';
-import { MarketData } from '../hooks/useMarket';
-import { fmt, fmtPct } from '../utils/math';
+import React from 'react';
 
-interface Props { market: MarketData | null; loading: boolean; }
+interface MarketData {
+  symbol?: string;
+  markPrice?: number;
+  indexPrice?: number;
+  change24h?: number;
+  volume24h?: number;
+  openInterest?: number;
+  fundingRate?: number;
+}
 
-const StatBox: React.FC<{ label: string; value: string; color?: string }> = ({ label, value, color }) => (
-  <div className="flex flex-col">
-    <span className="text-xs text-gray-500">{label}</span>
-    <span className={`text-sm font-semibold ${color ?? 'text-gray-200'}`}>{value}</span>
-  </div>
-);
+interface Props {
+  market: MarketData | null;
+  loading: boolean;
+}
 
 const MarketHeader: React.FC<Props> = ({ market, loading }) => {
-  const [countdown, setCountdown] = useState(0);
+  const price = market?.markPrice ?? 0;
+  const change = market?.change24h ?? 0;
+  const isUp = change >= 0;
 
-  useEffect(() => {
-    if (!market) return;
-    setCountdown(market.nextFundingIn);
-    const t = setInterval(() => setCountdown(c => Math.max(0, c - 1)), 1000);
-    return () => clearInterval(t);
-  }, [market?.nextFundingIn]);
-
-  const mm = Math.floor(countdown / 60);
-  const ss = String(countdown % 60).padStart(2, '0');
-
-  if (loading || !market) {
-    return (
-      <div className="bg-gray-900 border-b border-gray-800 p-4 animate-pulse">
-        <div className="h-8 bg-gray-800 rounded w-64 mb-2" />
-        <div className="h-4 bg-gray-800 rounded w-96" />
-      </div>
-    );
-  }
-
-  const priceColor = market.priceChange24h >= 0 ? 'text-emerald-400' : 'text-red-400';
+  const fmt = (n: number, dec = 4) => n.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  const fmtK = (n: number) => n >= 1_000_000 ? (n / 1_000_000).toFixed(2) + 'M' : n >= 1_000 ? (n / 1_000).toFixed(1) + 'K' : n.toFixed(0);
 
   return (
-    <div className="bg-gray-900 border-b border-gray-800 px-5 py-3">
-      <div className="flex items-center gap-6 flex-wrap">
-        {/* Logo + name */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-bold">N</div>
-          <div>
-            <p className="text-sm font-bold text-white">NEET-PERP</p>
-            <p className="text-xs text-gray-500">Perpetual</p>
-          </div>
+    <div className="mkt-bar">
+      <div className="mkt-icon">N</div>
+      <div>
+        <div className="mkt-name">{market?.symbol ?? 'NEET-PERP'}</div>
+        <div style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'var(--mono)', letterSpacing: 1 }}>PERPETUAL</div>
+      </div>
+      <div className={`mkt-price ${isUp ? 'up' : 'dn'}`}>
+        {loading ? '—' : '$' + fmt(price)}
+      </div>
+      <div className={`mkt-chg ${isUp ? 'up' : 'dn'}`}>
+        {isUp ? '+' : ''}{change.toFixed(2)}%
+      </div>
+      <div className="stat-item">
+        <div className="stat-label">INDEX</div>
+        <div className="stat-value">${fmt(market?.indexPrice ?? 0)}</div>
+      </div>
+      <div className="stat-item">
+        <div className="stat-label">24H VOL</div>
+        <div className="stat-value">${fmtK(market?.volume24h ?? 0)}</div>
+      </div>
+      <div className="stat-item">
+        <div className="stat-label">OPEN INT.</div>
+        <div className="stat-value">${fmtK(market?.openInterest ?? 0)}</div>
+      </div>
+      <div className="stat-item">
+        <div className="stat-label">FUNDING</div>
+        <div className="stat-value" style={{ color: (market?.fundingRate ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
+          {((market?.fundingRate ?? 0) * 100).toFixed(4)}%
         </div>
-
-        {/* Mark price */}
-        <div className="flex flex-col">
-          <span className={`text-2xl font-bold ${priceColor}`}>
-            ${market.markPrice.toFixed(4)}
-          </span>
-          <span className={`text-xs ${priceColor}`}>
-            {market.priceChange24h >= 0 ? '+' : ''}{fmtPct(market.priceChange24h)} 24h
-          </span>
-        </div>
-
-        <div className="h-8 w-px bg-gray-700 hidden md:block" />
-
-        {/* Stats row */}
-        <div className="flex gap-6 flex-wrap">
-          <StatBox label="Index Price"   value={`$${market.indexPrice.toFixed(4)}`} />
-          <StatBox label="24h Volume"    value={fmt(market.volume24h)} />
-          <StatBox label="Open Interest" value={fmt(market.openInterest)} />
-          <StatBox
-            label="Funding Rate (1h)"
-            value={`${market.fundingRate >= 0 ? '+' : ''}${(market.fundingRate * 100).toFixed(4)}%`}
-            color={market.fundingRate > 0 ? 'text-red-400' : 'text-emerald-400'}
-          />
-          <StatBox
-            label="Next Funding"
-            value={`${mm}:${ss}`}
-            color="text-amber-400"
-          />
-          <StatBox label="Insurance Fund" value={fmt(market.insuranceFundSize)} color="text-blue-400" />
-        </div>
+      </div>
+      <div className="live-badge">
+        <div className="live-dot" />
+        LIVE
       </div>
     </div>
   );
