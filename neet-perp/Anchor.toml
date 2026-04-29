@@ -3,22 +3,22 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-neet_clearing_house = "2bvorArGtZTma2WoLtxejbtokywxyAd3FEVboT7Vzuww"
-neet_amm            = "CfqUg2Mv7PcPEh5rLuUvAfGugYva7GZStDmFYkspgNYo"
-neet_oracle_adapter = "9ejr5z91rYKboS8bG8iDE9t3iSf2jVCrVbBy2pRHWexS"
-neet_funding        = "91G4AGvfd6JfJqWojEVrapA4615sNrrr2Tddm9zmnDRL"
-neet_liquidation    = "8t58GABFWM4eXqHhYcnxgSLE3e2W7Wvmz5QRqjbms6NP"
-neet_insurance      = "Hmt6dN8xz3ej3841376toAEbe1B6PxsMuZJXqVBdGTEM"
-neet_treasury       = "4q5nwJxtYikZoHNxxh1t7mobi6nGwVsVeC6nu6uxpj1S"
+neet_clearing_house = "EdqgHXeGhpBqp2MrshF3PVpBe6D2s7g8UYALy9MHLzww"
+neet_amm            = "6jAsJnMMFEP1j8yN7T578Th9qv4886w7dEsP4wmkwmkc"
+neet_oracle_adapter = "DLCNVQMwyFEr6WgzKYScXc7PZs3xfLEwPehYer7LSAUe"
+neet_funding        = "H9T4E6E2nqVMqGh8M5hbW3kHHxJ66SjnDkTaZgnm3CJ"
+neet_liquidation    = "Bosr1Ah36SiY8jESXRbYXAXUDbm1kGGV8VQ9j8Apx5KQ"
+neet_insurance      = "bMfcXaB9aqYJFYBexVUBTsqAAMUmmChur2jt4NpHNJr"
+neet_treasury       = "9Sq1nXNFt2uFvZNNxBnCCgT2P1s7HDdewJnBiuQxQuYQ"
 
 [programs.devnet]
-neet_clearing_house = "2bvorArGtZTma2WoLtxejbtokywxyAd3FEVboT7Vzuww"
-neet_amm            = "CfqUg2Mv7PcPEh5rLuUvAfGugYva7GZStDmFYkspgNYo"
-neet_oracle_adapter = "9ejr5z91rYKboS8bG8iDE9t3iSf2jVCrVbBy2pRHWexS"
-neet_funding        = "91G4AGvfd6JfJqWojEVrapA4615sNrrr2Tddm9zmnDRL"
-neet_liquidation    = "8t58GABFWM4eXqHhYcnxgSLE3e2W7Wvmz5QRqjbms6NP"
-neet_insurance      = "Hmt6dN8xz3ej3841376toAEbe1B6PxsMuZJXqVBdGTEM"
-neet_treasury       = "4q5nwJxtYikZoHNxxh1t7mobi6nGwVsVeC6nu6uxpj1S"
+neet_clearing_house = "EdqgHXeGhpBqp2MrshF3PVpBe6D2s7g8UYALy9MHLzww"
+neet_amm            = "6jAsJnMMFEP1j8yN7T578Th9qv4886w7dEsP4wmkwmkc"
+neet_oracle_adapter = "DLCNVQMwyFEr6WgzKYScXc7PZs3xfLEwPehYer7LSAUe"
+neet_funding        = "H9T4E6E2nqVMqGh8M5hbW3kHHxJ66SjnDkTaZgnm3CJ"
+neet_liquidation    = "Bosr1Ah36SiY8jESXRbYXAXUDbm1kGGV8VQ9j8Apx5KQ"
+neet_insurance      = "bMfcXaB9aqYJFYBexVUBTsqAAMUmmChur2jt4NpHNJr"
+neet_treasury       = "9Sq1nXNFt2uFvZNNxBnCCgT2P1s7HDdewJnBiuQxQuYQ"
 
 [registry]
 url = "https://api.apr.dev"
@@ -27,6 +27,5 @@ url = "https://api.apr.dev"
 cluster = "Devnet"
 wallet = "~/.config/solana/id.json"
 
-# ── Protocol Wallets ─────────────────────────────────────────────────────────
-# Treasury  (receives 0.1% trading fees + 20% liquidation profit):
-#   DVjhpStJD6UKGM6EfSXBtp5n6wayiPttRYms2cXBN7JM
+# Deploy wallet (admin): 4NqMPyuybfgHaWak59psEBx1BzehLp7Po42Za6vmNgGm
+# Set DEPLOY_KEYPAIR GitHub secret with the JSON array from SECRETS.md
