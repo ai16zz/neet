@@ -1,96 +1,80 @@
 import React, { useState } from 'react';
 
 interface Props {
-  collateral:  number;
-  marginUsed:  number;
+  collateral: number;
+  marginUsed: number;
   realisedPnl: number;
-  onDeposit:   (amount: number) => Promise<void>;
-  onWithdraw:  (amount: number) => Promise<void>;
+  onDeposit: (usd: number) => Promise<void>;
+  onWithdraw: (usd: number) => Promise<void>;
 }
 
-const CollateralPanel: React.FC<Props> = ({
-  collateral, marginUsed, realisedPnl, onDeposit, onWithdraw
-}) => {
-  const [mode,   setMode]   = useState<'deposit' | 'withdraw'>('deposit');
+const CollateralPanel: React.FC<Props> = ({ collateral, marginUsed, realisedPnl, onDeposit, onWithdraw }) => {
+  const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit');
   const [amount, setAmount] = useState('');
-  const [busy,   setBusy]   = useState(false);
-  const [error,  setError]  = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
 
-  const total = collateral + marginUsed;
+  const freeMargin = collateral - marginUsed;
+  const marginRatio = collateral > 0 ? (marginUsed / collateral) * 100 : 0;
 
   const handleSubmit = async () => {
-    const n = parseFloat(amount);
-    if (!n || n <= 0) return setError('Enter a valid amount');
-    if (mode === 'withdraw' && n > collateral) return setError('Exceeds free collateral');
-    setError(null); setBusy(true);
+    const val = parseFloat(amount);
+    if (!val || val <= 0) { setErr('Enter a valid amount'); return; }
+    if (mode === 'withdraw' && val > freeMargin) { setErr('Exceeds free margin'); return; }
+    setErr(''); setLoading(true);
     try {
-      if (mode === 'deposit') await onDeposit(n);
-      else await onWithdraw(n);
+      if (mode === 'deposit') await onDeposit(val);
+      else await onWithdraw(val);
       setAmount('');
-    } catch (e: any) {
-      setError(e.message || 'Transaction failed');
-    } finally {
-      setBusy(false);
-    }
+    } catch (e: any) { setErr(e?.message ?? 'Transaction failed'); }
+    finally { setLoading(false); }
   };
 
+  const pnlClass = realisedPnl >= 0 ? 'green' : 'red';
+  const mrClass = marginRatio > 80 ? 'red' : marginRatio > 50 ? 'gold' : 'green';
+
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
-      <h3 className="text-sm font-semibold text-gray-200 mb-4">Collateral</h3>
-
-      {/* Stats */}
-      <div className="space-y-2 mb-5">
-        {[
-          { label: 'Total Deposited', value: `$${total.toFixed(2)}`, color: 'text-white' },
-          { label: 'Free Collateral', value: `$${collateral.toFixed(2)}`, color: 'text-emerald-400' },
-          { label: 'Margin Used',     value: `$${marginUsed.toFixed(2)}`, color: 'text-amber-400' },
-          { label: 'Realised PnL',    value: `${realisedPnl >= 0 ? '+' : ''}$${realisedPnl.toFixed(4)}`,
-            color: realisedPnl >= 0 ? 'text-emerald-400' : 'text-red-400' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="flex justify-between text-sm">
-            <span className="text-gray-500">{label}</span>
-            <span className={`font-medium ${color}`}>{value}</span>
+    <div className="coll-panel">
+      <div className="panel-title">COLLATERAL</div>
+      <div className="coll-grid">
+        <div className="coll-card">
+          <div className="coll-clabel">BALANCE</div>
+          <div className="coll-cval green">${collateral.toFixed(2)}</div>
+        </div>
+        <div className="coll-card">
+          <div className="coll-clabel">FREE MARGIN</div>
+          <div className="coll-cval green">${freeMargin.toFixed(2)}</div>
+        </div>
+        <div className="coll-card">
+          <div className="coll-clabel">MARGIN USED</div>
+          <div className="coll-cval gold">${marginUsed.toFixed(2)}</div>
+        </div>
+        <div className="coll-card">
+          <div className="coll-clabel">REALISED PNL</div>
+          <div className={`coll-cval ${pnlClass}`}>{realisedPnl >= 0 ? '+' : ''}${realisedPnl.toFixed(2)}</div>
+        </div>
+      </div>
+      <div className="coll-card" style={{ marginBottom: 12 }}>
+        <div className="coll-clabel">MARGIN RATIO</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+          <div style={{ flex: 1, height: 4, background: 'var(--border)', borderRadius: 2 }}>
+            <div style={{ width: marginRatio + '%', height: '100%', background: `var(--${mrClass})`, borderRadius: 2, transition: 'width 0.3s' }} />
           </div>
-        ))}
+          <span className={`coll-cval ${mrClass}`} style={{ fontSize: 11 }}>{marginRatio.toFixed(1)}%</span>
+        </div>
       </div>
-
-      {/* Toggle */}
-      <div className="flex rounded-lg overflow-hidden mb-3">
-        {(['deposit', 'withdraw'] as const).map(m => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`flex-1 py-2 text-xs font-medium capitalize transition-colors ${
-              mode === m ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400'
-            }`}
-          >
-            {m}
-          </button>
-        ))}
+      <div className="mode-wrap">
+        <button className={`mode-btn${mode==='deposit'?' active':''}`} onClick={() => setMode('deposit')}>DEPOSIT</button>
+        <button className={`mode-btn${mode==='withdraw'?' active':''}`} onClick={() => setMode('withdraw')}>WITHDRAW</button>
       </div>
-
-      {/* Amount input */}
-      <div className="relative mb-3">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-        <input
-          type="number"
-          value={amount}
-          onChange={e => setAmount(e.target.value)}
-          placeholder="0.00 USDC"
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-7 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
-        />
+      <div className="inp-wrap">
+        <div className="inp-label">AMOUNT (USDC)</div>
+        <input type="number" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} />
+        <span className="inp-suf">USDC</span>
       </div>
-
-      {error && (
-        <p className="text-red-400 text-xs mb-2">{error}</p>
-      )}
-
-      <button
-        onClick={handleSubmit}
-        disabled={busy}
-        className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium transition-colors"
-      >
-        {busy ? 'Processing…' : mode === 'deposit' ? 'Deposit USDC' : 'Withdraw USDC'}
+      {err && <div style={{ color: 'var(--red)', fontFamily: 'var(--mono)', fontSize: 11, marginBottom: 8 }}>{err}</div>}
+      <button className="coll-btn" onClick={handleSubmit} disabled={loading}>
+        {loading ? 'PROCESSING...' : mode === 'deposit' ? 'DEPOSIT USDC' : 'WITHDRAW USDC'}
       </button>
     </div>
   );
