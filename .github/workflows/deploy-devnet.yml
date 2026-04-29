@@ -160,13 +160,13 @@ jobs:
       - name: Patch declare_id!() to match keypairs
         working-directory: neet-perp
         run: |
-          sed -i 's/declare_id!("[^"]*")/declare_id!("EdqgHXeGhpBqp2MrshF3PVpBe6D2s7g8UYALy9MHLzww")/' programs/neet_clearing_house/src/lib.rs
-          sed -i 's/declare_id!("[^"]*")/declare_id!("6jAsJnMMFEP1j8yN7T578Th9qv4886w7dEsP4wmkwmkc")/' programs/neet_amm/src/lib.rs
-          sed -i 's/declare_id!("[^"]*")/declare_id!("DLCNVQMwyFEr6WgzKYScXc7PZs3xfLEwPehYer7LSAUe")/' programs/neet_oracle_adapter/src/lib.rs
-          sed -i 's/declare_id!("[^"]*")/declare_id!("H9T4E6E2nqVMqGh8M5hbW3kHHxJ66SjnDkTaZgnm3CJ")/' programs/neet_funding/src/lib.rs
-          sed -i 's/declare_id!("[^"]*")/declare_id!("Bosr1Ah36SiY8jESXRbYXAXUDbm1kGGV8VQ9j8Apx5KQ")/' programs/neet_liquidation/src/lib.rs
-          sed -i 's/declare_id!("[^"]*")/declare_id!("bMfcXaB9aqYJFYBexVUBTsqAAMUmmChur2jt4NpHNJr")/' programs/neet_insurance/src/lib.rs
-          sed -i 's/declare_id!("[^"]*")/declare_id!("9Sq1nXNFt2uFvZNNxBnCCgT2P1s7HDdewJnBiuQxQuYQ")/' programs/neet_treasury/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("3ZR4Kzp4QnDFLKk3GqmxeGrfxiXFYnFrwBzzrGYbVeqj")/' programs/neet_clearing_house/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("F5EtcCyCtNYs4YXeo8n1HyGEsfsrpeTiLrmJjA8PDMdf")/' programs/neet_amm/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("ByERjrUvJB3aknXgwq39qR6YNMMCe65Lg7RryKaaPyob")/' programs/neet_oracle_adapter/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("CrEgwhjMM58imD2FHkpfoxRtLephNKFURydRjjA5AfZ4")/' programs/neet_funding/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("G6kuR1BHXym3tWvCcCVsJgfRdLte43Ar9f3qdqnVsWV9")/' programs/neet_liquidation/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("HTVk38beWUuae5ze8DWF2W9fKFbCdAs4pn3oXwofjmhm")/' programs/neet_insurance/src/lib.rs
+          sed -i 's/declare_id!("[^"]*")/declare_id!("Cvw5QJDLP8fvKsNv1avJVmQHr5XHB8bG85mCFyCAC3BE")/' programs/neet_treasury/src/lib.rs
           echo "declare_id patches applied"
 
       - name: Build Anchor programs
