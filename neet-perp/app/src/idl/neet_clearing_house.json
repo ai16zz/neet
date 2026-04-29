@@ -1,1 +1,234 @@
-
+{
+  "version": "0.1.0",
+  "name": "neet_clearing_house",
+  "address": "EdqgHXeGhpBqp2MrshF3PVpBe6D2s7g8UYALy9MHLzww",
+  "instructions": [
+    {
+      "name": "initialize",
+      "accounts": [
+        { "name": "state", "isMut": true, "isSigner": false },
+        { "name": "admin", "isMut": true, "isSigner": true },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "usdcMint", "type": "publicKey" }]
+    },
+    {
+      "name": "setPaused",
+      "accounts": [
+        { "name": "state", "isMut": true, "isSigner": false },
+        { "name": "admin", "isMut": false, "isSigner": true }
+      ],
+      "args": [{ "name": "paused", "type": "bool" }]
+    },
+    {
+      "name": "depositCollateral",
+      "accounts": [
+        { "name": "state", "isMut": false, "isSigner": false },
+        { "name": "userAccount", "isMut": true, "isSigner": false },
+        { "name": "userTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "vault", "isMut": true, "isSigner": false },
+        { "name": "authority", "isMut": true, "isSigner": true },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false },
+        { "name": "systemProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "amount", "type": "u64" }]
+    },
+    {
+      "name": "withdrawCollateral",
+      "accounts": [
+        { "name": "state", "isMut": true, "isSigner": false },
+        { "name": "userAccount", "isMut": true, "isSigner": false },
+        { "name": "userTokenAccount", "isMut": true, "isSigner": false },
+        { "name": "vault", "isMut": true, "isSigner": false },
+        { "name": "authority", "isMut": false, "isSigner": true },
+        { "name": "tokenProgram", "isMut": false, "isSigner": false }
+      ],
+      "args": [{ "name": "amount", "type": "u64" }]
+    },
+    {
+      "name": "openPosition",
+      "accounts": [
+        { "name": "state", "isMut": true, "isSigner": false },
+        { "name": "userAccount", "isMut": true, "isSigner": false },
+        { "name": "market", "isMut": true, "isSigner": false },
+        { "name": "authority", "isMut": false, "isSigner": true }
+      ],
+      "args": [
+        { "name": "marketIndex", "type": "u8" },
+        { "name": "direction", "type": { "defined": "Direction" } },
+        { "name": "baseAmount", "type": "u64" },
+        { "name": "leverage", "type": "u64" }
+      ]
+    },
+    {
+      "name": "closePosition",
+      "accounts": [
+        { "name": "state", "isMut": true, "isSigner": false },
+        { "name": "userAccount", "isMut": true, "isSigner": false },
+        { "name": "market", "isMut": false, "isSigner": false },
+        { "name": "authority", "isMut": false, "isSigner": true }
+      ],
+      "args": [
+        { "name": "marketIndex", "type": "u8" },
+        { "name": "baseAmount", "type": "u64" }
+      ]
+    },
+    {
+      "name": "settleFunding",
+      "accounts": [
+        { "name": "userAccount", "isMut": true, "isSigner": false },
+        { "name": "market", "isMut": false, "isSigner": false },
+        { "name": "keeper", "isMut": false, "isSigner": true }
+      ],
+      "args": [{ "name": "marketIndex", "type": "u8" }]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "ProtocolState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "admin", "type": "publicKey" },
+          { "name": "usdcMint", "type": "publicKey" },
+          { "name": "paused", "type": "bool" },
+          { "name": "totalFees", "type": "u64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "UserAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "authority", "type": "publicKey" },
+          { "name": "collateral", "type": "u64" },
+          { "name": "marginUsed", "type": "u64" },
+          { "name": "realisedPnl", "type": "i64" },
+          { "name": "positions", "type": { "array": [{ "defined": "Position" }, 8] } },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "MarketState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "marketIndex", "type": "u8" },
+          { "name": "markPrice", "type": "u64" },
+          { "name": "indexPrice", "type": "u64" },
+          { "name": "markPriceTwap", "type": "u64" },
+          { "name": "cumulativeFundingRate", "type": "i64" },
+          { "name": "lastFundingTs", "type": "i64" },
+          { "name": "twapLastTs", "type": "i64" },
+          { "name": "baseReserve", "type": "u128" },
+          { "name": "quoteReserve", "type": "u128" },
+          { "name": "k", "type": "u128" },
+          { "name": "sqrtK", "type": "u128" },
+          { "name": "totalLongs", "type": "u64" },
+          { "name": "totalShorts", "type": "u64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "Direction",
+      "type": {
+        "kind": "enum",
+        "variants": [{ "name": "Long" }, { "name": "Short" }]
+      }
+    },
+    {
+      "name": "Position",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "marketIndex", "type": "u8" },
+          { "name": "direction", "type": { "defined": "Direction" } },
+          { "name": "baseAmount", "type": "u64" },
+          { "name": "quoteAmount", "type": "u64" },
+          { "name": "openNotional", "type": "u64" },
+          { "name": "leverage", "type": "u64" },
+          { "name": "lastFunding", "type": "i64" }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "ProtocolInit",
+      "fields": [
+        { "name": "admin", "type": "publicKey", "index": false },
+        { "name": "ts", "type": "i64", "index": false }
+      ]
+    },
+    {
+      "name": "Deposit",
+      "fields": [
+        { "name": "user", "type": "publicKey", "index": false },
+        { "name": "amount", "type": "u64", "index": false },
+        { "name": "ts", "type": "i64", "index": false }
+      ]
+    },
+    {
+      "name": "Withdraw",
+      "fields": [
+        { "name": "user", "type": "publicKey", "index": false },
+        { "name": "amount", "type": "u64", "index": false },
+        { "name": "ts", "type": "i64", "index": false }
+      ]
+    },
+    {
+      "name": "PositionOpened",
+      "fields": [
+        { "name": "user", "type": "publicKey", "index": false },
+        { "name": "market", "type": "u8", "index": false },
+        { "name": "direction", "type": { "defined": "Direction" }, "index": false },
+        { "name": "baseAmount", "type": "u64", "index": false },
+        { "name": "notional", "type": "u64", "index": false },
+        { "name": "entryPrice", "type": "u64", "index": false },
+        { "name": "leverage", "type": "u64", "index": false },
+        { "name": "fee", "type": "u64", "index": false },
+        { "name": "ts", "type": "i64", "index": false }
+      ]
+    },
+    {
+      "name": "PositionClosed",
+      "fields": [
+        { "name": "user", "type": "publicKey", "index": false },
+        { "name": "market", "type": "u8", "index": false },
+        { "name": "closeAmount", "type": "u64", "index": false },
+        { "name": "exitPrice", "type": "u64", "index": false },
+        { "name": "pnl", "type": "i64", "index": false },
+        { "name": "fee", "type": "u64", "index": false },
+        { "name": "ts", "type": "i64", "index": false }
+      ]
+    },
+    {
+      "name": "BadDebt",
+      "fields": [
+        { "name": "user", "type": "publicKey", "index": false },
+        { "name": "market", "type": "u8", "index": false },
+        { "name": "ts", "type": "i64", "index": false }
+      ]
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "Paused", "msg": "Trading paused" },
+    { "code": 6001, "name": "InvalidAmount", "msg": "Invalid amount" },
+    { "code": 6002, "name": "BadLeverage", "msg": "Leverage must be 1-10" },
+    { "code": 6003, "name": "InsufficientCollateral", "msg": "Insufficient free collateral" },
+    { "code": 6004, "name": "BelowMin", "msg": "Below $10 minimum notional" },
+    { "code": 6005, "name": "AboveMax", "msg": "Above $500k maximum notional" },
+    { "code": 6006, "name": "NoPosition", "msg": "Position not found" },
+    { "code": 6007, "name": "MaxPositions", "msg": "Max 8 positions reached" },
+    { "code": 6008, "name": "Overflow", "msg": "Math overflow" }
+  ],
+  "metadata": {
+    "address": "EdqgHXeGhpBqp2MrshF3PVpBe6D2s7g8UYALy9MHLzww"
+  }
+}
