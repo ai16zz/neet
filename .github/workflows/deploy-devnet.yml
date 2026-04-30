@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy_onchain:
-        description: 'Deploy programs to Solana devnet (requires funded wallet + secrets)'
+        description: 'Deploy programs to Solana MAINNET (requires 15 SOL in deployer wallet + all secrets set)'
         required: false
         default: 'false'
         type: boolean
@@ -112,14 +112,15 @@ jobs:
         run: npx tsc --noEmit --skipLibCheck || true
 
   # ----------------------------------------------------------------
-  # JOB 3 - Build Anchor programs + deploy to devnet
+  # JOB 3 - Build Anchor programs + deploy to Solana MAINNET
+  #         Only runs when deploy_onchain=true (manual workflow_dispatch)
   # ----------------------------------------------------------------
   build-and-deploy:
-    name: Build Anchor Programs & Deploy to Devnet
-    if: github.event.inputs.deploy_onchain == 'true'
+    name: Build Anchor Programs & Deploy to Mainnet
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [unit-tests]
+    if: github.event.inputs.deploy_onchain == 'true'
     outputs:
       usdc_mint: ${{ steps.init.outputs.usdc_mint }}
     steps:
@@ -148,7 +149,7 @@ jobs:
         run: |
           mkdir -p ~/.config/solana
           echo '${{ secrets.DEPLOY_KEYPAIR }}' > ~/.config/solana/id.json
-          solana config set --url devnet
+          solana config set --url mainnet-beta
           echo "Deploy wallet: $(solana address)"
           echo "Balance: $(solana balance)"
 
@@ -188,11 +189,11 @@ jobs:
           cp target/idl/neet_amm.json            app/src/idl/ 2>/dev/null || true
           echo "IDL files copied"
 
-      - name: Deploy to devnet
+      - name: Deploy to Mainnet
         working-directory: neet-perp
         run: |
           anchor deploy \
-            --provider.cluster devnet \
+            --provider.cluster mainnet \
             --provider.wallet ~/.config/solana/id.json \
             2>&1 || echo "Deploy finished (check output above)"
 
@@ -201,7 +202,7 @@ jobs:
         working-directory: neet-perp
         run: |
           npm install --legacy-peer-deps
-          npx ts-node scripts/deploy.ts devnet 2>&1 || echo "Init finished"
+          npx ts-node scripts/deploy.ts mainnet 2>&1 || echo "Init finished"
           USDC=$(cat deploy-info.json 2>/dev/null | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).usdcMint)}catch{console.log('')}})" 2>/dev/null || echo "")
           echo "usdc_mint=$USDC" >> $GITHUB_OUTPUT
           echo "USDC mint: $USDC"
@@ -218,6 +219,7 @@ jobs:
 
   # ----------------------------------------------------------------
   # JOB 4 - Build React app + publish to GitHub Pages
+  #         Always runs (decoupled from on-chain deploy)
   # ----------------------------------------------------------------
   build-frontend:
     name: Build Frontend & Publish to GitHub Pages
@@ -258,7 +260,7 @@ jobs:
           VITE_USDC_MINT: ${{ secrets.VITE_USDC_MINT || '' }}
         run: npm run build 2>&1
 
-      - name: Deploy perp app to GitHub Pages
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -266,23 +268,3 @@ jobs:
           destination_dir: perp
           keep_files: true
           commit_message: "deploy: NEET-PERP trading UI [${{ github.sha }}]"
-
-      - name: Collect root static files
-        run: |
-          mkdir -p /tmp/site-root
-          for f in callback.html index.html neet-predict_2.html neet-predict_2_edit.html \
-                   neet-security-patch.js neet_background.jpg perp.html \
-                   pumpfun-grads.json scan.html verify-worker.js \
-                   nansen-data.json nansen-profiler.json nansen-screener.json \
-                   neet-dev-stats.json; do
-            [ -f "$f" ] && cp "$f" /tmp/site-root/ && echo "Copied: $f"
-          done
-          ls /tmp/site-root/
-
-      - name: Deploy root static files to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: /tmp/site-root
-          keep_files: true
-          commit_message: "deploy: sync root static files [${{ github.sha }}]"
