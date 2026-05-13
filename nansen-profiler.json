@@ -1,1 +1,1 @@
-{"error": "Insufficient credits", "detail": "Insufficient credits remaining to call this endpoint.", "last_updated": "2026-05-13T01:27:43.852125"}
+{"message": "Invalid API key. Get your key at https://app.nansen.ai/api", "last_updated": "2026-05-13T05:30:54.569707"}
